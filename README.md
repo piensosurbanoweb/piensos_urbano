@@ -201,30 +201,14 @@ piensosurbano_db=> \dt
 Esta sección explica cómo desplegar el servidor Node.js (`server.js`) en [Render](https://render.com/) usando PostgreSQL.
 
 ### 1️⃣ Configuración del proyecto
-- Asegúrate de tener un archivo `package.json` en la raíz del proyecto con las dependencias necesarias:
+- En tu terminal local, ejecuta:
 
-```json
-{
-  "name": "piensos_urbano",
-  "version": "1.0.0",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "engines": {
-    "node": "20.x"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "pg": "^8.11.0",
-    "cors": "^2.8.5"
-  }
-}
+```bash
+
+npm install
 ```
 
-Tu server.js debe estar configurado para conectarse a PostgreSQL de Render:
-
-Render despliega automáticamente desde un repositorio. Asegúrate de:
+Para subir a Render:
 ```bash
 git add .
 git commit -m "Prepara deploy para Render"
