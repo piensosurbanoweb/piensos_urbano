@@ -1,11 +1,24 @@
+const path = require('path');
+
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors()); // Permitir peticiones desde otros orígenes
 app.use(express.json()); // Para parsear JSON en POST
+
+
+// Servir archivos estáticos desde la carpeta 'public'
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Esto asegura que cualquier ruta no encontrada devuelva index.html (para SPA)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 
 // 🔑 CONFIGURACIÓN DE CONEXIÓN A POSTGRESQL
 const pool = new Pool({
@@ -17,10 +30,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-
-/*app.listen(port, () => {
-  console.log(`Servidor escuchando en http://localhost:${port}`);
-});*/
+// || RUTAS DE API ||
 
 // --- CLIENTES ---
 app.get("/clientes", async (req, res) => {
