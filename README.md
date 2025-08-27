@@ -70,7 +70,7 @@ PGPASSWORD="1XHe24nwUm90KH3NfjAezbTagdzXZVOI" psql \
 ---
 
 ## 6. Ejecutar scripts `.sql`
-Para ejecutar un archivo `.sql` con tus tablas y datos ()Ejemplo para piensosurbano-db :
+Para ejecutar un archivo `.sql` con tus tablas y datos (Ejemplo para piensosurbano-db) :
 
 ```bash
  PGPASSWORD="1XHe24nwUm90KH3NfjAezbTagdzXZVOI" psql \
