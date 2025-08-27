@@ -2,23 +2,25 @@ const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.use(cors()); // Permitir peticiones desde otros orígenes
 app.use(express.json()); // Para parsear JSON en POST
 
 // 🔑 CONFIGURACIÓN DE CONEXIÓN A POSTGRESQL
 const pool = new Pool({
-  user: "Admin",       // 👈 Cambia esto por tu usuario de PostgreSQL
-  host: "localhost",          // 👈 Ej: "localhost" si es local
-  database: "PIENSOSURBANO",        // 👈 Nombre de tu base de datos
-  password: "JoseAlicia2001-",  // 👈 Tu contraseña de PostgreSQL
-  port: 5432,               // Puerto por defecto PostgreSQL
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
+  ssl: { rejectUnauthorized: false }
 });
 
-app.listen(port, () => {
+
+/*app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
-});
+});*/
 
 // --- CLIENTES ---
 app.get("/clientes", async (req, res) => {
@@ -284,6 +286,9 @@ app.get("/", (req, res) => {
 });
 
 // Iniciar servidor
-app.listen(port, () => {
-  console.log(`Servidor escuchando en http://localhost:${port}`);
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor escuchando en puerto ${PORT}`);
 });
+
