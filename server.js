@@ -11,15 +11,6 @@ app.use(cors()); // Permitir peticiones desde otros orígenes
 app.use(express.json()); // Para parsear JSON en POST
 
 
-// Servir archivos estáticos desde la carpeta 'public'
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Esto asegura que cualquier ruta no encontrada devuelva index.html (para SPA)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-
 // 🔑 CONFIGURACIÓN DE CONEXIÓN A POSTGRESQL
 const pool = new Pool({
   user: process.env.DB_USER,
@@ -290,13 +281,25 @@ app.delete("/zonas/:id", async (req, res) => {
   }
 });
 
-// --- TEST ---
-app.get("/", (req, res) => {
-  res.send("Servidor conectado a PostgreSQL 🚀");
+app.delete("/zonas/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query("UPDATE zonas SET activa=false WHERE id=$1", [id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Error al eliminar zona" });
+  }
+});
+
+// Servir archivos estáticos desde la carpeta 'public'
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Esto asegura que cualquier ruta no encontrada devuelva index.html (SPA)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Iniciar servidor
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en puerto ${PORT}`);
