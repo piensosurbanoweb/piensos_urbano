@@ -2408,9 +2408,11 @@
         }
 
         // Gestión de la base de datos
+        const API_URL = window.location.origin; // Usa el dominio actual (local o Render)
+
         async function cargarClientes() {
             try {
-                const res = await fetch('https://piensos-urbano.onrender.com/clientes');
+                const res = await fetch(`${API_URL}/clientes`);
                 let data = await res.json();
                 clientes = data.map(c => ({
                     id: c.id,
@@ -2425,6 +2427,7 @@
                 renderizarTablaClientes();
             } catch (err) {
                 alert('Error al cargar clientes desde la base de datos');
+                console.error(err);
             }
         }
 
