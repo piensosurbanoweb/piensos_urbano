@@ -168,6 +168,7 @@ CREATE TABLE zonas (
 
 Y deberías ver las tablas:
 
+ ```bash
 piensosurbano_db=> \dt
                       List of relations
  Schema |        Name        | Type  |         Owner
@@ -180,7 +181,7 @@ piensosurbano_db=> \dt
  public | pedidos_pendientes | table | piensosurbano_db_user
  public | zonas              | table | piensosurbano_db_user
 (7 rows)
-
+ ```
 ---
 
 ## ✅ Notas
