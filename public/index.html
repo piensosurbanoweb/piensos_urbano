@@ -2410,7 +2410,7 @@
         // Gestión de la base de datos
         async function cargarClientes() {
             try {
-                const res = await fetch('http://localhost:3000/clientes');
+                const res = await fetch('https://piensos-urbano.onrender.com/clientes');
                 let data = await res.json();
                 clientes = data.map(c => ({
                     id: c.id,
