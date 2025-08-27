@@ -77,6 +77,111 @@ Este documento explica cómo instalar el cliente de PostgreSQL y conectarse a la
    ```
 
 ---
+## Una vez dentro, puedes pegar tu script entero (mejor de tabla en tabla):
+
+```bash
+SCRIPT BASE DE DATOS PIENSOSURBANO
+
+CREATE TABLE clientes (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    apodo VARCHAR(100) NOT NULL UNIQUE,
+    nombre_completo VARCHAR(255) NOT NULL,
+    telefono VARCHAR(20) NOT NULL,
+    localidad VARCHAR(100) NOT NULL,
+    zona_reparto VARCHAR(50) NOT NULL,
+    observaciones TEXT
+);
+
+CREATE TABLE pedidos_historial (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    cliente_id INT NOT NULL,
+    descripcion TEXT NOT NULL,
+    fecha_pedido DATE NOT NULL,
+    fecha_entrega DATE NOT NULL,
+    observaciones TEXT,
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
+);
+
+CREATE TABLE pedidos_pendientes (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    historial_id INT NOT NULL,
+    cliente_id INT NOT NULL,
+    apodo VARCHAR(100) NOT NULL,
+    nombre_completo VARCHAR(255) NOT NULL,
+    telefono VARCHAR(20) NOT NULL,
+    localidad VARCHAR(100) NOT NULL,
+    zona VARCHAR(50) NOT NULL,
+    pedido TEXT NOT NULL,
+    fecha_programacion DATE NOT NULL,
+    observaciones TEXT,
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE,
+    FOREIGN KEY (historial_id) REFERENCES pedidos_historial(id) ON DELETE CASCADE
+);
+
+
+CREATE TABLE pedidos_calendario (
+    id SERIAL PRIMARY KEY,  -- mejor un ID autoincremental en lugar de VARCHAR
+    historial_id INT NOT NULL,
+    cliente_id INT,
+    dia_reparto TEXT CHECK (dia_reparto IN ('lunes', 'martes', 'miercoles', 'jueves', 'viernes')) NOT NULL,
+    fecha_reparto DATE NOT NULL,   -- 📌 Nueva columna: permite repetir el mismo pedido en distintas fechas
+    orden_reparto INT DEFAULT 1,
+    conductor VARCHAR(100) DEFAULT 'Sin asignar',
+    camion VARCHAR(100) DEFAULT 'Sin asignar',
+    observaciones TEXT,
+    enviado_reparto BOOLEAN DEFAULT FALSE,
+    fecha_envio_reparto DATE,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL,
+    FOREIGN KEY (historial_id) REFERENCES pedidos_historial(id) ON DELETE CASCADE
+);
+
+
+CREATE TABLE conductores (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    activo BOOLEAN DEFAULT TRUE,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE camiones (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    activo BOOLEAN DEFAULT TRUE,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE zonas (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    activa BOOLEAN DEFAULT TRUE,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+```
+
+## Verifica que todo se creó:
+
+ ```bash
+   \dt
+   ```
+
+Y deberías ver las tablas:
+
+piensosurbano_db=> \dt
+                      List of relations
+ Schema |        Name        | Type  |         Owner
+--------+--------------------+-------+-----------------------
+ public | camiones           | table | piensosurbano_db_user
+ public | clientes           | table | piensosurbano_db_user
+ public | conductores        | table | piensosurbano_db_user
+ public | pedidos_calendario | table | piensosurbano_db_user
+ public | pedidos_historial  | table | piensosurbano_db_user
+ public | pedidos_pendientes | table | piensosurbano_db_user
+ public | zonas              | table | piensosurbano_db_user
+(7 rows)
+
+---
 
 ## ✅ Notas
 
