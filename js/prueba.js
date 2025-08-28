@@ -1,0 +1,1 @@
+console.log("Mi JS externo funciona!");
