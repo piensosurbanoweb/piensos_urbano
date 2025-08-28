@@ -6,48 +6,47 @@
         let diaSeleccionadoDiario = 'lunes';
 
         // Funciones de pestañas
-        function cambiarPestana(pestana) {
-        // Resetear estilos de todos los botones
-        const botones = ['tabBaseDatos','tabNuevoPedido','tabPedidosPendientes','tabCalendario','tabGestionBD','tabHojaReparto'];
-        const baseClass = 'flex-1 px-5 py-4 text-center font-medium text-sm';
-        const inactiveClass = baseClass + ' bg-gray-200 text-gray-700 hover:bg-gray-300';
-        const activeClass = baseClass + ' bg-blue-600 text-white';
-        
-        botones.forEach(id => document.getElementById(id).className = inactiveClass);
-        document.getElementById('tab' + pestana.charAt(0).toUpperCase() + pestana.slice(1)).className = activeClass;
+       function cambiarPestana(pestana) {
+    // Resetear estilos de todos los botones
+    const botones = ['tabBaseDatos','tabNuevoPedido','tabPedidosPendientes','tabCalendario','tabGestionBD','tabHojaReparto'];
+    const baseClass = 'flex-1 px-5 py-4 text-center font-medium text-sm';
+    const inactiveClass = baseClass + ' bg-gray-200 text-gray-700 hover:bg-gray-300';
+    const activeClass = baseClass + ' bg-blue-600 text-white';
+    
+    botones.forEach(id => document.getElementById(id).className = inactiveClass);
+    document.getElementById('tab' + pestana.charAt(0).toUpperCase() + pestana.slice(1)).className = activeClass;
 
-        // Cargar HTML de la pestaña
-        fetch(`${pestana}.html`)
-            .then(res => res.text())
-            .then(html => {
-                document.getElementById("contenidoPestanas").innerHTML = html;
+    // Cargar HTML de la pestaña
+    fetch(`${pestana}.html`)
+        .then(res => res.text())
+        .then(html => {
+            document.getElementById("contenidoPestanas").innerHTML = html;
 
-                // Inicializar funciones según la pestaña
-                if (pestana === 'baseDatos') {
-                    cargarClientes();
-                } else if (pestana === 'nuevoPedido') {
-                    const hoy = new Date().toISOString().split('T')[0];
-                    document.getElementById('fechaPedidoNuevo').value = hoy;
-                } else if (pestana === 'pedidosPendientes') {
-                    actualizarListaPendientes();
-                } else if (pestana === 'calendario') {
-                    actualizarCalendario();
-                } else if (pestana === 'gestionBD') {
-                    actualizarEstadisticas();
-                    actualizarListaConductores();
-                    actualizarListaCamiones();
-                    actualizarListaZonas();
-                    actualizarSelectoresZonas();
-                    actualizarSelectoresConductores();
-                    actualizarSelectoresCamiones();
-                } else if (pestana === 'hojaReparto') {
-                    actualizarFechasReparto();
-                    actualizarTablaReparto();
-                }
-            })
-            .catch(err => console.error("Error cargando pestaña:", err));
-    }
-
+            // Inicializar funciones según la pestaña
+            if (pestana === 'baseDatos') {
+                cargarClientes(); // Solo se llama después de que el HTML se haya insertado
+            } else if (pestana === 'nuevoPedido') {
+                const hoy = new Date().toISOString().split('T')[0];
+                document.getElementById('fechaPedidoNuevo').value = hoy;
+            } else if (pestana === 'pedidosPendientes') {
+                actualizarListaPendientes();
+            } else if (pestana === 'calendario') {
+                actualizarCalendario();
+            } else if (pestana === 'gestionBD') {
+                actualizarEstadisticas();
+                actualizarListaConductores();
+                actualizarListaCamiones();
+                actualizarListaZonas();
+                actualizarSelectoresZonas();
+                actualizarSelectoresConductores();
+                actualizarSelectoresCamiones();
+            } else if (pestana === 'hojaReparto') {
+                actualizarFechasReparto();
+                actualizarTablaReparto();
+            }
+        })
+        .catch(err => console.error("Error cargando pestaña:", err));
+}
 
         // Funciones para Pedidos Pendientes
         function actualizarListaPendientes() {
@@ -2035,8 +2034,9 @@
         });
 
         // Inicialización
-        document.addEventListener('DOMContentLoaded', function() {
-            cargarClientes();
+        window.addEventListener('DOMContentLoaded', () => {
+            cambiarPestana('baseDatos');
         });
+
 
         (function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'971396b170790424',t:'MTc1NTU0Mjk0MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();
