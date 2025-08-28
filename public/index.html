@@ -185,6 +185,28 @@
                 </div>
             </div>
 
+
+            <!-- Modal para Agregar/Editar Cliente -->
+            <div id="clienteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 justify-center items-center z-50">
+            <div class="bg-white p-6 rounded-lg w-96 shadow-lg">
+                <h3 id="modalTitle" class="text-xl font-bold mb-4">Agregar Cliente</h3>
+                <form id="clienteForm" class="space-y-4">
+                <input type="text" id="apodo" name="apodo" placeholder="Apodo" class="w-full border p-2 rounded" required>
+                <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Nombre y Apellidos" class="w-full border p-2 rounded" required>
+                <input type="text" id="telefono" name="telefono" placeholder="Teléfono" class="w-full border p-2 rounded">
+                <input type="text" id="localidad" name="localidad" placeholder="Localidad" class="w-full border p-2 rounded">
+                <input type="text" id="zona_reparto" name="zona_reparto" placeholder="Zona Reparto" class="w-full border p-2 rounded">
+                <textarea id="observaciones" name="observaciones" placeholder="Observaciones" class="w-full border p-2 rounded"></textarea>
+                
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="cerrarModal()" class="px-4 py-2 bg-gray-400 text-white rounded">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Guardar</button>
+                </div>
+                </form>
+            </div>
+            </div>
+
+
             <!-- Pestaña Pedidos Pendientes -->
             <div id="pestanaPedidosPendientes" class="p-6 hidden">
                 <div class="flex justify-between items-center mb-6">
@@ -2482,7 +2504,7 @@
             editandoId = null;
             document.getElementById('modalTitle').textContent = 'Agregar Nuevo Cliente';
             document.getElementById('clienteForm').reset();
-            actualizarSelectoresZonas();
+            //actualizarSelectoresZonas();
             document.getElementById('clienteModal').classList.remove('hidden');
             document.getElementById('clienteModal').classList.add('flex');
         }
@@ -2687,33 +2709,34 @@
         }
         
         // Event Listeners
-        document.getElementById('clienteForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        document.getElementById("clienteForm").addEventListener("submit", async function(e) {
+        e.preventDefault();
 
-            const nuevoCliente = {
-                apodo: document.getElementById('apodo').value,
-                nombre_completo: document.getElementById('nombreCompleto').value,
-                telefono: document.getElementById('telefono').value,
-                localidad: document.getElementById('localidad').value,
-                zona_reparto: document.getElementById('zonaReparto').value,
-                observaciones: document.getElementById('observaciones').value
-            };
+        const nuevoCliente = {
+            apodo: document.getElementById("apodo").value,
+            nombre_completo: document.getElementById("nombre_completo").value,
+            telefono: document.getElementById("telefono").value,
+            localidad: document.getElementById("localidad").value,
+            zona_reparto: document.getElementById("zona_reparto").value,
+            observaciones: document.getElementById("observaciones").value
+        };
 
             try {
-                const res = await fetch('http://localhost:3000/clientes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(nuevoCliente)
-                });
-                if (res.ok) {
-                    cerrarModal();
-                    await cargarClientes();
-                } else {
-                    const error = await res.json();
-                    alert('Error al guardar el cliente: ' + (error.error || ''));
-                }
+        let res = await fetch("https://piensos-urbano.onrender.com/clientes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(nuevoCliente)
+        });
+
+        if (res.ok) {
+            await cargarClientes(); // refresca tabla
+            cerrarModal();
+        } else {
+            alert("⚠️ Error al guardar cliente");
+        }
             } catch (err) {
-                alert('No se pudo conectar al servidor');
+                console.error(err);
+                alert("❌ Error de conexión con el servidor");
             }
         });
 
