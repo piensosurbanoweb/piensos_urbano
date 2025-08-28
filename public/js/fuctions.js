@@ -7,60 +7,47 @@
 
         // Funciones de pestañas
         function cambiarPestana(pestana) {
-            // Ocultar todas las pestañas
-            document.getElementById('pestanaBaseDatos').classList.add('hidden');
-            document.getElementById('pestanaNuevoPedido').classList.add('hidden');
-            document.getElementById('pestanaPedidosPendientes').classList.add('hidden');
-            document.getElementById('pestanaCalendario').classList.add('hidden');
-            document.getElementById('pestanaGestionBD').classList.add('hidden');
-            document.getElementById('pestanaHojaReparto').classList.add('hidden');
-            
-            // Resetear estilos de botones
-            const baseClass = 'flex-1 px-5 py-4 text-center font-medium text-sm';
-            const inactiveClass = baseClass + ' bg-gray-200 text-gray-700 hover:bg-gray-300';
-            const activeClass = baseClass + ' bg-blue-600 text-white';
-            
-            document.getElementById('tabBaseDatos').className = inactiveClass;
-            document.getElementById('tabNuevoPedido').className = inactiveClass;
-            document.getElementById('tabPedidosPendientes').className = inactiveClass;
-            document.getElementById('tabCalendario').className = inactiveClass;
-            document.getElementById('tabGestionBD').className = inactiveClass;
-            document.getElementById('tabHojaReparto').className = inactiveClass;
-            
-            if (pestana === 'baseDatos') {
-                document.getElementById('pestanaBaseDatos').classList.remove('hidden');
-                document.getElementById('tabBaseDatos').className = activeClass;
-            } else if (pestana === 'nuevoPedido') {
-                document.getElementById('pestanaNuevoPedido').classList.remove('hidden');
-                document.getElementById('tabNuevoPedido').className = activeClass;
-                // Establecer fecha actual por defecto
-                const hoy = new Date().toISOString().split('T')[0];
-                document.getElementById('fechaPedidoNuevo').value = hoy;
-            } else if (pestana === 'pedidosPendientes') {
-                document.getElementById('pestanaPedidosPendientes').classList.remove('hidden');
-                document.getElementById('tabPedidosPendientes').className = activeClass;
-                actualizarListaPendientes();
-            } else if (pestana === 'calendario') {
-                document.getElementById('pestanaCalendario').classList.remove('hidden');
-                document.getElementById('tabCalendario').className = activeClass;
-                actualizarCalendario();
-            } else if (pestana === 'gestionBD') {
-                document.getElementById('pestanaGestionBD').classList.remove('hidden');
-                document.getElementById('tabGestionBD').className = activeClass;
-                actualizarEstadisticas();
-                actualizarListaConductores();
-                actualizarListaCamiones();
-                actualizarListaZonas();
-                actualizarSelectoresZonas();
-                actualizarSelectoresConductores();
-                actualizarSelectoresCamiones();
-            } else if (pestana === 'hojaReparto') {
-                document.getElementById('pestanaHojaReparto').classList.remove('hidden');
-                document.getElementById('tabHojaReparto').className = activeClass;
-                actualizarFechasReparto();
-                actualizarTablaReparto();
-            }
-        }
+        // Resetear estilos de todos los botones
+        const botones = ['tabBaseDatos','tabNuevoPedido','tabPedidosPendientes','tabCalendario','tabGestionBD','tabHojaReparto'];
+        const baseClass = 'flex-1 px-5 py-4 text-center font-medium text-sm';
+        const inactiveClass = baseClass + ' bg-gray-200 text-gray-700 hover:bg-gray-300';
+        const activeClass = baseClass + ' bg-blue-600 text-white';
+        
+        botones.forEach(id => document.getElementById(id).className = inactiveClass);
+        document.getElementById('tab' + pestana.charAt(0).toUpperCase() + pestana.slice(1)).className = activeClass;
+
+        // Cargar HTML de la pestaña
+        fetch(`${pestana}.html`)
+            .then(res => res.text())
+            .then(html => {
+                document.getElementById("contenidoPestanas").innerHTML = html;
+
+                // Inicializar funciones según la pestaña
+                if (pestana === 'baseDatos') {
+                    cargarClientes();
+                } else if (pestana === 'nuevoPedido') {
+                    const hoy = new Date().toISOString().split('T')[0];
+                    document.getElementById('fechaPedidoNuevo').value = hoy;
+                } else if (pestana === 'pedidosPendientes') {
+                    actualizarListaPendientes();
+                } else if (pestana === 'calendario') {
+                    actualizarCalendario();
+                } else if (pestana === 'gestionBD') {
+                    actualizarEstadisticas();
+                    actualizarListaConductores();
+                    actualizarListaCamiones();
+                    actualizarListaZonas();
+                    actualizarSelectoresZonas();
+                    actualizarSelectoresConductores();
+                    actualizarSelectoresCamiones();
+                } else if (pestana === 'hojaReparto') {
+                    actualizarFechasReparto();
+                    actualizarTablaReparto();
+                }
+            })
+            .catch(err => console.error("Error cargando pestaña:", err));
+    }
+
 
         // Funciones para Pedidos Pendientes
         function actualizarListaPendientes() {

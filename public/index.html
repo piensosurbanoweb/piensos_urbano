@@ -13,25 +13,48 @@
         <!-- Pestañas -->
         <div class="bg-white rounded-xl shadow-lg overflow-hidden">
             <div class="flex border-b">
-                <button onclick="window.location.href='baseDatos.html'" id="tabBaseDatos" class="flex-1 px-5 py-4 text-center font-medium bg-blue-600 text-white text-sm">
+                <!-- Base de Datos -->
+                <button onclick="cambiarPestana('baseDatos')" id="tabBaseDatos" 
+                        class="flex-1 px-5 py-4 text-center font-medium bg-blue-600 text-white text-sm">
                     🗄️ Base de Datos
                 </button>
-                <button onclick="cambiarPestana('nuevoPedido')" id="tabNuevoPedido" class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
+
+                <!-- Nuevo Pedido -->
+                <button onclick="cambiarPestana('nuevoPedido')" id="tabNuevoPedido" 
+                        class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
                     📝 Nuevo Pedido
                 </button>
-                <button onclick="cambiarPestana('pedidosPendientes')" id="tabPedidosPendientes" class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
-                    📋 Pendientes <span id="contadorPendientes" class="bg-red-500 text-white rounded-full px-2 py-1 text-xs ml-1">0</span>
+
+                <!-- Pendientes -->
+                <button onclick="cambiarPestana('pedidosPendientes')" id="tabPedidosPendientes" 
+                        class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
+                    📋 Pendientes 
+                    <span id="contadorPendientes" class="bg-red-500 text-white rounded-full px-2 py-1 text-xs ml-1">0</span>
                 </button>
-                <button onclick="cambiarPestana('calendario')" id="tabCalendario" class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
+
+                <!-- Calendario -->
+                <button onclick="cambiarPestana('calendario')" id="tabCalendario" 
+                        class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
                     📅 Calendario
                 </button>
-                <button onclick="cambiarPestana('gestionBD')" id="tabGestionBD" class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
+
+                <!-- Gestión BD -->
+                <button onclick="cambiarPestana('gestionBD')" id="tabGestionBD" 
+                        class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
                     ⚙️ Gestión BD
                 </button>
-                <button onclick="cambiarPestana('hojaReparto')" id="tabHojaReparto" class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
+
+                <!-- Hoja Reparto -->
+                <button onclick="cambiarPestana('hojaReparto')" id="tabHojaReparto" 
+                        class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
                     📦 Hoja Reparto
                 </button>
             </div>
+        </div>
+
+        <!-- Contenedor donde se cargará cada HTML de pestaña -->
+        <div id="contenidoPestanas"></div>
+
 
             
 
@@ -610,7 +633,6 @@
         </div>
     </div>
     <script src="js/fuctions.js" defer></script>
-    
 
 </body>
 </html>
