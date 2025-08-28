@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/estilos.css">
+    <title>Document</title>
+</head>
+<body>
+    <!-- Pestaña Base de Datos -->
+            <div id="pestanaBaseDatos" class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Base de Datos de Clientes</h2>
+                    <button onclick="agregarCliente()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+                        <span>➕</span> Agregar Cliente
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Apodo</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Nombre y Apellidos</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Teléfono</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Localidad</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Zona Reparto</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Últimos Pedidos</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Observaciones</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientesTable" class="divide-y divide-gray-200">
+                            <!-- Los clientes se cargarán aquí -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+
+            <!-- Modal para Agregar/Editar Cliente -->
+            <div id="clienteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 justify-center items-center z-50">
+            <div class="bg-white p-6 rounded-lg w-96 shadow-lg">
+                <h3 id="modalTitle" class="text-xl font-bold mb-4">Agregar Cliente</h3>
+                <form id="clienteForm" class="space-y-4">
+                <input type="text" id="apodo" name="apodo" placeholder="Apodo" class="w-full border p-2 rounded" required>
+                <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Nombre y Apellidos" class="w-full border p-2 rounded" required>
+                <input type="text" id="telefono" name="telefono" placeholder="Teléfono" class="w-full border p-2 rounded">
+                <input type="text" id="localidad" name="localidad" placeholder="Localidad" class="w-full border p-2 rounded">
+                <input type="text" id="zona_reparto" name="zona_reparto" placeholder="Zona Reparto" class="w-full border p-2 rounded">
+                <textarea id="observaciones" name="observaciones" placeholder="Observaciones" class="w-full border p-2 rounded"></textarea>
+                
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="cerrarModal()" class="px-4 py-2 bg-gray-400 text-white rounded">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Guardar</button>
+                </div>
+                </form>
+            </div>
+            </div>
+<script src="js/fuctions.js" defer></script>
+</body>
+</html>

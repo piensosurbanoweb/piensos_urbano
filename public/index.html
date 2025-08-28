@@ -3,139 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Base de Datos de Clientes</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        
-        @media print {
-            body { 
-                font-family: Arial, sans-serif;
-                font-size: 12px;
-                margin: 0;
-                padding: 20px;
-                background: white !important;
-            }
-            
-            .no-print { display: none !important; }
-            
-            .print-table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-top: 20px;
-            }
-            
-            .print-table th,
-            .print-table td {
-                border: 1px solid #000;
-                padding: 8px;
-                text-align: left;
-                font-size: 11px;
-            }
-            
-            .print-table th {
-                background-color: #f0f0f0 !important;
-                font-weight: bold;
-            }
-            
-            .print-header {
-                text-align: center;
-                margin-bottom: 20px;
-            }
-            
-            .print-title {
-                font-size: 18px;
-                font-weight: bold;
-                margin-bottom: 10px;
-            }
-            
-            .print-date {
-                font-size: 14px;
-                margin-bottom: 5px;
-            }
-            
-            .orden-cell {
-                width: 60px;
-                text-align: center;
-            }
-            
-            .conductor-cell {
-                width: 100px;
-            }
-            
-            .observaciones-cell {
-                max-width: 150px;
-                word-wrap: break-word;
-            }
-        }
-        
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: white;
-            min-width: 200px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
-        .dropdown:hover .dropdown-content {
-            display: block;
-        }
-        
-        .dropdown-item {
-            padding: 8px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #f3f4f6;
-        }
-        
-        .dropdown-item:hover {
-            background-color: #f9fafb;
-        }
-        
-        .dropdown-item:last-child {
-            border-bottom: none;
-        }
-
-        .autocomplete-suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 10;
-        }
-
-        .autocomplete-item {
-            padding: 8px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #f3f4f6;
-        }
-
-        .autocomplete-item:hover {
-            background-color: #f9fafb;
-        }
-
-        .autocomplete-item:last-child {
-            border-bottom: none;
-        }
-    </style>
+    <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <!-- Pestañas -->
         <div class="bg-white rounded-xl shadow-lg overflow-hidden">
             <div class="flex border-b">
-                <button onclick="cambiarPestana('baseDatos')" id="tabBaseDatos" class="flex-1 px-5 py-4 text-center font-medium bg-blue-600 text-white text-sm">
+                <button onclick="window.location.href='baseDatos.html'" id="tabBaseDatos" class="flex-1 px-5 py-4 text-center font-medium bg-blue-600 text-white text-sm">
                     🗄️ Base de Datos
                 </button>
                 <button onclick="cambiarPestana('nuevoPedido')" id="tabNuevoPedido" class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
@@ -155,56 +33,7 @@
                 </button>
             </div>
 
-            <!-- Pestaña Base de Datos -->
-            <div id="pestanaBaseDatos" class="p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800">Base de Datos de Clientes</h2>
-                    <button onclick="agregarCliente()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
-                        <span>➕</span> Agregar Cliente
-                    </button>
-                </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full border-collapse">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Apodo</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Nombre y Apellidos</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Teléfono</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Localidad</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Zona Reparto</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Últimos Pedidos</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Observaciones</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="clientesTable" class="divide-y divide-gray-200">
-                            <!-- Los clientes se cargarán aquí -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-
-            <!-- Modal para Agregar/Editar Cliente -->
-            <div id="clienteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 justify-center items-center z-50">
-            <div class="bg-white p-6 rounded-lg w-96 shadow-lg">
-                <h3 id="modalTitle" class="text-xl font-bold mb-4">Agregar Cliente</h3>
-                <form id="clienteForm" class="space-y-4">
-                <input type="text" id="apodo" name="apodo" placeholder="Apodo" class="w-full border p-2 rounded" required>
-                <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Nombre y Apellidos" class="w-full border p-2 rounded" required>
-                <input type="text" id="telefono" name="telefono" placeholder="Teléfono" class="w-full border p-2 rounded">
-                <input type="text" id="localidad" name="localidad" placeholder="Localidad" class="w-full border p-2 rounded">
-                <input type="text" id="zona_reparto" name="zona_reparto" placeholder="Zona Reparto" class="w-full border p-2 rounded">
-                <textarea id="observaciones" name="observaciones" placeholder="Observaciones" class="w-full border p-2 rounded"></textarea>
-                
-                <div class="flex justify-end gap-2">
-                    <button type="button" onclick="cerrarModal()" class="px-4 py-2 bg-gray-400 text-white rounded">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded">Guardar</button>
-                </div>
-                </form>
-            </div>
-            </div>
+            
 
 
             <!-- Pestaña Pedidos Pendientes -->

@@ -1,0 +1,122 @@
+ @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        @media print {
+            body { 
+                font-family: Arial, sans-serif;
+                font-size: 12px;
+                margin: 0;
+                padding: 20px;
+                background: white !important;
+            }
+            
+            .no-print { display: none !important; }
+            
+            .print-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+            }
+            
+            .print-table th,
+            .print-table td {
+                border: 1px solid #000;
+                padding: 8px;
+                text-align: left;
+                font-size: 11px;
+            }
+            
+            .print-table th {
+                background-color: #f0f0f0 !important;
+                font-weight: bold;
+            }
+            
+            .print-header {
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            
+            .print-title {
+                font-size: 18px;
+                font-weight: bold;
+                margin-bottom: 10px;
+            }
+            
+            .print-date {
+                font-size: 14px;
+                margin-bottom: 5px;
+            }
+            
+            .orden-cell {
+                width: 60px;
+                text-align: center;
+            }
+            
+            .conductor-cell {
+                width: 100px;
+            }
+            
+            .observaciones-cell {
+                max-width: 150px;
+                word-wrap: break-word;
+            }
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 200px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        
+        .dropdown-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .dropdown-item:hover {
+            background-color: #f9fafb;
+        }
+        
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .autocomplete-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .autocomplete-item:hover {
+            background-color: #f9fafb;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
