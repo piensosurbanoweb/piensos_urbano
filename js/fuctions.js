@@ -1,4 +1,4 @@
-  // Variables de control
+ // Variables de control
         let editandoId = null;
         let clienteSeleccionado = null;
         let semanaActualOffset = 0; // Para navegar entre semanas
