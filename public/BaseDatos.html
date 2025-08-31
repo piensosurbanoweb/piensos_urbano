@@ -1,13 +1,17 @@
-<div id="pestanaBaseDatos" class="p-6">
+<!-- Contenedor principal de la pestaña de Base de Datos -->
+<div id="pestanaBaseDatos" class="p-6 bg-white rounded-xl shadow-lg">
     <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-800">Base de Datos de Clientes</h2>
+        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <i class="fas fa-users text-blue-500"></i>
+            Base de Datos de Clientes
+        </h2>
         <button onclick="abrirModal('agregar')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
-            <span>➕</span> Agregar Cliente
+            <i class="fas fa-plus-circle"></i> Agregar Cliente
         </button>
     </div>
 
     <div class="overflow-x-auto">
-        <table class="w-full border-collapse">
+        <table class="w-full border-collapse rounded-lg overflow-hidden shadow-sm">
             <thead class="bg-gray-100">
                 <tr>
                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Apodo</th>
@@ -15,42 +19,100 @@
                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Teléfono</th>
                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Localidad</th>
                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Zona Reparto</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Últimos Pedidos</th>
                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Observaciones</th>
                     <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Acciones</th>
                 </tr>
             </thead>
-            <tbody id="listaClientes">
+            <tbody id="listaClientes" class="divide-y divide-gray-200">
             </tbody>
         </table>
     </div>
+    <div id="loading" class="text-center py-6 hidden">
+        <i class="fas fa-spinner fa-spin text-2xl text-blue-500"></i>
+        <p class="text-gray-500 mt-2">Cargando clientes...</p>
+    </div>
+    <div id="mensajeVacio" class="text-center py-12 text-gray-500 hidden">
+        <div class="text-4xl mb-4">🗄️</div>
+        <p class="text-lg">No hay clientes registrados</p>
+        <p class="text-sm">¡Agrega el primero para empezar!</p>
+    </div>
+</div>
 
-    <div id="clienteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 justify-center items-center z-50">
-        <div class="bg-white p-6 rounded-lg w-96 shadow-lg">
-            <h3 id="modalTitle" class="text-xl font-bold mb-4">Agregar Cliente</h3>
-            <form id="clienteForm" class="space-y-4">
-                <input type="text" id="apodo" name="apodo" placeholder="Apodo" class="w-full border p-2 rounded" required>
-                <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Nombre y Apellidos" class="w-full border p-2 rounded" required>
-                <input type="text" id="telefono" name="telefono" placeholder="Teléfono" class="w-full border p-2 rounded">
-                <input type="text" id="localidad" name="localidad" placeholder="Localidad" class="w-full border p-2 rounded">
-                <select id="zona_reparto" name="zona_reparto" class="w-full border p-2 rounded">
-                </select>
-                <textarea id="observaciones" name="observaciones" placeholder="Observaciones" class="w-full border p-2 rounded"></textarea>
-                <div class="flex justify-end gap-2">
-                    <button type="button" onclick="cerrarModal()" class="px-4 py-2 bg-gray-500 text-white rounded">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Guardar</button>
-                </div>
-            </form>
+<!-- Modal para Agregar/Editar Cliente -->
+<div id="clienteModal" class="modal-container hidden fixed inset-0 bg-black bg-opacity-50 justify-center items-center z-50">
+    <div class="modal-content bg-white p-6 rounded-xl w-11/12 md:w-1/2 lg:w-1/3 shadow-2xl scale-95 opacity-0 transition-transform transition-opacity duration-300">
+        <h3 id="modalTitle" class="text-xl font-bold mb-4">Agregar Cliente</h3>
+        <form id="clienteForm" class="space-y-4">
+            <input type="text" id="apodo" name="apodo" placeholder="Apodo" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+            <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Nombre y Apellidos" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+            <input type="text" id="telefono" name="telefono" placeholder="Teléfono" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <input type="text" id="localidad" name="localidad" placeholder="Localidad" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <select id="zona_reparto" name="zona_reparto" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            </select>
+            <textarea id="observaciones" name="observaciones" placeholder="Observaciones" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="cerrarModal()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal de Confirmación para Eliminar -->
+<div id="confirmModal" class="modal-container hidden fixed inset-0 bg-black bg-opacity-50 justify-center items-center z-50">
+    <div class="modal-content bg-white p-6 rounded-xl w-11/12 md:w-1/2 lg:w-1/4 shadow-2xl scale-95 opacity-0 transition-transform transition-opacity duration-300">
+        <h3 class="text-xl font-bold mb-4">Confirmar Eliminación</h3>
+        <p>¿Estás seguro de que deseas eliminar a este cliente?</p>
+        <div class="flex justify-end gap-2 mt-4">
+            <button type="button" onclick="cerrarConfirmacion()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200">Cancelar</button>
+            <button type="button" id="confirmarEliminarBtn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200">Eliminar</button>
         </div>
     </div>
 </div>
 
-<script>
-    // Variables de control (pueden ser globales o pasadas como parámetros si usas módulos)
-    let editandoId = null;
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // Funciones del modal de clientes
-    function abrirModal(modo, cliente = null) {
+    // Global variables from the Canvas environment
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    let userId = '';
+    let editandoId = null;
+    let idToDelete = null;
+
+    // Static list of zones since the backend is not available
+    const zonasDisponibles = ["Zona A", "Zona B", "Zona C", "Zona D"];
+    
+    // Auth and Initialization
+    async function initAuthAndDB() {
+        try {
+            if (typeof __initial_auth_token !== 'undefined') {
+                await signInWithCustomToken(auth, __initial_auth_token);
+                userId = auth.currentUser.uid;
+            } else {
+                await signInAnonymously(auth);
+                userId = crypto.randomUUID();
+            }
+            console.log("Firebase initialized and user signed in. User ID:", userId);
+
+            // Start listening for data after successful auth
+            cargarZonas();
+            cargarClientes();
+        } catch (error) {
+            console.error("Error during Firebase initialization or authentication:", error);
+        }
+    }
+
+    // Modal functions
+    window.abrirModal = (modo, cliente = null) => {
         const modal = document.getElementById('clienteModal');
         const form = document.getElementById('clienteForm');
         const title = document.getElementById('modalTitle');
@@ -61,55 +123,104 @@
             editandoId = null;
         } else if (modo === 'editar' && cliente) {
             title.textContent = 'Editar Cliente';
-            document.getElementById('apodo').value = cliente.apodo;
-            document.getElementById('nombre_completo').value = cliente.nombre_completo;
-            document.getElementById('telefono').value = cliente.telefono;
-            document.getElementById('localidad').value = cliente.localidad;
-            document.getElementById('zona_reparto').value = cliente.zona_reparto;
-            document.getElementById('observaciones').value = cliente.observaciones;
+            document.getElementById('apodo').value = cliente.apodo || '';
+            document.getElementById('nombre_completo').value = cliente.nombre_completo || '';
+            document.getElementById('telefono').value = cliente.telefono || '';
+            document.getElementById('localidad').value = cliente.localidad || '';
+            document.getElementById('zona_reparto').value = cliente.zona_reparto || '';
+            document.getElementById('observaciones').value = cliente.observaciones || '';
             editandoId = cliente.id;
         }
+
         modal.classList.remove('hidden');
         modal.classList.add('flex');
+        setTimeout(() => {
+            modal.querySelector('.modal-content').classList.remove('scale-95', 'opacity-0');
+        }, 10);
     }
 
-    function cerrarModal() {
+    window.cerrarModal = () => {
         const modal = document.getElementById('clienteModal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        modal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    }
+    
+    window.abrirConfirmacion = (id) => {
+        idToDelete = id;
+        const modal = document.getElementById('confirmModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.querySelector('.modal-content').classList.remove('scale-95', 'opacity-0');
+        }, 10);
     }
 
-    // Cargar clientes
-    async function cargarClientes() {
-        try {
-            const res = await fetch('/clientes');
-            const clientes = await res.json();
-            const listaClientes = document.getElementById('listaClientes');
-            listaClientes.innerHTML = '';
+    window.cerrarConfirmacion = () => {
+        idToDelete = null;
+        const modal = document.getElementById('confirmModal');
+        modal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    }
+
+    // Load clients from Firestore in real-time
+    const cargarClientes = () => {
+        const loadingDiv = document.getElementById('loading');
+        loadingDiv.classList.remove('hidden');
+
+        const clientesCollection = collection(db, `artifacts/${appId}/users/${userId}/clientes`);
+
+        onSnapshot(clientesCollection, (snapshot) => {
+            const clientes = [];
+            snapshot.forEach(doc => {
+                clientes.push({ id: doc.id, ...doc.data() });
+            });
+            renderizarClientes(clientes);
+            loadingDiv.classList.add('hidden');
+        }, (error) => {
+            console.error("Error al obtener clientes:", error);
+            loadingDiv.classList.add('hidden');
+        });
+    }
+
+    const renderizarClientes = (clientes) => {
+        const listaClientes = document.getElementById('listaClientes');
+        const mensajeVacio = document.getElementById('mensajeVacio');
+        listaClientes.innerHTML = '';
+        if (clientes.length === 0) {
+            mensajeVacio.classList.remove('hidden');
+        } else {
+            mensajeVacio.classList.add('hidden');
             clientes.forEach(cliente => {
                 const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
                 tr.innerHTML = `
                     <td class="px-4 py-3 border text-sm">${cliente.apodo}</td>
                     <td class="px-4 py-3 border text-sm">${cliente.nombre_completo}</td>
                     <td class="px-4 py-3 border text-sm">${cliente.telefono || ''}</td>
                     <td class="px-4 py-3 border text-sm">${cliente.localidad || ''}</td>
                     <td class="px-4 py-3 border text-sm">${cliente.zona_reparto || ''}</td>
-                    <td class="px-4 py-3 border text-sm">${cliente.ultimos_pedidos || ''}</td>
                     <td class="px-4 py-3 border text-sm">${cliente.observaciones || ''}</td>
                     <td class="px-4 py-3 border text-sm">
-                        <button onclick="editarCliente(${cliente.id})" class="text-blue-600 hover:text-blue-900 mr-2">✏️</button>
-                        <button onclick="eliminarCliente(${cliente.id})" class="text-red-600 hover:text-red-900">🗑️</button>
+                        <button onclick="editarCliente('${cliente.id}')" class="text-blue-600 hover:text-blue-900 mr-2">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="eliminarCliente('${cliente.id}')" class="text-red-600 hover:text-red-900">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </td>
                 `;
                 listaClientes.appendChild(tr);
             });
-        } catch (err) {
-            console.error('Error al cargar clientes:', err);
         }
     }
 
-    // Agregar/Editar cliente
-    document.getElementById('clienteForm').addEventListener('submit', async (e) => {
+    const guardarCliente = async (e) => {
         e.preventDefault();
         const apodo = document.getElementById('apodo').value;
         const nombre_completo = document.getElementById('nombre_completo').value;
@@ -121,86 +232,75 @@
         const clienteData = { apodo, nombre_completo, telefono, localidad, zona_reparto, observaciones };
 
         try {
-            let res;
             if (editandoId) {
-                res = await fetch(`/clientes/${editandoId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(clienteData)
-                });
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/clientes`, editandoId);
+                await updateDoc(docRef, clienteData);
+                console.log("Cliente actualizado con ID:", editandoId);
             } else {
-                res = await fetch('/clientes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(clienteData)
-                });
+                const clientesCollection = collection(db, `artifacts/${appId}/users/${userId}/clientes`);
+                const docRef = await addDoc(clientesCollection, clienteData);
+                console.log("Nuevo cliente agregado con ID:", docRef.id);
             }
-            if (res.ok) {
-                cerrarModal();
-                cargarClientes();
-            } else {
-                console.error('Error al guardar cliente');
-            }
+            cerrarModal();
         } catch (err) {
-            console.error('Error de red:', err);
+            console.error('Error al guardar cliente:', err);
         }
-    });
+    }
 
-    // Editar cliente
-    async function editarCliente(id) {
+    window.editarCliente = async (id) => {
         try {
-            const res = await fetch(`/clientes/${id}`);
-            const cliente = await res.json();
-            abrirModal('editar', cliente);
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/clientes`, id);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                abrirModal('editar', { id: docSnap.id, ...docSnap.data() });
+            } else {
+                console.error('No se encontró el cliente con ID:', id);
+            }
         } catch (err) {
             console.error('Error al obtener cliente para editar:', err);
         }
-    }
+    };
 
-    // Eliminar cliente
-    async function eliminarCliente(id) {
-        if (confirm('¿Estás seguro de que quieres eliminar este cliente?')) {
-            try {
-                const res = await fetch(`/clientes/${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    cargarClientes();
-                } else {
-                    console.error('Error al eliminar cliente');
-                }
-            } catch (err) {
-                console.error('Error de red:', err);
-            }
-        }
-    }
+    window.eliminarCliente = (id) => {
+        abrirConfirmacion(id);
+    };
 
-    // Funciones de Zonas (necesarias para el modal)
-    async function cargarZonas() {
+    const confirmarEliminacion = async () => {
+        if (!idToDelete) return;
         try {
-            const res = await fetch('/zonas');
-            const zonas = await res.json();
-            const selectCliente = document.getElementById('zona_reparto');
-            
-            selectCliente.innerHTML = '';
-            zonas.forEach(z => {
-                const option = document.createElement('option');
-                option.value = z.nombre;
-                option.textContent = z.nombre;
-                selectCliente.appendChild(option);
-            });
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/clientes`, idToDelete);
+            await deleteDoc(docRef);
+            console.log("Cliente eliminado con ID:", idToDelete);
+            cerrarConfirmacion();
         } catch (err) {
-            console.error('Error al cargar zonas:', err);
+            console.error('Error al eliminar cliente:', err);
         }
     }
 
-    // Inicializar al cargar esta pestaña
-    (function() {
-        cargarClientes();
-        cargarZonas();
-        // Ocultar el modal al hacer clic fuera
-        document.getElementById('clienteModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                cerrarModal();
-            }
+    const cargarZonas = () => {
+        const selectCliente = document.getElementById('zona_reparto');
+        selectCliente.innerHTML = '';
+        zonasDisponibles.forEach(zona => {
+            const option = document.createElement('option');
+            option.value = zona;
+            option.textContent = zona;
+            selectCliente.appendChild(option);
         });
-    })();
+    }
+
+    document.getElementById('clienteForm').addEventListener('submit', guardarCliente);
+    document.getElementById('clienteModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            cerrarModal();
+        }
+    });
+    document.getElementById('confirmModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            cerrarConfirmacion();
+        }
+    });
+    document.getElementById('confirmarEliminarBtn').addEventListener('click', confirmarEliminacion);
+
+    initAuthAndDB();
 </script>
