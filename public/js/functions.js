@@ -100,7 +100,7 @@ async function cargarClientes() {
                 <td class="px-4 py-2 border">${cliente.telefono}</td>
                 <td class="px-4 py-2 border">${cliente.localidad}</td>
                 <td class="px-4 py-2 border">${cliente.zona_reparto}</td>
-                <td class="px-4 py-2 border">${cliente.observaciones || ''}</td>
+                <td class="px-4 py-2 border text-left">${cliente.observaciones || ''}</td>
                 <td class="px-4 py-2 border text-center">
                     <button onclick="abrirModal('editar', ${cliente.id})" class="text-blue-600 hover:text-blue-800 text-lg">✏️</button>
                     <button onclick="eliminarCliente(${cliente.id})" class="text-red-600 hover:text-red-800 ml-2 text-lg">🗑️</button>
