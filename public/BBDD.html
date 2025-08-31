@@ -21,7 +21,7 @@
                 </tr>
             </thead>
             <tbody id="listaClientes">
-                </tbody>
+            </tbody>
         </table>
     </div>
 
@@ -34,7 +34,7 @@
                 <input type="text" id="telefono" name="telefono" placeholder="Teléfono" class="w-full border p-2 rounded">
                 <input type="text" id="localidad" name="localidad" placeholder="Localidad" class="w-full border p-2 rounded">
                 <select id="zona_reparto" name="zona_reparto" class="w-full border p-2 rounded">
-                    </select>
+                </select>
                 <textarea id="observaciones" name="observaciones" placeholder="Observaciones" class="w-full border p-2 rounded"></textarea>
                 <div class="flex justify-end gap-2">
                     <button type="button" onclick="cerrarModal()" class="px-4 py-2 bg-gray-500 text-white rounded">Cancelar</button>
@@ -46,10 +46,8 @@
 </div>
 
 <script>
-    // Variables de control (pueden ser globales o pasadas como parámetros si usas módulos)
     let editandoId = null;
 
-    // Funciones del modal de clientes
     function abrirModal(modo, cliente = null) {
         const modal = document.getElementById('clienteModal');
         const form = document.getElementById('clienteForm');
@@ -79,7 +77,6 @@
         modal.classList.remove('flex');
     }
 
-    // Cargar clientes
     async function cargarClientes() {
         try {
             const res = await fetch('/clientes');
@@ -108,7 +105,6 @@
         }
     }
 
-    // Agregar/Editar cliente
     document.getElementById('clienteForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const apodo = document.getElementById('apodo').value;
@@ -146,7 +142,6 @@
         }
     });
 
-    // Editar cliente
     async function editarCliente(id) {
         try {
             const res = await fetch(`/clientes/${id}`);
@@ -157,7 +152,6 @@
         }
     }
 
-    // Eliminar cliente
     async function eliminarCliente(id) {
         if (confirm('¿Estás seguro de que quieres eliminar este cliente?')) {
             try {
@@ -173,7 +167,6 @@
         }
     }
 
-    // Funciones de Zonas (necesarias para el modal)
     async function cargarZonas() {
         try {
             const res = await fetch('/zonas');
@@ -192,15 +185,14 @@
         }
     }
 
-    // Inicializar al cargar esta pestaña
-    document.addEventListener('DOMContentLoaded', () => {
+    // Código de inicialización corregido
+    (function() {
         cargarClientes();
         cargarZonas();
-        // Ocultar el modal al hacer clic fuera
         document.getElementById('clienteModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 cerrarModal();
             }
         });
-    });
+    })();
 </script>
