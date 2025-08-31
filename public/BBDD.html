@@ -46,8 +46,10 @@
 </div>
 
 <script>
+    // Variables de control (pueden ser globales o pasadas como parámetros si usas módulos)
     let editandoId = null;
 
+    // Funciones del modal de clientes
     function abrirModal(modo, cliente = null) {
         const modal = document.getElementById('clienteModal');
         const form = document.getElementById('clienteForm');
@@ -77,6 +79,7 @@
         modal.classList.remove('flex');
     }
 
+    // Cargar clientes
     async function cargarClientes() {
         try {
             const res = await fetch('/clientes');
@@ -105,6 +108,7 @@
         }
     }
 
+    // Agregar/Editar cliente
     document.getElementById('clienteForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const apodo = document.getElementById('apodo').value;
@@ -142,6 +146,7 @@
         }
     });
 
+    // Editar cliente
     async function editarCliente(id) {
         try {
             const res = await fetch(`/clientes/${id}`);
@@ -152,6 +157,7 @@
         }
     }
 
+    // Eliminar cliente
     async function eliminarCliente(id) {
         if (confirm('¿Estás seguro de que quieres eliminar este cliente?')) {
             try {
@@ -167,6 +173,7 @@
         }
     }
 
+    // Funciones de Zonas (necesarias para el modal)
     async function cargarZonas() {
         try {
             const res = await fetch('/zonas');
@@ -185,10 +192,11 @@
         }
     }
 
-    // Código de inicialización corregido
+    // Inicializar al cargar esta pestaña
     (function() {
         cargarClientes();
         cargarZonas();
+        // Ocultar el modal al hacer clic fuera
         document.getElementById('clienteModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 cerrarModal();
