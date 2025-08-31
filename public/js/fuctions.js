@@ -56,5 +56,5 @@ async function cambiarPestana(nombrePestana) {
 
 // Cargar la pestaña de Base de Datos al iniciar
 document.addEventListener('DOMContentLoaded', () => {
-    cambiarPestana('BaseDatos');
+    cambiarPestana('baseDatos');
 });
