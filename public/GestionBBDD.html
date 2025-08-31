@@ -1,13 +1,267 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="css/estilos.css">
-    <title>Document</title>
-</head>
-<body>
+<div id="pestanaGestionBD" class="p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">⚙️ Gestión de Base de Datos</h2>
+    </div>
     
-</body>
-</html>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-lg border shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                👨‍💼 Gestión de Conductores
+            </h3>
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="nuevoConductor" placeholder="Nombre del conductor" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarConductor()">
+                <button onclick="agregarConductor()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
+                    ➕ Agregar
+                </button>
+            </div>
+            <div class="bg-gray-50 rounded-lg border max-h-64 overflow-y-auto">
+                <ul id="listaConductores" class="divide-y divide-gray-200">
+                    </ul>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg border shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                🚚 Gestión de Camiones
+            </h3>
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="nuevoCamion" placeholder="Matrícula del camión" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarCamion()">
+                <button onclick="agregarCamion()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
+                    ➕ Agregar
+                </button>
+            </div>
+            <div class="bg-gray-50 rounded-lg border max-h-64 overflow-y-auto">
+                <ul id="listaCamiones" class="divide-y divide-gray-200">
+                    </ul>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg border shadow-sm">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                📍 Gestión de Zonas
+            </h3>
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="nuevaZona" placeholder="Nombre de la zona" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarZona()">
+                <button onclick="agregarZona()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
+                    ➕ Agregar
+                </button>
+            </div>
+            <div class="bg-gray-50 rounded-lg border max-h-64 overflow-y-auto">
+                <ul id="listaZonas" class="divide-y divide-gray-200">
+                    </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-8 bg-white p-6 rounded-lg border border-yellow-200">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            🔧 Herramientas de Mantenimiento
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button onclick="limpiarPedidosAntiguos()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">
+                🧹 Limpiar Pedidos Antiguos
+            </button>
+            <button onclick="exportarDatos()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">
+                📤 Exportar Datos
+            </button>
+            <button onclick="resetearSistema()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">
+                🔄 Resetear Sistema
+            </button>
+        </div>
+        <div class="mt-4 text-sm text-gray-600">
+            <p><strong>⚠️ Importante:</strong> Las herramientas de mantenimiento pueden afectar todos los datos del sistema.</p>
+            <p>Usa estas funciones con precaución y asegúrate de tener respaldos si es necesario.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Gestión de Conductores ---
+    async function cargarConductores() {
+        try {
+            const res = await fetch('/conductores');
+            const conductores = await res.json();
+            const lista = document.getElementById('listaConductores');
+            lista.innerHTML = '';
+            conductores.forEach(c => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-3 text-sm';
+                li.innerHTML = `
+                    <span>${c.nombre}</span>
+                    <button onclick="eliminarConductor(${c.id})" class="text-red-600 hover:text-red-800">🗑️</button>
+                `;
+                lista.appendChild(li);
+            });
+        } catch (err) {
+            console.error('Error al cargar conductores:', err);
+        }
+    }
+
+    async function agregarConductor() {
+        const input = document.getElementById('nuevoConductor');
+        const nombre = input.value.trim();
+        if (!nombre) return;
+
+        try {
+            const res = await fetch('/conductores', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre })
+            });
+            if (res.ok) {
+                input.value = '';
+                cargarConductores();
+            }
+        } catch (err) {
+            console.error('Error al agregar conductor:', err);
+        }
+    }
+
+    async function eliminarConductor(id) {
+        if (confirm('¿Estás seguro de que quieres eliminar este conductor?')) {
+            try {
+                const res = await fetch(`/conductores/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    cargarConductores();
+                }
+            } catch (err) {
+                console.error('Error al eliminar conductor:', err);
+            }
+        }
+    }
+
+    // --- Gestión de Camiones ---
+    async function cargarCamiones() {
+        try {
+            const res = await fetch('/camiones');
+            const camiones = await res.json();
+            const lista = document.getElementById('listaCamiones');
+            lista.innerHTML = '';
+            camiones.forEach(c => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-3 text-sm';
+                li.innerHTML = `
+                    <span>${c.matricula}</span>
+                    <button onclick="eliminarCamion(${c.id})" class="text-red-600 hover:text-red-800">🗑️</button>
+                `;
+                lista.appendChild(li);
+            });
+        } catch (err) {
+            console.error('Error al cargar camiones:', err);
+        }
+    }
+
+    async function agregarCamion() {
+        const input = document.getElementById('nuevoCamion');
+        const matricula = input.value.trim();
+        if (!matricula) return;
+
+        try {
+            const res = await fetch('/camiones', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ matricula })
+            });
+            if (res.ok) {
+                input.value = '';
+                cargarCamiones();
+            }
+        } catch (err) {
+            console.error('Error al agregar camión:', err);
+        }
+    }
+
+    async function eliminarCamion(id) {
+        if (confirm('¿Estás seguro de que quieres eliminar este camión?')) {
+            try {
+                const res = await fetch(`/camiones/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    cargarCamiones();
+                }
+            } catch (err) {
+                console.error('Error al eliminar camión:', err);
+            }
+        }
+    }
+
+    // --- Gestión de Zonas ---
+    async function cargarZonas() {
+        try {
+            const res = await fetch('/zonas');
+            const zonas = await res.json();
+            const lista = document.getElementById('listaZonas');
+            lista.innerHTML = '';
+            zonas.forEach(z => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-3 text-sm';
+                li.innerHTML = `
+                    <span>${z.nombre}</span>
+                    <button onclick="eliminarZona(${z.id})" class="text-red-600 hover:text-red-800">🗑️</button>
+                `;
+                lista.appendChild(li);
+            });
+        } catch (err) {
+            console.error('Error al cargar zonas:', err);
+        }
+    }
+
+    async function agregarZona() {
+        const input = document.getElementById('nuevaZona');
+        const nombre = input.value.trim();
+        if (!nombre) return;
+
+        try {
+            const res = await fetch('/zonas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre })
+            });
+            if (res.ok) {
+                input.value = '';
+                cargarZonas();
+            }
+        } catch (err) {
+            console.error('Error al agregar zona:', err);
+        }
+    }
+
+    async function eliminarZona(id) {
+        if (confirm('¿Estás seguro de que quieres eliminar esta zona?')) {
+            try {
+                const res = await fetch(`/zonas/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    cargarZonas();
+                }
+            } catch (err) {
+                console.error('Error al eliminar zona:', err);
+            }
+        }
+    }
+
+    // --- Herramientas de Mantenimiento (Funciones simuladas) ---
+    function limpiarPedidosAntiguos() {
+        if (confirm('¿Estás seguro de que quieres limpiar los pedidos antiguos? Esta acción no se puede deshacer.')) {
+            alert('Limpieza de pedidos antiguos simulada. Se ha llamado a la API para realizar la acción.');
+            // Aquí iría el fetch a la API: await fetch('/api/limpiar-pedidos', { method: 'POST' });
+        }
+    }
+
+    function exportarDatos() {
+        alert('Exportación de datos simulada. Se está preparando el archivo para descarga.');
+        // Aquí iría el fetch a la API para descargar un archivo: await fetch('/api/exportar-datos');
+    }
+
+    function resetearSistema() {
+        if (confirm('⚠️ ¡ADVERTENCIA! ¿Estás seguro de que quieres RESETEAR EL SISTEMA? Se eliminarán todos los clientes, pedidos y registros. Esta acción es IRREVERSIBLE.')) {
+            alert('El reseteo del sistema se ha simulado. Se ha llamado a la API para realizar la acción.');
+            // Aquí iría el fetch a la API: await fetch('/api/resetear-sistema', { method: 'POST' });
+        }
+    }
+
+    // Inicializar al cargar esta pestaña
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarConductores();
+        cargarCamiones();
+        cargarZonas();
+    });
+</script>

@@ -1,13 +1,200 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="css/estilos.css">
-    <title>Document</title>
-</head>
-<body>
+<div id="pestanaHojaReparto" class="p-6">
+    <div class="no-print mb-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">📦 Gestión de Hoja de Reparto</h2>
+            <div class="flex gap-4">
+                <button onclick="mostrarSelectorPedidos()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+                    <span>➕</span> Agregar Pedido a la Hoja
+                </button>
+                <button onclick="limpiarHojaReparto()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+                    <span>🗑️</span> Limpiar Hoja
+                </button>
+                <button onclick="imprimirHojaReparto()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+                    <span>🖨️</span> Imprimir Hoja
+                </button>
+            </div>
+        </div>
+        
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 text-sm text-yellow-700" role="alert">
+            <p class="font-bold">Información Importante:</p>
+            <p>Solo se mostrarán los pedidos de la hoja de reparto. Para agregar pedidos, usa el botón "Agregar Pedido a la Hoja".</p>
+        </div>
+    </div>
     
-</body>
-</html>
+    <div id="hojaDeReparto" class="mt-8 bg-white p-6 rounded-lg shadow-md">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Hoja de Reparto</h3>
+        <ul id="listaPedidosHoja" class="space-y-4">
+            </ul>
+        <div id="mensajeVacioHoja" class="text-center py-12 text-gray-500 hidden">
+            <div class="text-4xl mb-4">📄</div>
+            <p class="text-lg">La hoja de reparto está vacía</p>
+            <p class="text-sm">Agrega pedidos para empezar</p>
+        </div>
+    </div>
+</div>
+
+<div id="selectorPedidosModal" class="hidden fixed inset-0 bg-black bg-opacity-50 justify-center items-center z-50">
+    <div class="bg-white p-6 rounded-lg w-11/12 md:w-3/4 lg:w-1/2 shadow-lg max-h-[90%] overflow-y-auto">
+        <h3 class="text-xl font-bold mb-4">Seleccionar Pedidos para la Hoja</h3>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Filtrar por Zona de Reparto:</label>
+            <select id="filtroZonaHoja" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                <option value="">Todas las zonas</option>
+                </select>
+        </div>
+        <div id="listaPedidosSelector" class="space-y-3 max-h-96 overflow-y-auto border p-3 rounded">
+            </div>
+        <div class="flex justify-end gap-2 mt-4">
+            <button type="button" onclick="cerrarSelectorPedidos()" class="px-4 py-2 bg-gray-500 text-white rounded">Cerrar</button>
+            <button type="button" onclick="agregarSeleccionadosALaHoja()" class="px-4 py-2 bg-blue-600 text-white rounded">Agregar Seleccionados</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let pedidosHojaReparto = [];
+
+    function renderizarHojaReparto() {
+        const lista = document.getElementById('listaPedidosHoja');
+        const mensajeVacio = document.getElementById('mensajeVacioHoja');
+        lista.innerHTML = '';
+        
+        if (pedidosHojaReparto.length === 0) {
+            mensajeVacio.classList.remove('hidden');
+        } else {
+            mensajeVacio.classList.add('hidden');
+            pedidosHojaReparto.forEach(pedido => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-4 bg-gray-50 rounded-lg border';
+                li.innerHTML = `
+                    <div>
+                        <p class="font-bold text-lg">${pedido.apodo_cliente} - ${pedido.producto}</p>
+                        <p class="text-sm text-gray-600">${pedido.cantidad} unidades</p>
+                        <p class="text-xs text-gray-400">Entrega: ${new Date(pedido.fecha_entrega).toLocaleDateString()}</p>
+                    </div>
+                    <button onclick="eliminarPedidoHoja(${pedido.id})" class="text-red-600 hover:text-red-800 no-print">🗑️</button>
+                `;
+                lista.appendChild(li);
+            });
+        }
+    }
+
+    async function mostrarSelectorPedidos() {
+        document.getElementById('selectorPedidosModal').classList.remove('hidden');
+        document.getElementById('selectorPedidosModal').classList.add('flex');
+        
+        // Cargar zonas para el filtro
+        try {
+            const resZonas = await fetch('/zonas');
+            const zonas = await resZonas.json();
+            const selectFiltro = document.getElementById('filtroZonaHoja');
+            selectFiltro.innerHTML = '<option value="">Todas las zonas</option>';
+            zonas.forEach(z => {
+                const option = document.createElement('option');
+                option.value = z.nombre;
+                option.textContent = z.nombre;
+                selectFiltro.appendChild(option);
+            });
+        } catch (err) {
+            console.error('Error al cargar zonas para filtro:', err);
+        }
+
+        cargarPedidosDisponibles();
+    }
+    
+    async function cargarPedidosDisponibles() {
+        const zonaFiltro = document.getElementById('filtroZonaHoja').value;
+        const lista = document.getElementById('listaPedidosSelector');
+        lista.innerHTML = 'Cargando pedidos...';
+        
+        try {
+            const res = await fetch('/pedidos/pendientes'); // O la ruta que más te convenga
+            let pedidos = await res.json();
+            
+            if (zonaFiltro) {
+                pedidos = pedidos.filter(p => p.zona_reparto === zonaFiltro);
+            }
+            
+            lista.innerHTML = '';
+            if (pedidos.length > 0) {
+                pedidos.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center gap-3 bg-gray-100 p-3 rounded-md';
+                    div.innerHTML = `
+                        <input type="checkbox" data-pedido-id="${p.id}" class="form-checkbox text-blue-600 h-5 w-5">
+                        <div>
+                            <p class="font-bold">${p.apodo_cliente}</p>
+                            <p class="text-sm text-gray-600">${p.producto} (${p.cantidad})</p>
+                        </div>
+                    `;
+                    lista.appendChild(div);
+                });
+            } else {
+                lista.innerHTML = '<p class="text-center text-gray-500">No hay pedidos disponibles para esta zona.</p>';
+            }
+        } catch (err) {
+            console.error('Error al cargar pedidos disponibles:', err);
+        }
+    }
+
+    function cerrarSelectorPedidos() {
+        document.getElementById('selectorPedidosModal').classList.add('hidden');
+        document.getElementById('selectorPedidosModal').classList.remove('flex');
+    }
+
+    async function agregarSeleccionadosALaHoja() {
+        const checkboxes = document.querySelectorAll('#listaPedidosSelector input[type="checkbox"]:checked');
+        const ids = Array.from(checkboxes).map(cb => cb.dataset.pedidoId);
+
+        if (ids.length === 0) {
+            alert('Por favor, selecciona al menos un pedido.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/pedidos/hoja-reparto', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids })
+            });
+            const nuevosPedidos = await res.json();
+            
+            pedidosHojaReparto = [...pedidosHojaReparto, ...nuevosPedidos];
+            renderizarHojaReparto();
+            cerrarSelectorPedidos();
+        } catch (err) {
+            console.error('Error al agregar pedidos a la hoja:', err);
+        }
+    }
+
+    function eliminarPedidoHoja(id) {
+        if (confirm('¿Quieres eliminar este pedido de la hoja de reparto?')) {
+            pedidosHojaReparto = pedidosHojaReparto.filter(p => p.id !== id);
+            renderizarHojaReparto();
+        }
+    }
+
+    function limpiarHojaReparto() {
+        if (confirm('¿Estás seguro de que quieres limpiar la hoja de reparto?')) {
+            pedidosHojaReparto = [];
+            renderizarHojaReparto();
+        }
+    }
+
+    function imprimirHojaReparto() {
+        window.print();
+    }
+
+    // Inicializar al cargar esta pestaña
+    document.addEventListener('DOMContentLoaded', () => {
+        renderizarHojaReparto();
+        document.getElementById('filtroZonaHoja').addEventListener('change', cargarPedidosDisponibles);
+        
+        // Ocultar modal al hacer clic fuera
+        document.getElementById('selectorPedidosModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                cerrarSelectorPedidos();
+            }
+        });
+    });
+</script>

@@ -1,13 +1,192 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="css/estilos.css">
-    <title>Document</title>
-</head>
-<body>
+<div id="pestanaCalendario" class="p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">📅 Calendario de Reparto</h2>
+        <div class="flex gap-4">
+            <div class="flex gap-2">
+                <button onclick="cambiarVistaCalendario('semanal')" id="btnVistaSemanal" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                    📅 Vista Semanal
+                </button>
+                <button onclick="cambiarVistaCalendario('diaria')" id="btnVistaDiaria" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                    📋 Vista Diaria
+                </button>
+            </div>
+            <div class="flex gap-2" id="controlesNavegacion">
+                <button onclick="semanaAnterior()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                    ← Anterior
+                </button>
+                <div class="bg-gray-100 text-gray-800 px-4 py-2 rounded-lg font-medium flex items-center justify-center min-w-[150px]">
+                    <span id="tituloCalendario">Semana Actual</span>
+                </div>
+                <button onclick="semanaSiguiente()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                    Siguiente →
+                </button>
+            </div>
+        </div>
+    </div>
     
-</body>
-</html>
+    <div id="vistaSemanal" class="grid grid-cols-1 md:grid-cols-7 gap-4">
+        </div>
+
+    <div id="vistaDiaria" class="hidden">
+        <div class="flex justify-between items-center mb-4 mt-6">
+            <select id="selectDiaDiario" onchange="cambiarDiaDiario()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                <option value="lunes">Lunes</option>
+                <option value="martes">Martes</option>
+                <option value="miercoles">Miércoles</option>
+                <option value="jueves">Jueves</option>
+                <option value="viernes">Viernes</option>
+                <option value="sabado">Sábado</option>
+            </select>
+            <button onclick="enviarDiaAHojaReparto()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
+                📦 Enviar a Hoja Reparto
+            </button>
+        </div>
+        <div id="pedidosDiarios" class="space-y-4">
+            </div>
+        <div id="mensajeVacioDiario" class="text-center py-12 text-gray-500 hidden">
+            <div class="text-4xl mb-4">📅</div>
+            <p class="text-lg">No hay pedidos programados para este día</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Variables de control
+    let semanaActualOffset = 0;
+    let vistaCalendarioActual = 'semanal';
+
+    // Funciones
+    function getWeekDays(offset = 0) {
+        const today = new Date();
+        today.setDate(today.getDate() + offset * 7);
+        const day = today.getDay();
+        const startOfWeek = new Date(today.setDate(today.getDate() - day + (day === 0 ? -6 : 1))); // Lunes de la semana
+        const weekDays = [];
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(startOfWeek);
+            date.setDate(startOfWeek.getDate() + i);
+            weekDays.push(date);
+        }
+        return weekDays;
+    }
+
+    async function cargarPedidosCalendario() {
+        const diasSemana = getWeekDays(semanaActualOffset);
+        document.getElementById('tituloCalendario').textContent = `Semana: ${diasSemana[0].toLocaleDateString()} - ${diasSemana[6].toLocaleDateString()}`;
+
+        try {
+            const res = await fetch('/pedidos/calendario');
+            const pedidos = await res.json();
+            
+            if (vistaCalendarioActual === 'semanal') {
+                renderizarVistaSemanal(pedidos, diasSemana);
+            } else {
+                cambiarDiaDiario(); // Recargar la vista diaria si ya estamos en ella
+            }
+        } catch (err) {
+            console.error('Error al cargar pedidos del calendario:', err);
+        }
+    }
+    
+    function renderizarVistaSemanal(pedidos, diasSemana) {
+        const contenedor = document.getElementById('vistaSemanal');
+        contenedor.innerHTML = '';
+        
+        diasSemana.forEach(dia => {
+            const nombreDia = new Intl.DateTimeFormat('es-ES', { weekday: 'long' }).format(dia);
+            const fechaString = dia.toISOString().split('T')[0];
+            const pedidosDelDia = pedidos.filter(p => p.fecha_entrega.startsWith(fechaString));
+            
+            const columna = document.createElement('div');
+            columna.className = 'bg-white p-4 rounded-lg shadow';
+            columna.innerHTML = `
+                <h3 class="font-bold text-gray-700 capitalize">${nombreDia}</h3>
+                <p class="text-sm text-gray-500 mb-2">${dia.toLocaleDateString()}</p>
+                <div class="space-y-2">
+                    ${pedidosDelDia.length > 0 ? pedidosDelDia.map(p => `
+                        <div class="bg-gray-100 p-2 rounded-md border border-gray-200 text-sm">
+                            <p class="font-semibold">${p.apodo_cliente}</p>
+                            <p>${p.producto} (${p.cantidad})</p>
+                        </div>
+                    `).join('') : '<p class="text-xs text-gray-400">Sin pedidos</p>'}
+                </div>
+            `;
+            contenedor.appendChild(columna);
+        });
+    }
+
+    function cambiarVistaCalendario(vista) {
+        vistaCalendarioActual = vista;
+        const btnSemanal = document.getElementById('btnVistaSemanal');
+        const btnDiaria = document.getElementById('btnVistaDiaria');
+        const vistaSemanalDiv = document.getElementById('vistaSemanal');
+        const vistaDiariaDiv = document.getElementById('vistaDiaria');
+
+        if (vista === 'semanal') {
+            btnSemanal.classList.replace('bg-gray-500', 'bg-blue-600');
+            btnDiaria.classList.replace('bg-blue-600', 'bg-gray-500');
+            vistaSemanalDiv.classList.remove('hidden');
+            vistaDiariaDiv.classList.add('hidden');
+        } else {
+            btnSemanal.classList.replace('bg-blue-600', 'bg-gray-500');
+            btnDiaria.classList.replace('bg-gray-500', 'bg-blue-600');
+            vistaSemanalDiv.classList.add('hidden');
+            vistaDiariaDiv.classList.remove('hidden');
+        }
+        cargarPedidosCalendario();
+    }
+    
+    async function cambiarDiaDiario() {
+        const diaSeleccionado = document.getElementById('selectDiaDiario').value;
+        const listaPedidos = document.getElementById('pedidosDiarios');
+        const mensajeVacio = document.getElementById('mensajeVacioDiario');
+        listaPedidos.innerHTML = '';
+        
+        try {
+            const res = await fetch(`/pedidos/diarios/${diaSeleccionado}`);
+            const pedidos = await res.json();
+            
+            if (pedidos.length > 0) {
+                mensajeVacio.classList.add('hidden');
+                pedidos.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'bg-white p-4 rounded-lg shadow-md';
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h3 class="font-bold text-lg">${p.apodo_cliente} - ${p.producto}</h3>
+                                <p class="text-sm text-gray-600">Cantidad: ${p.cantidad}</p>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-500">${p.observaciones || ''}</p>
+                    `;
+                    listaPedidos.appendChild(div);
+                });
+            } else {
+                mensajeVacio.classList.remove('hidden');
+            }
+        } catch (err) {
+            console.error('Error al cargar pedidos diarios:', err);
+        }
+    }
+
+    function semanaAnterior() {
+        semanaActualOffset--;
+        cargarPedidosCalendario();
+    }
+
+    function semanaSiguiente() {
+        semanaActualOffset++;
+        cargarPedidosCalendario();
+    }
+
+    function enviarDiaAHojaReparto() {
+        const dia = document.getElementById('selectDiaDiario').value;
+        alert(`Se han enviado los pedidos del ${dia} a la hoja de reparto. (Función a implementar en HojaReparto.html)`);
+    }
+
+    // Inicializar al cargar esta pestaña
+    document.addEventListener('DOMContentLoaded', () => {
+        cambiarVistaCalendario('semanal');
+    });
+</script>
