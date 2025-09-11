@@ -1,39 +1,28 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Base de Datos de Clientes</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100 p-6">
-
-    <!-- Contenedor principal de la pestaña de Base de Datos -->
-    <div id="pestanaBaseDatos" class="p-6 bg-white rounded-xl shadow-lg">
+<!-- BaseDatos.html -->
+<div id="pestanaBaseDatos">
+    <!-- Contenedor principal -->
+    <div class="p-6 bg-white rounded-xl shadow-lg">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
                 <i class="fas fa-users text-blue-500"></i>
                 Base de Datos de Clientes
             </h2>
-            <button onclick="abrirModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+            <button onclick="abrirModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
                 <i class="fas fa-plus-circle"></i> Agregar Cliente
             </button>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full border-collapse rounded-lg overflow-hidden shadow-sm">
+            <table class="w-full border-collapse rounded-lg shadow-sm">
                 <thead class="bg-gray-100">
                     <tr>
-                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Apodo</th>
-                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Nombre y Apellidos</th>
-                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Teléfono</th>
-                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Localidad</th>
-                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Zona Reparto</th>
-                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Observaciones</th>
-                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Acciones</th>
+                        <th class="px-4 py-3 text-left border">Apodo</th>
+                        <th class="px-4 py-3 text-left border">Nombre y Apellidos</th>
+                        <th class="px-4 py-3 text-left border">Teléfono</th>
+                        <th class="px-4 py-3 text-left border">Localidad</th>
+                        <th class="px-4 py-3 text-left border">Zona Reparto</th>
+                        <th class="px-4 py-3 text-left border">Observaciones</th>
+                        <th class="px-4 py-3 text-left border">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="listaClientes" class="divide-y divide-gray-200"></tbody>
@@ -57,17 +46,17 @@
             <h3 id="modalTitle" class="text-xl font-bold mb-4">Agregar Cliente</h3>
             <form id="clienteForm" class="space-y-4">
                 <input type="hidden" id="clienteId">
-                <input type="text" id="apodo" name="apodo" placeholder="Apodo" class="w-full border border-gray-300 rounded-lg p-2" required>
-                <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Nombre y Apellidos" class="w-full border border-gray-300 rounded-lg p-2" required>
-                <input type="text" id="telefono" name="telefono" placeholder="Teléfono" class="w-full border border-gray-300 rounded-lg p-2">
-                <input type="text" id="localidad" name="localidad" placeholder="Localidad" class="w-full border border-gray-300 rounded-lg p-2">
-                <select id="zona_reparto" name="zona_reparto" class="w-full border border-gray-300 rounded-lg p-2">
+                <input type="text" id="apodo" name="apodo" placeholder="Apodo" class="w-full border rounded-lg p-2" required>
+                <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Nombre y Apellidos" class="w-full border rounded-lg p-2" required>
+                <input type="text" id="telefono" name="telefono" placeholder="Teléfono" class="w-full border rounded-lg p-2">
+                <input type="text" id="localidad" name="localidad" placeholder="Localidad" class="w-full border rounded-lg p-2">
+                <select id="zona_reparto" name="zona_reparto" class="w-full border rounded-lg p-2">
                     <option value="Zona A">Zona A</option>
                     <option value="Zona B">Zona B</option>
                     <option value="Zona C">Zona C</option>
                     <option value="Zona D">Zona D</option>
                 </select>
-                <textarea id="observaciones" name="observaciones" placeholder="Observaciones" class="w-full border border-gray-300 rounded-lg p-2"></textarea>
+                <textarea id="observaciones" name="observaciones" placeholder="Observaciones" class="w-full border rounded-lg p-2"></textarea>
                 <div class="flex justify-end gap-2">
                     <button type="button" onclick="cerrarModal()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg">Cancelar</button>
                     <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Guardar</button>
@@ -75,5 +64,4 @@
             </form>
         </div>
     </div>
-</body>
-</html>
+</div>

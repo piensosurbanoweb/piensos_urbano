@@ -15,17 +15,16 @@ let zonas = [];
 let conductores = ["Juan", "Pedro", "Manuel"];
 let camiones = ["Camión 1", "Camión 2"];
 
-
-// Funciones de pestañas
+// --- Funciones de pestañas ---
 async function cambiarPestana(nombrePestana) {
     const contenedor = document.getElementById('contenidoPestanas');
     if (!contenedor) {
         console.error("El elemento 'contenidoPestanas' no se encontró en el DOM.");
         return;
     }
-    
+
     // Resetear el contenido del contenedor
-    contenedor.innerHTML = ''; 
+    contenedor.innerHTML = '';
 
     // Gestionar el estado activo/inactivo de los botones
     const botones = ['BaseDatos', 'NuevoPedido', 'PedidosPendientes', 'Calendario', 'GestionBBDD', 'HojaReparto'];
@@ -52,90 +51,103 @@ async function cambiarPestana(nombrePestana) {
         }
         const html = await res.text();
         contenedor.innerHTML = html;
-        
-        // Ejecutar funciones específicas de la pestaña si existen
-        switch (nombrePestana) {
-            case 'BaseDatos':
-                cargarClientes();
-                break;
-            case 'NuevoPedido':
-                cargarZonasNuevoPedido();
-                break;
-            case 'PedidosPendientes':
-                cargarPedidosPendientes();
-                break;
-            case 'Calendario':
-                cargarPedidosCalendario();
-                break;
-            case 'GestionBBDD':
-                cargarConductores();
-                cargarCamiones();
-                cargarZonas();
-                break;
-            case 'HojaReparto':
-                cargarPedidosHoja();
-                cargarZonasHoja();
-                break;
+
+        // --- Lógica específica después de inyectar el HTML ---
+        if (nombrePestana === "BaseDatos") {
+            cargarClientes();
+
+            const form = document.getElementById("clienteForm");
+            if (form) form.addEventListener("submit", guardarCliente);
+        } else if (nombrePestana === "NuevoPedido") {
+            cargarZonasNuevoPedido();
+        } else if (nombrePestana === "PedidosPendientes") {
+            cargarPedidosPendientes();
+        } else if (nombrePestana === "Calendario") {
+            cargarPedidosCalendario();
+        } else if (nombrePestana === "GestionBBDD") {
+            cargarConductores();
+            cargarCamiones();
+            cargarZonas();
+        } else if (nombrePestana === "HojaReparto") {
+            cargarPedidosHoja();
+            cargarZonasHoja();
         }
+
     } catch (err) {
         console.error(`Error al cargar la pestaña ${nombrePestana}:`, err);
     }
 }
 
 // --- Funciones de Base de Datos ---
-// --- Funciones de Base de Datos (con backend propio) ---
-
 async function cargarClientes() {
     try {
-        const response = await fetch('/clientes');
-        const clientes = await response.json();
+        document.getElementById("loading").classList.remove("hidden");
+        document.getElementById("mensajeVacio").classList.add("hidden");
 
-        const tabla = document.querySelector("#clientesTable tbody");
-        if (!tabla) return;
+        const response = await fetch('/clientes');
+        const clientesData = await response.json();
+        clientes = clientesData; // Guardar en variable global
+
+        const tabla = document.getElementById("listaClientes");
         tabla.innerHTML = "";
 
+        if (clientes.length === 0) {
+            document.getElementById("mensajeVacio").classList.remove("hidden");
+            return;
+        }
+
         clientes.forEach(cliente => {
-            const fila = `
-                <tr>
-                    <td>${cliente.id}</td>
-                    <td>${cliente.nombre}</td>
-                    <td>${cliente.email}</td>
-                    <td>${cliente.telefono}</td>
-                    <td>
-                        <button class="btn btn-warning btn-sm" onclick="abrirModal(${JSON.stringify(cliente).replace(/"/g, '&quot;')})">Editar</button>
-                        <button class="btn btn-danger btn-sm" onclick="eliminarCliente('${cliente.id}')">Eliminar</button>
-                        <button class="btn btn-info btn-sm" onclick="verHistorial('${cliente.id}')">Historial</button>
-                        <button class="btn btn-success btn-sm" onclick="nuevoPedido('${cliente.id}')">Nuevo Pedido</button>
-                    </td>
-                </tr>
+            const fila = document.createElement("tr");
+
+            fila.innerHTML = `
+                <td class="px-4 py-2 border">${cliente.apodo || ''}</td>
+                <td class="px-4 py-2 border">${cliente.nombre_completo || ''}</td>
+                <td class="px-4 py-2 border">${cliente.telefono || ''}</td>
+                <td class="px-4 py-2 border">${cliente.localidad || ''}</td>
+                <td class="px-4 py-2 border">${cliente.zona_reparto || ''}</td>
+                <td class="px-4 py-2 border">${cliente.observaciones || ''}</td>
+                <td class="px-4 py-2 border flex gap-2">
+                    <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
+                        onclick='abrirModal(${JSON.stringify(cliente)})'>
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                        onclick="eliminarCliente('${cliente.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
             `;
-            tabla.innerHTML += fila;
+
+            tabla.appendChild(fila);
         });
     } catch (error) {
         console.error("Error cargando clientes:", error);
+    } finally {
+        document.getElementById("loading").classList.add("hidden");
     }
 }
 
 async function guardarCliente(event) {
     event.preventDefault();
 
-    const id = document.getElementById("clienteId").value;
+    const id = document.getElementById("clienteId")?.value;
     const cliente = {
-        nombre: document.getElementById("nombre").value,
-        email: document.getElementById("email").value,
-        telefono: document.getElementById("telefono").value
+        apodo: document.getElementById("apodo").value,
+        nombre_completo: document.getElementById("nombre_completo").value,
+        telefono: document.getElementById("telefono").value,
+        localidad: document.getElementById("localidad").value,
+        zona_reparto: document.getElementById("zona_reparto").value,
+        observaciones: document.getElementById("observaciones").value
     };
 
     try {
         if (id) {
-            // Actualizar cliente
             await fetch(`/clientes/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(cliente)
             });
         } else {
-            // Crear cliente nuevo
             await fetch('/clientes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -143,8 +155,7 @@ async function guardarCliente(event) {
             });
         }
 
-        const modal = bootstrap.Modal.getInstance(document.getElementById("clienteModal"));
-        modal.hide();
+        cerrarModal();
         cargarClientes();
     } catch (error) {
         console.error("Error guardando cliente:", error);
@@ -152,18 +163,42 @@ async function guardarCliente(event) {
 }
 
 function abrirModal(cliente = null) {
-    document.getElementById("clienteForm").reset();
+    const form = document.getElementById("clienteForm");
+    form?.reset();
     document.getElementById("clienteId").value = "";
 
     if (cliente) {
-        document.getElementById("clienteId").value = cliente.id;
-        document.getElementById("nombre").value = cliente.nombre;
-        document.getElementById("email").value = cliente.email;
-        document.getElementById("telefono").value = cliente.telefono;
+        document.getElementById("clienteId").value = cliente.id || '';
+        document.getElementById("apodo").value = cliente.apodo || '';
+        document.getElementById("nombre_completo").value = cliente.nombre_completo || '';
+        document.getElementById("telefono").value = cliente.telefono || '';
+        document.getElementById("localidad").value = cliente.localidad || '';
+        document.getElementById("zona_reparto").value = cliente.zona_reparto || 'Zona A';
+        document.getElementById("observaciones").value = cliente.observaciones || '';
+        document.getElementById("modalTitle").innerText = "Editar Cliente";
+    } else {
+        document.getElementById("modalTitle").innerText = "Agregar Cliente";
     }
 
-    const modal = new bootstrap.Modal(document.getElementById("clienteModal"));
-    modal.show();
+    const modal = document.getElementById("clienteModal");
+    modal.classList.remove("hidden");
+    setTimeout(() => {
+        const content = modal.querySelector(".modal-content");
+        content.classList.remove("scale-95", "opacity-0");
+        content.classList.add("scale-100", "opacity-100");
+    }, 10);
+}
+
+function cerrarModal() {
+    const modal = document.getElementById("clienteModal");
+    const content = modal.querySelector(".modal-content");
+
+    content.classList.remove("scale-100", "opacity-100");
+    content.classList.add("scale-95", "opacity-0");
+
+    setTimeout(() => {
+        modal.classList.add("hidden");
+    }, 300);
 }
 
 async function eliminarCliente(id) {
@@ -176,21 +211,6 @@ async function eliminarCliente(id) {
         console.error("Error eliminando cliente:", error);
     }
 }
-
-function verHistorial(idCliente) {
-    alert("Función para ver historial del cliente " + idCliente);
-}
-
-function nuevoPedido(idCliente) {
-    alert("Función para crear un nuevo pedido para el cliente " + idCliente);
-}
-
-// --- Inicialización ---
-document.addEventListener("DOMContentLoaded", () => {
-    cargarClientes();
-    document.getElementById("clienteForm").addEventListener("submit", guardarCliente);
-});
-
 
 
 // --- Funciones de Pedidos Pendientes ---
@@ -446,18 +466,23 @@ async function cargarZonasNuevoPedido() {
 
 // Inicialización de la aplicación
 document.addEventListener('DOMContentLoaded', () => {
-    document.addEventListener('click', function(e) {
+
+    // Cerrar modal al hacer click fuera del contenido
+    document.addEventListener('click', function (e) {
         const modal = document.getElementById('clienteModal');
         if (modal && e.target === modal) {
             cerrarModal();
         }
     });
 
-    const clienteForm = document.getElementById('clienteForm');
-    if (clienteForm) {
-        clienteForm.addEventListener('submit', guardarCliente);
-    }
-    
     // Iniciar con la primera pestaña
-    cambiarPestana('BaseDatos');
+    cambiarPestana('BaseDatos').then(() => {
+        // Después de cargar la pestaña, añadir listener al formulario
+        const clienteForm = document.getElementById('clienteForm');
+        if (clienteForm) {
+            clienteForm.addEventListener('submit', guardarCliente);
+        }
+    });
+
 });
+
