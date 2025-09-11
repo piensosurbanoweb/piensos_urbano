@@ -1,27 +1,35 @@
 <div id="pestanaPedidosPendientes" class="p-6">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-800">📋 Pedidos Pendientes de Programar</h2>
-        <div class="flex items-center gap-4">
-            <div class="text-sm text-gray-600">
-                Total pendientes: <span id="totalPendientes" class="font-semibold text-red-600">0</span>
-            </div>
-            <div class="flex gap-2">
-                <select id="ordenarPendientes" onchange="ordenarPedidosPendientes()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
-                    <option value="zona">Ordenar por Zona</option>
-                    <option value="fechaPedido">Ordenar por Fecha Pedido</option>
-                    <option value="fechaEntrega">Ordenar por Fecha Entrega</option>
-                    <option value="apodo">Ordenar por Apodo</option>
-                </select>
-            </div>
-        </div>
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">
+      📋 Pedidos Pendientes de Programar
+    </h2>
+    <div class="flex items-center gap-4">
+      <div class="text-sm text-gray-600">
+        Total pendientes:
+        <span id="totalPendientes" class="font-semibold text-red-600">0</span>
+      </div>
+      <div class="flex gap-2">
+        <select
+          id="ordenarPendientes"
+          class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="zona">Ordenar por Zona</option>
+          <option value="fechaPedido">Ordenar por Fecha Pedido</option>
+          <option value="fechaEntrega">Ordenar por Fecha Entrega</option>
+          <option value="apodo">Ordenar por Apodo</option>
+        </select>
+      </div>
     </div>
+  </div>
 
-    <div id="listaPedidosPendientes" class="space-y-4">
-        </div>
+  <div id="listaPedidosPendientes" class="space-y-4"></div>
 
-    <div id="mensajeVacioPendientes" class="text-center py-12 text-gray-500 hidden">
-        <div class="text-4xl mb-4">✅</div>
-        <p class="text-lg">No hay pedidos pendientes</p>
-        <p class="text-sm">Todos los pedidos han sido programados</p>
-    </div>
+  <div
+    id="mensajeVacioPendientes"
+    class="text-center py-12 text-gray-500 hidden"
+  >
+    <div class="text-4xl mb-4">✅</div>
+    <p class="text-lg">No hay pedidos pendientes</p>
+    <p class="text-sm">Todos los pedidos han sido programados</p>
+  </div>
 </div>

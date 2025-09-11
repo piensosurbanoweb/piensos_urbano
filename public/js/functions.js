@@ -599,5 +599,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    const ordenarPendientes = document.getElementById('ordenarPendientes');
+    if (ordenarPendientes) {
+        ordenarPendientes.addEventListener('change', ordenarPedidosPendientes);
+    }
+
 });
 
