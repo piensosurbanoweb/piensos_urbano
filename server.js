@@ -99,6 +99,23 @@ app.post("/pedidos_historial", async (req, res) => {
   }
 });
 
+// --- PEDIDOS REGISTRADOS --
+app.post("/pedidos", async (req, res) => {
+  try {
+    const { cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones } = req.body;
+    const result = await pool.query(
+      `INSERT INTO pedidos (cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Error al insertar pedido" });
+  }
+});
+
+
 // --- PEDIDOS PENDIENTES ---
 app.get("/pedidos_pendientes", async (req, res) => {
   try {
@@ -287,6 +304,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
 
 // Iniciar servidor
 const PORT = process.env.PORT || 3000;
