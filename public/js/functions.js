@@ -228,67 +228,50 @@ async function eliminarCliente(id) {
 
 // Cargar clientes para autocompletado
 async function cargarClientesParaAutocomplete() {
-    try {
-        const res = await fetch('/clientes');
-        const clientes = await res.json();
-        const apodoInput = document.getElementById('apodoAutoComplete');
-        const autocompleteSuggestions = document.getElementById('autocompleteSuggestions');
-        
-        if (!apodoInput || !autocompleteSuggestions) return;
+    const apodoInput = document.getElementById('apodoAutoComplete');
+    const autocompleteSuggestions = document.getElementById('autocompleteSuggestions');
+    if (!apodoInput) return;
 
-        apodoInput.addEventListener('input', () => {
-            const query = apodoInput.value.toLowerCase();
-            autocompleteSuggestions.innerHTML = '';
-            if (query.length > 0) {
-                const matches = clientes.filter(c => c.apodo.toLowerCase().includes(query));
-                if (matches.length > 0) {
-                    matches.forEach(cliente => {
-                        const li = document.createElement('li');
-                        li.textContent = cliente.apodo;
-                        li.classList.add('cursor-pointer', 'px-4', 'py-2', 'hover:bg-gray-200');
-                        li.addEventListener('click', () => {
-                            apodoInput.value = cliente.apodo;
-                            clienteSeleccionado = cliente;
-                            rellenarCamposCliente(cliente);
-                            autocompleteSuggestions.classList.add('hidden');
-                        });
-                        autocompleteSuggestions.appendChild(li);
-                    });
-                    autocompleteSuggestions.classList.remove('hidden');
-                } else {
-                    autocompleteSuggestions.classList.add('hidden');
-                }
-            } else {
+    const res = await fetch('/clientes');
+    const clientes = await res.json();
+
+    apodoInput.addEventListener('input', () => {
+        const query = apodoInput.value.toLowerCase();
+        autocompleteSuggestions.innerHTML = '';
+        if (!query) return autocompleteSuggestions.classList.add('hidden');
+
+        const matches = clientes.filter(c => c.apodo.toLowerCase().includes(query));
+        if (matches.length === 0) return autocompleteSuggestions.classList.add('hidden');
+
+        matches.forEach(cliente => {
+            const li = document.createElement('li');
+            li.textContent = cliente.apodo;
+            li.classList.add('cursor-pointer', 'px-4', 'py-2', 'hover:bg-gray-200');
+            li.addEventListener('click', () => {
+                apodoInput.value = cliente.apodo;
+                clienteSeleccionado = cliente;
+                rellenarCamposCliente(cliente);
                 autocompleteSuggestions.classList.add('hidden');
-            }
+            });
+            autocompleteSuggestions.appendChild(li);
         });
-    } catch (err) {
-        console.error('Error al cargar clientes para autocompletado:', err);
-    }
+        autocompleteSuggestions.classList.remove('hidden');
+    });
 }
 
-// Rellenar campos con datos del cliente seleccionado
 function rellenarCamposCliente(cliente) {
     document.getElementById('nombreCompleto').value = cliente.nombre_completo;
     document.getElementById('zonaReparto').value = cliente.zona_reparto;
     document.getElementById('localidad').value = cliente.localidad;
 }
 
-// Inicializar formulario de nuevo pedido
 function inicializarFormularioPedidos() {
     const form = document.getElementById('nuevoPedidoForm');
     if (!form) return;
 
-    // Autocompletado
-    cargarClientesParaAutocomplete();
-
-    // Submit
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!clienteSeleccionado) {
-            alert('Por favor, selecciona un cliente válido del autocompletado.');
-            return;
-        }
+        if (!clienteSeleccionado) return alert('Selecciona un cliente válido.');
 
         const pedidoData = {
             cliente_id: clienteSeleccionado.id,
@@ -301,25 +284,20 @@ function inicializarFormularioPedidos() {
             observaciones: document.getElementById('observacionesPedido').value
         };
 
-        try {
-            const res = await fetch('/pedidos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(pedidoData)
-            });
+        const res = await fetch('/pedidos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(pedidoData)
+        });
 
-            if (res.ok) {
-                mostrarMensajeExito("✅ Pedido registrado con éxito!");
-            } else {
-                console.error('Error al registrar pedido');
-            }
-        } catch (err) {
-            console.error('Error de red:', err);
+        if (res.ok) {
+            mostrarMensajeExito('Pedido registrado con éxito!');
+        } else {
+            console.error('Error al registrar pedido');
         }
     });
 }
 
-// Limpiar formulario
 function limpiarFormularioPedido() {
     const form = document.getElementById('nuevoPedidoForm');
     if (form) form.reset();
@@ -328,7 +306,6 @@ function limpiarFormularioPedido() {
     if (suggestions) suggestions.classList.add('hidden');
 }
 
-// Mostrar mensaje de éxito tipo popup por 2 segundos
 function mostrarMensajeExito(texto) {
     let popup = document.getElementById('mensajeExito');
     if (!popup) {
@@ -337,14 +314,10 @@ function mostrarMensajeExito(texto) {
         popup.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded shadow-lg z-50 opacity-0 transition-opacity duration-300';
         document.body.appendChild(popup);
     }
-
     popup.textContent = texto;
-    popup.classList.remove('opacity-0');
     popup.classList.add('opacity-100');
-
     setTimeout(() => {
         popup.classList.remove('opacity-100');
-        popup.classList.add('opacity-0');
         limpiarFormularioPedido();
     }, 2000);
 }
