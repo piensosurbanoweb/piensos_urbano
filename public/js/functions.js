@@ -113,7 +113,7 @@ async function cargarClientes() {
             </button>
             <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
                 onclick="eliminarCliente('${cliente.id}')">
-                <i class="fa-solid fa-trash"></i>
+                <i class="fa-solid fa-trash"></i> 
             </button>
         </td>
     `;
