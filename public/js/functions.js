@@ -243,6 +243,7 @@ async function cargarClientesParaAutocomplete() {
                     matches.forEach(cliente => {
                         const li = document.createElement('li');
                         li.textContent = cliente.apodo;
+                        li.classList.add('cursor-pointer', 'px-4', 'py-2', 'hover:bg-gray-200');
                         li.addEventListener('click', () => {
                             apodoInput.value = cliente.apodo;
                             clienteSeleccionado = cliente;
@@ -271,7 +272,7 @@ function rellenarCamposCliente(cliente) {
     document.getElementById('localidad').value = cliente.localidad;
 }
 
-// Registrar pedido
+// Registrar pedido con mensaje popup
 function inicializarFormularioPedidos() {
     const form = document.getElementById('nuevoPedidoForm');
     if (!form) return;
@@ -300,10 +301,9 @@ function inicializarFormularioPedidos() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(pedidoData)
             });
+
             if (res.ok) {
-                alert('Pedido registrado con éxito!');
-                limpiarFormularioPedido();
-                clienteSeleccionado = null;
+                mostrarMensajeExito("Pedido registrado con éxito!");
             } else {
                 console.error('Error al registrar pedido');
             }
@@ -320,6 +320,28 @@ function limpiarFormularioPedido() {
     clienteSeleccionado = null;
     const suggestions = document.getElementById('autocompleteSuggestions');
     if (suggestions) suggestions.classList.add('hidden');
+}
+
+// Mostrar mensaje de éxito tipo popup por 2 segundos
+function mostrarMensajeExito(texto) {
+    // Crear div si no existe
+    let popup = document.getElementById('mensajeExito');
+    if (!popup) {
+        popup = document.createElement('div');
+        popup.id = 'mensajeExito';
+        popup.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded shadow-lg z-50 opacity-0 transition-opacity duration-300';
+        document.body.appendChild(popup);
+    }
+
+    popup.textContent = texto;
+    popup.classList.remove('opacity-0');
+    popup.classList.add('opacity-100');
+
+    setTimeout(() => {
+        popup.classList.remove('opacity-100');
+        popup.classList.add('opacity-0');
+        limpiarFormularioPedido(); // Limpiar formulario tras desaparecer
+    }, 2000);
 }
 
 
