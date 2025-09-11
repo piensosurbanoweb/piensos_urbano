@@ -1,200 +1,79 @@
-<!-- Contenedor principal de la pestaña de Base de Datos -->
-<div id="pestanaBaseDatos" class="p-6 bg-white rounded-xl shadow-lg">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <i class="fas fa-users text-blue-500"></i>
-            Base de Datos de Clientes
-        </h2>
-        <button onclick="abrirModal('agregar')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
-            <i class="fas fa-plus-circle"></i> Agregar Cliente
-        </button>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base de Datos de Clientes</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-6">
+
+    <!-- Contenedor principal de la pestaña de Base de Datos -->
+    <div id="pestanaBaseDatos" class="p-6 bg-white rounded-xl shadow-lg">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <i class="fas fa-users text-blue-500"></i>
+                Base de Datos de Clientes
+            </h2>
+            <button onclick="abrirModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+                <i class="fas fa-plus-circle"></i> Agregar Cliente
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse rounded-lg overflow-hidden shadow-sm">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Apodo</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Nombre y Apellidos</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Teléfono</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Localidad</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Zona Reparto</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Observaciones</th>
+                        <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="listaClientes" class="divide-y divide-gray-200"></tbody>
+            </table>
+        </div>
+
+        <div id="loading" class="text-center py-6 hidden">
+            <i class="fas fa-spinner fa-spin text-2xl text-blue-500"></i>
+            <p class="text-gray-500 mt-2">Cargando clientes...</p>
+        </div>
+        <div id="mensajeVacio" class="text-center py-12 text-gray-500 hidden">
+            <div class="text-4xl mb-4">🗄️</div>
+            <p class="text-lg">No hay clientes registrados</p>
+            <p class="text-sm">¡Agrega el primero para empezar!</p>
+        </div>
     </div>
 
-    <div class="overflow-x-auto">
-        <table class="w-full border-collapse rounded-lg overflow-hidden shadow-sm">
-            <thead class="bg-gray-100">
-                <tr>
-                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Apodo</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Nombre y Apellidos</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Teléfono</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Localidad</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Zona Reparto</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Observaciones</th>
-                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border">Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="listaClientes" class="divide-y divide-gray-200"></tbody>
-        </table>
+    <!-- Modal para Agregar/Editar Cliente -->
+    <div id="clienteModal" class="modal-container hidden fixed inset-0 bg-black bg-opacity-50 justify-center items-center z-50">
+        <div class="modal-content bg-white p-6 rounded-xl w-11/12 md:w-1/2 lg:w-1/3 shadow-2xl scale-95 opacity-0 transition-transform transition-opacity duration-300">
+            <h3 id="modalTitle" class="text-xl font-bold mb-4">Agregar Cliente</h3>
+            <form id="clienteForm" class="space-y-4">
+                <input type="hidden" id="clienteId">
+                <input type="text" id="apodo" name="apodo" placeholder="Apodo" class="w-full border border-gray-300 rounded-lg p-2" required>
+                <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Nombre y Apellidos" class="w-full border border-gray-300 rounded-lg p-2" required>
+                <input type="text" id="telefono" name="telefono" placeholder="Teléfono" class="w-full border border-gray-300 rounded-lg p-2">
+                <input type="text" id="localidad" name="localidad" placeholder="Localidad" class="w-full border border-gray-300 rounded-lg p-2">
+                <select id="zona_reparto" name="zona_reparto" class="w-full border border-gray-300 rounded-lg p-2">
+                    <option value="Zona A">Zona A</option>
+                    <option value="Zona B">Zona B</option>
+                    <option value="Zona C">Zona C</option>
+                    <option value="Zona D">Zona D</option>
+                </select>
+                <textarea id="observaciones" name="observaciones" placeholder="Observaciones" class="w-full border border-gray-300 rounded-lg p-2"></textarea>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="cerrarModal()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Guardar</button>
+                </div>
+            </form>
+        </div>
     </div>
-
-    <div id="loading" class="text-center py-6 hidden">
-        <i class="fas fa-spinner fa-spin text-2xl text-blue-500"></i>
-        <p class="text-gray-500 mt-2">Cargando clientes...</p>
-    </div>
-    <div id="mensajeVacio" class="text-center py-12 text-gray-500 hidden">
-        <div class="text-4xl mb-4">🗄️</div>
-        <p class="text-lg">No hay clientes registrados</p>
-        <p class="text-sm">¡Agrega el primero para empezar!</p>
-    </div>
-</div>
-
-<!-- Modal para Agregar/Editar Cliente -->
-<div id="clienteModal" class="modal-container hidden fixed inset-0 bg-black bg-opacity-50 justify-center items-center z-50">
-    <div class="modal-content bg-white p-6 rounded-xl w-11/12 md:w-1/2 lg:w-1/3 shadow-2xl scale-95 opacity-0 transition-transform transition-opacity duration-300">
-        <h3 id="modalTitle" class="text-xl font-bold mb-4">Agregar Cliente</h3>
-        <form id="clienteForm" class="space-y-4">
-            <input type="text" id="apodo" name="apodo" placeholder="Apodo" class="w-full border border-gray-300 rounded-lg p-2" required>
-            <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Nombre y Apellidos" class="w-full border border-gray-300 rounded-lg p-2" required>
-            <input type="text" id="telefono" name="telefono" placeholder="Teléfono" class="w-full border border-gray-300 rounded-lg p-2">
-            <input type="text" id="localidad" name="localidad" placeholder="Localidad" class="w-full border border-gray-300 rounded-lg p-2">
-            <select id="zona_reparto" name="zona_reparto" class="w-full border border-gray-300 rounded-lg p-2">
-                <option value="Zona A">Zona A</option>
-                <option value="Zona B">Zona B</option>
-                <option value="Zona C">Zona C</option>
-                <option value="Zona D">Zona D</option>
-            </select>
-            <textarea id="observaciones" name="observaciones" placeholder="Observaciones" class="w-full border border-gray-300 rounded-lg p-2"></textarea>
-            <div class="flex justify-end gap-2">
-                <button type="button" onclick="cerrarModal()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg">Cancelar</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Guardar</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-let clientes = [];
-let editandoId = null;
-
-// --- Funciones de Base de Datos ---
-async function cargarClientes() {
-    try {
-        const res = await fetch('/clientes');
-        clientes = await res.json();
-        const lista = document.getElementById('listaClientes');
-        const mensajeVacio = document.getElementById('mensajeVacio');
-
-        lista.innerHTML = '';
-        if (clientes.length === 0) {
-            mensajeVacio.classList.remove('hidden');
-        } else {
-            mensajeVacio.classList.add('hidden');
-            clientes.forEach(cliente => {
-                const row = document.createElement('tr');
-                row.className = 'border-b hover:bg-gray-50';
-                row.innerHTML = `
-                    <td class="px-4 py-2 border">${cliente.apodo}</td>
-                    <td class="px-4 py-2 border">${cliente.nombre_completo}</td>
-                    <td class="px-4 py-2 border">${cliente.telefono || ''}</td>
-                    <td class="px-4 py-2 border">${cliente.localidad || ''}</td>
-                    <td class="px-4 py-2 border">${cliente.zona_reparto || ''}</td>
-                    <td class="px-4 py-2 border text-left">${cliente.observaciones || ''}</td>
-                    <td class="px-4 py-2 border text-center">
-                        <button onclick="abrirModal('editar', ${cliente.id})" class="text-blue-600 hover:text-blue-800 text-lg">✏️</button>
-                        <button onclick="eliminarCliente(${cliente.id})" class="text-red-600 hover:text-red-800 ml-2 text-lg">🗑️</button>
-                        <button onclick="mostrarHistorialPedidos(${cliente.id})" class="text-purple-600 hover:text-purple-800 ml-2 text-lg">📜</button>
-                        <button onclick="mostrarNuevoPedido(${cliente.id})" class="text-green-600 hover:text-green-800 ml-2 text-lg">📝</button>
-                    </td>
-                `;
-                lista.appendChild(row);
-            });
-        }
-    } catch (err) {
-        console.error('Error al cargar clientes:', err);
-    }
-}
-
-function abrirModal(modo, id = null) {
-    const modal = document.getElementById('clienteModal');
-    const form = document.getElementById('clienteForm');
-    const modalTitle = document.getElementById('modalTitle');
-
-    if (modo === 'agregar') {
-        modalTitle.textContent = 'Agregar Cliente';
-        form.reset();
-        editandoId = null;
-    } else if (modo === 'editar') {
-        modalTitle.textContent = 'Editar Cliente';
-        const cliente = clientes.find(c => c.id === id);
-        if (cliente) {
-            document.getElementById('apodo').value = cliente.apodo;
-            document.getElementById('nombre_completo').value = cliente.nombre_completo;
-            document.getElementById('telefono').value = cliente.telefono;
-            document.getElementById('localidad').value = cliente.localidad;
-            document.getElementById('zona_reparto').value = cliente.zona_reparto;
-            document.getElementById('observaciones').value = cliente.observaciones;
-            editandoId = id;
-        }
-    }
-
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    setTimeout(() => modal.querySelector('.modal-content').classList.remove('scale-95', 'opacity-0'), 10);
-}
-
-function cerrarModal() {
-    const modal = document.getElementById('clienteModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-    document.getElementById('clienteForm').reset();
-    editandoId = null;
-}
-
-async function guardarCliente(event) {
-    event.preventDefault();
-    const clienteData = {
-        apodo: document.getElementById('apodo').value,
-        nombre_completo: document.getElementById('nombre_completo').value,
-        telefono: document.getElementById('telefono').value,
-        localidad: document.getElementById('localidad').value,
-        zona_reparto: document.getElementById('zona_reparto').value,
-        observaciones: document.getElementById('observaciones').value
-    };
-
-    try {
-        let res;
-        if (editandoId) {
-            res = await fetch(`/clientes/${editandoId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(clienteData)
-            });
-        } else {
-            res = await fetch('/clientes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(clienteData)
-            });
-        }
-        if (res.ok) {
-            cerrarModal();
-            cargarClientes();
-        } else {
-            console.error('Error al guardar cliente');
-        }
-    } catch (err) {
-        console.error('Error de red:', err);
-    }
-}
-
-async function eliminarCliente(id) {
-    if (confirm("¿Estás seguro de que quieres eliminar este cliente?")) {
-        try {
-            const res = await fetch(`/clientes/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                cargarClientes();
-            } else {
-                console.error('Error al eliminar cliente');
-            }
-        } catch (err) {
-            console.error('Error de red:', err);
-        }
-    }
-}
-
-// Eventos
-document.getElementById('clienteForm').addEventListener('submit', guardarCliente);
-
-// Cargar clientes al inicio
-cargarClientes();
-</script>
+</body>
+</html>

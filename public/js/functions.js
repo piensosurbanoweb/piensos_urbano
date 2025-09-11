@@ -83,121 +83,115 @@ async function cambiarPestana(nombrePestana) {
 }
 
 // --- Funciones de Base de Datos ---
+// --- Funciones de Base de Datos (con backend propio) ---
+
 async function cargarClientes() {
     try {
-        const res = await fetch('/clientes');
-        clientes = await res.json();
-        const lista = document.getElementById('listaClientes');
-        if (!lista) return;
+        const response = await fetch('/clientes');
+        const clientes = await response.json();
 
-        lista.innerHTML = '';
+        const tabla = document.querySelector("#clientesTable tbody");
+        if (!tabla) return;
+        tabla.innerHTML = "";
+
         clientes.forEach(cliente => {
-            const row = document.createElement('tr');
-            row.className = 'border-b hover:bg-gray-50';
-            row.innerHTML = `
-                <td class="px-4 py-2 border">${cliente.apodo}</td>
-                <td class="px-4 py-2 border">${cliente.nombre_completo}</td>
-                <td class="px-4 py-2 border">${cliente.telefono}</td>
-                <td class="px-4 py-2 border">${cliente.localidad}</td>
-                <td class="px-4 py-2 border">${cliente.zona_reparto}</td>
-                <td class="px-4 py-2 border text-left">${cliente.observaciones || ''}</td>
-                <td class="px-4 py-2 border text-center">
-                    <button onclick="abrirModal('editar', ${cliente.id})" class="text-blue-600 hover:text-blue-800 text-lg">✏️</button>
-                    <button onclick="eliminarCliente(${cliente.id})" class="text-red-600 hover:text-red-800 ml-2 text-lg">🗑️</button>
-                    <button onclick="mostrarHistorialPedidos(${cliente.id})" class="text-purple-600 hover:text-purple-800 ml-2 text-lg">📜</button>
-                    <button onclick="mostrarNuevoPedido(${cliente.id})" class="text-green-600 hover:text-green-800 ml-2 text-lg">📝</button>
-                </td>
+            const fila = `
+                <tr>
+                    <td>${cliente.id}</td>
+                    <td>${cliente.nombre}</td>
+                    <td>${cliente.email}</td>
+                    <td>${cliente.telefono}</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" onclick="abrirModal(${JSON.stringify(cliente).replace(/"/g, '&quot;')})">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarCliente('${cliente.id}')">Eliminar</button>
+                        <button class="btn btn-info btn-sm" onclick="verHistorial('${cliente.id}')">Historial</button>
+                        <button class="btn btn-success btn-sm" onclick="nuevoPedido('${cliente.id}')">Nuevo Pedido</button>
+                    </td>
+                </tr>
             `;
-            lista.appendChild(row);
+            tabla.innerHTML += fila;
         });
-    } catch (err) {
-        console.error('Error al cargar clientes:', err);
+    } catch (error) {
+        console.error("Error cargando clientes:", error);
     }
-}
-
-function abrirModal(modo, id = null) {
-    const modal = document.getElementById('clienteModal');
-    const form = document.getElementById('clienteForm');
-    const modalTitle = document.getElementById('modalTitle');
-    
-    if (modo === 'agregar') {
-        modalTitle.textContent = 'Agregar Cliente';
-        form.reset();
-        editandoId = null;
-    } else { // modo 'editar'
-        modalTitle.textContent = 'Editar Cliente';
-        const cliente = clientes.find(c => c.id === id);
-        if (cliente) {
-            document.getElementById('apodo').value = cliente.apodo;
-            document.getElementById('nombre_completo').value = cliente.nombre_completo;
-            document.getElementById('telefono').value = cliente.telefono;
-            document.getElementById('localidad').value = cliente.localidad;
-            document.getElementById('zona_reparto').value = cliente.zona_reparto;
-            document.getElementById('observaciones').value = cliente.observaciones;
-            editandoId = id;
-        }
-    }
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-}
-
-function cerrarModal() {
-    const modal = document.getElementById('clienteModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-    document.getElementById('clienteForm').reset();
-    editandoId = null;
 }
 
 async function guardarCliente(event) {
     event.preventDefault();
-    const apodo = document.getElementById('apodo').value;
-    const nombre_completo = document.getElementById('nombre_completo').value;
-    const telefono = document.getElementById('telefono').value;
-    const localidad = document.getElementById('localidad').value;
-    const zona_reparto = document.getElementById('zona_reparto').value;
-    const observaciones = document.getElementById('observaciones').value;
-    const clienteData = { apodo, nombre_completo, telefono, localidad, zona_reparto, observaciones };
+
+    const id = document.getElementById("clienteId").value;
+    const cliente = {
+        nombre: document.getElementById("nombre").value,
+        email: document.getElementById("email").value,
+        telefono: document.getElementById("telefono").value
+    };
+
     try {
-        let res;
-        if (editandoId) {
-            res = await fetch(`/clientes/${editandoId}`, {
+        if (id) {
+            // Actualizar cliente
+            await fetch(`/clientes/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(clienteData)
+                body: JSON.stringify(cliente)
             });
         } else {
-            res = await fetch('/clientes', {
+            // Crear cliente nuevo
+            await fetch('/clientes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(clienteData)
+                body: JSON.stringify(cliente)
             });
         }
-        if (res.ok) {
-            cerrarModal();
-            cargarClientes();
-        } else {
-            console.error('Error al guardar cliente');
-        }
-    } catch (err) {
-        console.error('Error de red:', err);
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById("clienteModal"));
+        modal.hide();
+        cargarClientes();
+    } catch (error) {
+        console.error("Error guardando cliente:", error);
     }
 }
 
+function abrirModal(cliente = null) {
+    document.getElementById("clienteForm").reset();
+    document.getElementById("clienteId").value = "";
+
+    if (cliente) {
+        document.getElementById("clienteId").value = cliente.id;
+        document.getElementById("nombre").value = cliente.nombre;
+        document.getElementById("email").value = cliente.email;
+        document.getElementById("telefono").value = cliente.telefono;
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById("clienteModal"));
+    modal.show();
+}
+
 async function eliminarCliente(id) {
-    if (confirm("¿Estás seguro de que quieres eliminar este cliente?")) {
-        try {
-            const res = await fetch(`/clientes/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                cargarClientes();
-            } else {
-                console.error('Error al eliminar cliente');
-            }
-        } catch (err) {
-            console.error('Error de red:', err);
-        }
+    if (!confirm("¿Seguro que deseas eliminar este cliente?")) return;
+
+    try {
+        await fetch(`/clientes/${id}`, { method: 'DELETE' });
+        cargarClientes();
+    } catch (error) {
+        console.error("Error eliminando cliente:", error);
     }
 }
+
+function verHistorial(idCliente) {
+    alert("Función para ver historial del cliente " + idCliente);
+}
+
+function nuevoPedido(idCliente) {
+    alert("Función para crear un nuevo pedido para el cliente " + idCliente);
+}
+
+// --- Inicialización ---
+document.addEventListener("DOMContentLoaded", () => {
+    cargarClientes();
+    document.getElementById("clienteForm").addEventListener("submit", guardarCliente);
+});
+
+
 
 // --- Funciones de Pedidos Pendientes ---
 async function cargarPedidosPendientes() {
