@@ -63,7 +63,7 @@ async function cambiarPestana(nombrePestana) {
             cargarZonasNuevoPedido();
             cargarClientesParaAutocomplete();
             inicializarFormularioPedidos();
-            
+
         }
 
         if (nombrePestana === "PedidosPendientes") {
@@ -284,11 +284,12 @@ function inicializarFormularioPedidos() {
             observaciones: document.getElementById('observacionesPedido').value
         };
 
-        const res = await fetch('/pedidos', {
+        const res = await fetch('https://piensos-urbano.onrender.com/pedidos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(pedidoData)
         });
+
 
         if (res.ok) {
             mostrarMensajeExito('Pedido registrado con éxito!');
