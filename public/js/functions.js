@@ -61,7 +61,7 @@ async function cambiarPestana(nombrePestana) {
 
         if (nombrePestana === "NuevoPedido") {
             cargarClientesParaAutocomplete();
-            inicializarFormularioPedidos(); // función que resetea el formulario y añade event listeners
+            inicializarFormularioPedidos();
         }
 
         if (nombrePestana === "PedidosPendientes") {
@@ -224,7 +224,7 @@ async function eliminarCliente(id) {
 
 // --- Funciones de Nuevo Pedido ---
 
-// Función para cargar clientes y autocompletado
+// Cargar clientes para autocompletado
 async function cargarClientesParaAutocomplete() {
     try {
         const res = await fetch('/clientes');
@@ -232,7 +232,7 @@ async function cargarClientesParaAutocomplete() {
         const apodoInput = document.getElementById('apodoAutoComplete');
         const autocompleteSuggestions = document.getElementById('autocompleteSuggestions');
         
-        if (!apodoInput) return;
+        if (!apodoInput || !autocompleteSuggestions) return;
 
         apodoInput.addEventListener('input', () => {
             const query = apodoInput.value.toLowerCase();
@@ -272,11 +272,15 @@ function rellenarCamposCliente(cliente) {
     document.getElementById('localidad').value = cliente.localidad;
 }
 
-// Registrar pedido con mensaje popup
+// Inicializar formulario de nuevo pedido
 function inicializarFormularioPedidos() {
     const form = document.getElementById('nuevoPedidoForm');
     if (!form) return;
 
+    // Autocompletado
+    cargarClientesParaAutocomplete();
+
+    // Submit
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!clienteSeleccionado) {
@@ -303,7 +307,7 @@ function inicializarFormularioPedidos() {
             });
 
             if (res.ok) {
-                mostrarMensajeExito("Pedido registrado con éxito!");
+                mostrarMensajeExito("✅ Pedido registrado con éxito!");
             } else {
                 console.error('Error al registrar pedido');
             }
@@ -324,7 +328,6 @@ function limpiarFormularioPedido() {
 
 // Mostrar mensaje de éxito tipo popup por 2 segundos
 function mostrarMensajeExito(texto) {
-    // Crear div si no existe
     let popup = document.getElementById('mensajeExito');
     if (!popup) {
         popup = document.createElement('div');
@@ -340,10 +343,9 @@ function mostrarMensajeExito(texto) {
     setTimeout(() => {
         popup.classList.remove('opacity-100');
         popup.classList.add('opacity-0');
-        limpiarFormularioPedido(); // Limpiar formulario tras desaparecer
+        limpiarFormularioPedido();
     }, 2000);
 }
-
 
 // --- Funciones de Pedidos Pendientes ---
 async function cargarPedidosPendientes() {
