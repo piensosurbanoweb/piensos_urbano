@@ -71,6 +71,43 @@ app.delete("/clientes/:id", async (req, res) => {
   }
 });
 
+
+// --- PEDIDOS REGISTRADOS --
+// --- PEDIDOS ---
+app.post("/pedidos", async (req, res) => {
+    try {
+        const {
+            cliente_id,
+            apodo_cliente,
+            tipo,
+            dia_semana,
+            cantidad,
+            producto,
+            fecha_entrega,
+            observaciones
+        } = req.body;
+
+        // Convertimos strings vacíos en null si la columna lo permite
+        const diaSemanaDB = dia_semana || null;
+        const observacionesDB = observaciones || null;
+
+        const result = await pool.query(
+            `INSERT INTO pedidos 
+            (cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+            [cliente_id, apodo_cliente, tipo, diaSemanaDB, cantidad, producto, fecha_entrega, observacionesDB]
+        );
+
+        console.log('Pedido insertado:', result.rows[0]);
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error al insertar pedido:', err);
+        res.status(500).json({ error: "Error al insertar pedido" });
+    }
+});
+
+
+
 // --- HISTORIAL DE PEDIDOS ---
 app.get("/pedidos_historial/:cliente_id", async (req, res) => {
   try {
@@ -96,22 +133,6 @@ app.post("/pedidos_historial", async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: "Error al insertar pedido historial" });
-  }
-});
-
-// --- PEDIDOS REGISTRADOS --
-app.post("/pedidos", async (req, res) => {
-  try {
-    const { cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones } = req.body;
-    const result = await pool.query(
-      `INSERT INTO pedidos (cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones]
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: "Error al insertar pedido" });
   }
 });
 

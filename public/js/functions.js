@@ -277,14 +277,12 @@ function inicializarFormularioPedidos() {
             cliente_id: clienteSeleccionado.id,
             apodo_cliente: clienteSeleccionado.apodo,
             tipo: document.getElementById('tipoPedido').value,
-            dia_semana: document.getElementById('diaSemana')?.value || '',
-            cantidad: parseInt(document.getElementById('cantidad').value), // ✅ convertir a número
+            dia_semana: document.getElementById('diaSemana')?.value || null,
+            cantidad: parseInt(document.getElementById('cantidad').value),
             producto: document.getElementById('producto').value,
             fecha_entrega: document.getElementById('fechaEntregaNuevo').value,
-            observaciones: document.getElementById('observacionesPedido').value
+            observaciones: document.getElementById('observacionesPedido').value || null
         };
-
-        console.log('Datos que se envían al backend:', pedidoData); // ✅ para depuración
 
         try {
             const res = await fetch('https://piensos-urbano.onrender.com/pedidos', {
@@ -293,16 +291,14 @@ function inicializarFormularioPedidos() {
                 body: JSON.stringify(pedidoData)
             });
 
-            if (res.ok) {
-                mostrarMensajeExito('Pedido registrado con éxito!');
-            } else {
-                const error = await res.json();
-                console.error('Error al registrar pedido:', error);
-                alert('Error al registrar pedido. Revisa la consola.');
-            }
+            if (!res.ok) throw new Error('Error al registrar pedido');
+
+            const nuevoPedido = await res.json();
+            console.log('Pedido registrado:', nuevoPedido);
+            mostrarMensajeExito('Pedido registrado con éxito!');
         } catch (err) {
-            console.error('Error de red:', err);
-            alert('Error de red al registrar pedido.');
+            console.error('Error al registrar pedido:', err);
+            alert('No se pudo registrar el pedido. Revisa la consola.');
         }
     });
 }
