@@ -60,8 +60,10 @@ async function cambiarPestana(nombrePestana) {
         }
 
         if (nombrePestana === "NuevoPedido") {
+            cargarZonasNuevoPedido();
             cargarClientesParaAutocomplete();
             inicializarFormularioPedidos();
+            
         }
 
         if (nombrePestana === "PedidosPendientes") {
