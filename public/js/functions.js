@@ -278,26 +278,35 @@ function inicializarFormularioPedidos() {
             apodo_cliente: clienteSeleccionado.apodo,
             tipo: document.getElementById('tipoPedido').value,
             dia_semana: document.getElementById('diaSemana')?.value || '',
-            cantidad: document.getElementById('cantidad').value,
+            cantidad: parseInt(document.getElementById('cantidad').value), // ✅ convertir a número
             producto: document.getElementById('producto').value,
             fecha_entrega: document.getElementById('fechaEntregaNuevo').value,
             observaciones: document.getElementById('observacionesPedido').value
         };
 
-        const res = await fetch('https://piensos-urbano.onrender.com/pedidos', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(pedidoData)
-        });
+        console.log('Datos que se envían al backend:', pedidoData); // ✅ para depuración
 
+        try {
+            const res = await fetch('https://piensos-urbano.onrender.com/pedidos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(pedidoData)
+            });
 
-        if (res.ok) {
-            mostrarMensajeExito('Pedido registrado con éxito!');
-        } else {
-            console.error('Error al registrar pedido');
+            if (res.ok) {
+                mostrarMensajeExito('Pedido registrado con éxito!');
+            } else {
+                const error = await res.json();
+                console.error('Error al registrar pedido:', error);
+                alert('Error al registrar pedido. Revisa la consola.');
+            }
+        } catch (err) {
+            console.error('Error de red:', err);
+            alert('Error de red al registrar pedido.');
         }
     });
 }
+
 
 function limpiarFormularioPedido() {
     const form = document.getElementById('nuevoPedidoForm');
