@@ -100,8 +100,8 @@ app.post("/pedidos", async (req, res) => {
 
     // 3. Obtener datos del cliente para la tabla 'pedidos_pendientes'
     const clienteResult = await client.query(
-        "SELECT apodo, nombre_completo, telefono, localidad, zona_reparto FROM clientes WHERE id = $1",
-        [cliente_id]
+      "SELECT apodo, nombre_completo, telefono, localidad, zona_reparto FROM clientes WHERE id = $1",
+      [cliente_id]
     );
     const clienteData = clienteResult.rows[0];
 
@@ -159,7 +159,9 @@ app.post("/pedidos_historial", async (req, res) => {
 // --- PEDIDOS PENDIENTES ---
 app.get("/pedidos/pendientes", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM pedidos_pendientes ORDER BY fecha_programacion DESC");
+    const result = await pool.query(
+      "SELECT * FROM pedidos WHERE estado = 'pendiente' ORDER BY fecha_creacion DESC"
+    );
     res.json(result.rows);
   } catch (err) {
     console.error('Error al obtener pedidos pendientes:', err.message);
@@ -198,14 +200,18 @@ app.delete("/pedidos_pendientes/:id", async (req, res) => {
 app.put("/pedidos/programar/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    // Asumiendo que el pedido a programar viene de la tabla de pendientes
-    await pool.query("DELETE FROM pedidos_pendientes WHERE id = $1", [id]); 
+    await pool.query(
+      "UPDATE pedidos SET estado = 'programado' WHERE id = $1",
+      [id]
+    );
     res.json({ success: true });
   } catch (err) {
     console.error('Error al marcar pedido como programado:', err.message);
     res.status(500).json({ error: "Error al actualizar el estado del pedido" });
   }
 });
+
+
 // --- PEDIDOS CALENDARIO ---
 app.get("/pedidos_calendario", async (req, res) => {
   try {
