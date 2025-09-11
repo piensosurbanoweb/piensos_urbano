@@ -10,6 +10,20 @@ CREATE TABLE clientes (
     observaciones TEXT
 );
 
+CREATE TABLE pedidos (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    cliente_id INT NOT NULL,
+    apodo_cliente VARCHAR(100),
+    tipo VARCHAR(50),
+    dia_semana VARCHAR(20),
+    cantidad DECIMAL(10, 2),
+    producto VARCHAR(255),
+    fecha_entrega DATE,
+    observaciones TEXT,
+    fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
+);
+
 CREATE TABLE pedidos_historial (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     cliente_id INT NOT NULL,

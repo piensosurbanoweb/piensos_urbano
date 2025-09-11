@@ -72,8 +72,7 @@ app.delete("/clientes/:id", async (req, res) => {
 });
 
 
-// --- PEDIDOS REGISTRADOS --
-// --- PEDIDOS (Integración con Historial y Pendientes) ---
+// --- PEDIDOS --
 app.post("/pedidos", async (req, res) => {
   const client = await pool.connect();
   try {
@@ -158,11 +157,12 @@ app.post("/pedidos_historial", async (req, res) => {
 
 
 // --- PEDIDOS PENDIENTES ---
-app.get("/pedidos_pendientes", async (req, res) => {
+app.get("/pedidos/pendientes", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM pedidos_pendientes ORDER BY fecha_programacion DESC");
     res.json(result.rows);
   } catch (err) {
+    console.error('Error al obtener pedidos pendientes:', err.message);
     res.status(500).json({ error: "Error al obtener pedidos pendientes" });
   }
 });
@@ -177,6 +177,7 @@ app.post("/pedidos_pendientes", async (req, res) => {
     );
     res.json(result.rows[0]);
   } catch (err) {
+    console.error('Error al insertar pedido pendiente:', err.message);
     res.status(500).json({ error: "Error al insertar pedido pendiente" });
   }
 });
@@ -187,10 +188,24 @@ app.delete("/pedidos_pendientes/:id", async (req, res) => {
     await pool.query("DELETE FROM pedidos_pendientes WHERE id=$1", [id]);
     res.json({ success: true });
   } catch (err) {
+    console.error('Error al eliminar pedido pendiente:', err.message);
     res.status(500).json({ error: "Error al eliminar pedido pendiente" });
   }
 });
 
+
+// --- MARCAR PEDIDO COMO PROGRAMADO ---
+app.put("/pedidos/programar/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Asumiendo que el pedido a programar viene de la tabla de pendientes
+    await pool.query("DELETE FROM pedidos_pendientes WHERE id = $1", [id]); 
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error al marcar pedido como programado:', err.message);
+    res.status(500).json({ error: "Error al actualizar el estado del pedido" });
+  }
+});
 // --- PEDIDOS CALENDARIO ---
 app.get("/pedidos_calendario", async (req, res) => {
   try {
