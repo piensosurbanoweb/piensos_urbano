@@ -55,20 +55,27 @@ async function cambiarPestana(nombrePestana) {
         // --- Lógica específica después de inyectar el HTML ---
         if (nombrePestana === "BaseDatos") {
             cargarClientes();
-
             const form = document.getElementById("clienteForm");
             if (form) form.addEventListener("submit", guardarCliente);
-        } else if (nombrePestana === "NuevoPedido") {
-            cargarZonasNuevoPedido();
-        } else if (nombrePestana === "PedidosPendientes") {
+        }
+
+        if (nombrePestana === "NuevoPedido") {
+            cargarClientesParaAutocomplete();
+            inicializarFormularioPedidos(); // función que resetea el formulario y añade event listeners
+        }
+
+        if (nombrePestana === "PedidosPendientes") {
             cargarPedidosPendientes();
-        } else if (nombrePestana === "Calendario") {
+        }
+        if (nombrePestana === "Calendario") {
             cargarPedidosCalendario();
-        } else if (nombrePestana === "GestionBBDD") {
+        }
+        if (nombrePestana === "GestionBBDD") {
             cargarConductores();
             cargarCamiones();
             cargarZonas();
-        } else if (nombrePestana === "HojaReparto") {
+        }
+        if (nombrePestana === "HojaReparto") {
             cargarPedidosHoja();
             cargarZonasHoja();
         }
@@ -77,6 +84,7 @@ async function cambiarPestana(nombrePestana) {
         console.error(`Error al cargar la pestaña ${nombrePestana}:`, err);
     }
 }
+
 
 // --- Funciones de Base de Datos ---
 async function cargarClientes() {
@@ -211,6 +219,107 @@ async function eliminarCliente(id) {
     } catch (error) {
         console.error("Error eliminando cliente:", error);
     }
+}
+
+
+// --- Funciones de Nuevo Pedido ---
+
+// Función para cargar clientes y autocompletado
+async function cargarClientesParaAutocomplete() {
+    try {
+        const res = await fetch('/clientes');
+        const clientes = await res.json();
+        const apodoInput = document.getElementById('apodoAutoComplete');
+        const autocompleteSuggestions = document.getElementById('autocompleteSuggestions');
+        
+        if (!apodoInput) return;
+
+        apodoInput.addEventListener('input', () => {
+            const query = apodoInput.value.toLowerCase();
+            autocompleteSuggestions.innerHTML = '';
+            if (query.length > 0) {
+                const matches = clientes.filter(c => c.apodo.toLowerCase().includes(query));
+                if (matches.length > 0) {
+                    matches.forEach(cliente => {
+                        const li = document.createElement('li');
+                        li.textContent = cliente.apodo;
+                        li.addEventListener('click', () => {
+                            apodoInput.value = cliente.apodo;
+                            clienteSeleccionado = cliente;
+                            rellenarCamposCliente(cliente);
+                            autocompleteSuggestions.classList.add('hidden');
+                        });
+                        autocompleteSuggestions.appendChild(li);
+                    });
+                    autocompleteSuggestions.classList.remove('hidden');
+                } else {
+                    autocompleteSuggestions.classList.add('hidden');
+                }
+            } else {
+                autocompleteSuggestions.classList.add('hidden');
+            }
+        });
+    } catch (err) {
+        console.error('Error al cargar clientes para autocompletado:', err);
+    }
+}
+
+// Rellenar campos con datos del cliente seleccionado
+function rellenarCamposCliente(cliente) {
+    document.getElementById('nombreCompleto').value = cliente.nombre_completo;
+    document.getElementById('zonaReparto').value = cliente.zona_reparto;
+    document.getElementById('localidad').value = cliente.localidad;
+}
+
+// Registrar pedido
+function inicializarFormularioPedidos() {
+    const form = document.getElementById('nuevoPedidoForm');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!clienteSeleccionado) {
+            alert('Por favor, selecciona un cliente válido del autocompletado.');
+            return;
+        }
+
+        const pedidoData = {
+            cliente_id: clienteSeleccionado.id,
+            apodo_cliente: clienteSeleccionado.apodo,
+            tipo: document.getElementById('tipoPedido').value,
+            dia_semana: document.getElementById('diaSemana')?.value || '',
+            cantidad: document.getElementById('cantidad').value,
+            producto: document.getElementById('producto').value,
+            fecha_entrega: document.getElementById('fechaEntregaNuevo').value,
+            observaciones: document.getElementById('observacionesPedido').value
+        };
+
+        try {
+            const res = await fetch('/pedidos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(pedidoData)
+            });
+            if (res.ok) {
+                alert('Pedido registrado con éxito!');
+                limpiarFormularioPedido();
+                clienteSeleccionado = null;
+            } else {
+                console.error('Error al registrar pedido');
+            }
+        } catch (err) {
+            console.error('Error de red:', err);
+        }
+    });
+}
+
+// Limpiar formulario
+function limpiarFormularioPedido() {
+    const form = document.getElementById('nuevoPedidoForm');
+    if (form) form.reset();
+    clienteSeleccionado = null;
+    const suggestions = document.getElementById('autocompleteSuggestions');
+    if (suggestions) suggestions.classList.add('hidden');
 }
 
 
