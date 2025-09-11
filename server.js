@@ -73,37 +73,57 @@ app.delete("/clientes/:id", async (req, res) => {
 
 
 // --- PEDIDOS REGISTRADOS --
-// --- PEDIDOS ---
+// --- PEDIDOS (Integración con Historial y Pendientes) ---
 app.post("/pedidos", async (req, res) => {
-    try {
-        const {
-            cliente_id,
-            apodo_cliente,
-            tipo,
-            dia_semana,
-            cantidad,
-            producto,
-            fecha_entrega,
-            observaciones
-        } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN'); // Inicia una transacción
 
-        // Convertimos strings vacíos en null si la columna lo permite
-        const diaSemanaDB = dia_semana || null;
-        const observacionesDB = observaciones || null;
+    const { cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones } = req.body;
 
-        const result = await pool.query(
-            `INSERT INTO pedidos 
-            (cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-            [cliente_id, apodo_cliente, tipo, diaSemanaDB, cantidad, producto, fecha_entrega, observacionesDB]
-        );
+    // 1. Insertar en la tabla 'pedidos' (la tabla principal)
+    const pedidoResult = await client.query(
+      `INSERT INTO pedidos (cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, fecha_creacion`,
+      [cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones]
+    );
+    const newPedidoId = pedidoResult.rows[0].id;
+    const fechaPedido = pedidoResult.rows[0].fecha_creacion;
 
-        console.log('Pedido insertado:', result.rows[0]);
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error('Error al insertar pedido:', err);
-        res.status(500).json({ error: "Error al insertar pedido" });
-    }
+    // 2. Insertar en la tabla 'pedidos_historial'
+    const descripcion = `${cantidad} de ${producto} - ${apodo_cliente}`;
+    const historialResult = await client.query(
+      `INSERT INTO pedidos_historial (cliente_id, descripcion, fecha_pedido, fecha_entrega, observaciones)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [cliente_id, descripcion, fechaPedido, fecha_entrega, observaciones]
+    );
+    const historialId = historialResult.rows[0].id;
+
+    // 3. Obtener datos del cliente para la tabla 'pedidos_pendientes'
+    const clienteResult = await client.query(
+        "SELECT apodo, nombre_completo, telefono, localidad, zona_reparto FROM clientes WHERE id = $1",
+        [cliente_id]
+    );
+    const clienteData = clienteResult.rows[0];
+
+    // 4. Insertar en la tabla 'pedidos_pendientes'
+    const pedidoPendiente = `${cantidad} de ${producto}`;
+    await client.query(
+      `INSERT INTO pedidos_pendientes (historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [historialId, cliente_id, clienteData.apodo, clienteData.nombre_completo, clienteData.telefono, clienteData.localidad, clienteData.zona_reparto, pedidoPendiente, fecha_entrega, observaciones]
+    );
+
+    await client.query('COMMIT'); // Confirma todas las inserciones
+    res.json({ success: true, message: "Pedido registrado en todas las tablas." });
+
+  } catch (err) {
+    await client.query('ROLLBACK'); // Si algo falla, revierte todos los cambios
+    console.error('Error en la transacción de pedidos:', err.message);
+    res.status(500).json({ error: "Error al registrar el pedido", details: err.message });
+  } finally {
+    client.release();
+  }
 });
 
 
