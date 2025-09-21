@@ -108,7 +108,7 @@
         lista.innerHTML = 'Cargando pedidos...';
         
         try {
-            const res = await fetch('/pedidos/pendientes'); // O la ruta que más te convenga
+            const res = await fetch('/pedidos_pendientes'); // O la ruta que más te convenga
             let pedidos = await res.json();
             
             if (zonaFiltro) {
