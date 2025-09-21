@@ -157,7 +157,7 @@ app.post("/pedidos_historial", async (req, res) => {
 
 
 // --- PEDIDOS PENDIENTES ---
-app.get("/pedidos/pendientes", async (req, res) => {
+app.get("/pedidos_pendientes", async (req, res) => {
   try {
     const result = await pool.query(
       "SELECT * FROM pedidos WHERE estado = 'pendiente' ORDER BY fecha_creacion DESC"
