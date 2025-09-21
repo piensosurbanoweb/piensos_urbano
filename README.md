@@ -35,7 +35,12 @@ Este documento explica cómo instalar el cliente de PostgreSQL y conectarse a la
    ```bash
    PGPASSWORD="1XHe24nwUm90KH3NfjAezbTagdzXZVOI" psql -h dpg-d2mr240gjchc73d0nivg-a.frankfurt-postgres.render.com -U piensosurbano_db_user -d piensosurbano_db -p 5432
    ```
-5. Salir de la consola de PostgreSQL. Dentro de `psql`, puedes salir con:
+
+5. Contraseña base de datos:
+   ```bash
+   1XHe24nwUm90KH3NfjAezbTagdzXZVOI
+   ```
+6. Salir de la consola de PostgreSQL. Dentro de `psql`, puedes salir con:
 
 ```sql
 \q
