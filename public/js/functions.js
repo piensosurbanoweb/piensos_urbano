@@ -330,7 +330,7 @@ function mostrarMensajeExito(texto) {
 // --- Funciones de Pedidos Pendientes ---
 async function cargarPedidosPendientes() {
     try {
-        const res = await fetch('/pedidos_pendientes');
+        const res = await fetch('/pedidos/pendientes');
         pedidosPendientes = await res.json();
         const lista = document.getElementById('listaPedidosPendientes');
         const mensajeVacio = document.getElementById('mensajeVacioPendientes');
