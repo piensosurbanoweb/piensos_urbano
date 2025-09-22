@@ -284,7 +284,7 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
       [
         pedido.historial_id,
         pedido.cliente_id,
-        pedido.dia_semana, // Asume que existe en la tabla pedidos_pendientes
+        pedido.dia_semana,
         pedido.fecha_programacion,
         pedido.observaciones,
       ]
@@ -293,7 +293,7 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
     // 3. Eliminar el pedido de la tabla de pedidos_pendientes
     await pool.query("DELETE FROM pedidos_pendientes WHERE historial_id = $1", [id]);
 
-    res.json({ success: true });
+    res.json({ success: true, fecha_reparto: pedido.fecha_programacion });
   } catch (err) {
     console.error('Error al mover el pedido al calendario:', err.message);
     res.status(500).json({ error: "Error al programar el pedido en el calendario" });
