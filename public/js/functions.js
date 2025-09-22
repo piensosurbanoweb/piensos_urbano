@@ -386,22 +386,17 @@ function ordenarPedidosPendientes() {
         if (ordenarPor === 'apodo') {
             return a.apodo.localeCompare(b.apodo);
         }
-        // Para las fechas, necesitamos crear objetos Date para compararlas correctamente
         if (ordenarPor === 'fechaEntrega') {
             const fechaA = new Date(a.fecha_programacion);
             const fechaB = new Date(b.fecha_programacion);
             return fechaA - fechaB;
         }
-        // Nota: la opción 'fechaPedido' no existe en los datos actuales,
-        // pero podrías implementarla si la incluyes en la tabla 'pedidos_pendientes'.
-        // Aquí te damos un ejemplo por si la añades.
         if (ordenarPor === 'fechaPedido') {
-             // Este campo no está en pedidos_pendientes.
-             // Deberías cambiar la lógica de tu API si necesitas este dato.
-             // Por ahora, no hará nada.
-             return 0;
+            const fechaA = new Date(a.fecha_pedido);
+            const fechaB = new Date(b.fecha_pedido);
+            return fechaA - fechaB;
         }
-        return 0; // No hace nada si el valor no coincide
+        return 0;
     });
 
     renderizarPedidosPendientes(pedidosPendientes);
