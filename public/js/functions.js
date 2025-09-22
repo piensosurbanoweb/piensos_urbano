@@ -332,42 +332,79 @@ async function cargarPedidosPendientes() {
     try {
         const res = await fetch('/pedidos/pendientes');
         pedidosPendientes = await res.json();
-        const lista = document.getElementById('listaPedidosPendientes');
-        const mensajeVacio = document.getElementById('mensajeVacioPendientes');
-        const totalPendientes = document.getElementById('totalPendientes');
-        if (!lista || !mensajeVacio || !totalPendientes) return;
-
-        lista.innerHTML = '';
-        if (pedidosPendientes.length === 0) {
-            mensajeVacio.classList.remove('hidden');
-        } else {
-            mensajeVacio.classList.add('hidden');
-            pedidosPendientes.forEach(pedido => {
-                const item = document.createElement('div');
-                item.className = 'bg-white rounded-lg shadow-sm p-4 border border-gray-200';
-                item.innerHTML = `
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-semibold text-gray-700">Pedido para ${pedido.apodo} (${pedido.localidad})</span>
-                        <div class="text-xs text-gray-500">
-                            Zona: <span class="font-medium text-gray-700">${pedido.zona}</span>
-                        </div>
-                    </div>
-                    <p class="text-gray-800 text-lg font-bold">${pedido.pedido}</p>
-                    <p class="text-sm text-gray-500 mt-1">Programado para: ${pedido.fecha_programacion}</p>
-                    <p class="text-sm text-gray-500 mt-1">Observaciones: ${pedido.observaciones || 'N/A'}</p>
-                    <div class="flex justify-end gap-2 mt-4">
-                        <button onclick="moverApendientes(${pedido.historial_id})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors duration-200">
-                            📅 Programar en Calendario
-                        </button>
-                    </div>
-                `;
-                lista.appendChild(item);
-            });
-        }
-        totalPendientes.textContent = pedidosPendientes.length;
+        renderizarPedidosPendientes(pedidosPendientes);
     } catch (err) {
         console.error('Error al cargar pedidos pendientes:', err);
     }
+}
+
+function renderizarPedidosPendientes(pedidos) {
+    const lista = document.getElementById('listaPedidosPendientes');
+    const mensajeVacio = document.getElementById('mensajeVacioPendientes');
+    const totalPendientes = document.getElementById('totalPendientes');
+    if (!lista || !mensajeVacio || !totalPendientes) return;
+
+    lista.innerHTML = '';
+    if (pedidos.length === 0) {
+        mensajeVacio.classList.remove('hidden');
+    } else {
+        mensajeVacio.classList.add('hidden');
+        pedidos.forEach(pedido => {
+            const item = document.createElement('div');
+            item.className = 'bg-white rounded-lg shadow-sm p-4 border border-gray-200';
+            // Nota: Aquí estamos usando 'fecha_programacion' de tu base de datos,
+            // que se corresponde con la opción 'Fecha Entrega' del dropdown.
+            item.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-semibold text-gray-700">Pedido para ${pedido.apodo} (${pedido.localidad})</span>
+                    <div class="text-xs text-gray-500">
+                        Zona: <span class="font-medium text-gray-700">${pedido.zona}</span>
+                    </div>
+                </div>
+                <p class="text-gray-800 text-lg font-bold">${pedido.pedido}</p>
+                <p class="text-sm text-gray-500 mt-1">Programado para: ${pedido.fecha_programacion}</p>
+                <p class="text-sm text-gray-500 mt-1">Observaciones: ${pedido.observaciones || 'N/A'}</p>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button onclick="moverApendientes(${pedido.historial_id})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors duration-200">
+                        📅 Programar en Calendario
+                    </button>
+                </div>
+            `;
+            lista.appendChild(item);
+        });
+    }
+    totalPendientes.textContent = pedidos.length;
+}
+
+function ordenarPedidosPendientes() {
+    const ordenarPor = document.getElementById('ordenarPendientes').value;
+
+    pedidosPendientes.sort((a, b) => {
+        if (ordenarPor === 'zona') {
+            return a.zona.localeCompare(b.zona);
+        }
+        if (ordenarPor === 'apodo') {
+            return a.apodo.localeCompare(b.apodo);
+        }
+        // Para las fechas, necesitamos crear objetos Date para compararlas correctamente
+        if (ordenarPor === 'fechaEntrega') {
+            const fechaA = new Date(a.fecha_programacion);
+            const fechaB = new Date(b.fecha_programacion);
+            return fechaA - fechaB;
+        }
+        // Nota: la opción 'fechaPedido' no existe en los datos actuales,
+        // pero podrías implementarla si la incluyes en la tabla 'pedidos_pendientes'.
+        // Aquí te damos un ejemplo por si la añades.
+        if (ordenarPor === 'fechaPedido') {
+             // Este campo no está en pedidos_pendientes.
+             // Deberías cambiar la lógica de tu API si necesitas este dato.
+             // Por ahora, no hará nada.
+             return 0;
+        }
+        return 0; // No hace nada si el valor no coincide
+    });
+
+    renderizarPedidosPendientes(pedidosPendientes);
 }
 
 // --- Funciones de Calendario ---
