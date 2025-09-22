@@ -1,5 +1,7 @@
 // Variables de control, declaradas solo una vez para toda la aplicación
 let editandoId = null;
+
+// Variables para el control de la vista del calendario
 let semanaActualOffset = 0;
 let vistaCalendarioActual = 'semanal';
 let diaSeleccionadoDiario = 'lunes';
@@ -403,49 +405,167 @@ function ordenarPedidosPendientes() {
 
 
 // --- Funciones de Calendario ---
+
+/**
+ * Obtiene los días de la semana actual con un desplazamiento (offset) dado.
+ * @param {number} offset - Número de semanas a desplazar (positivo para futuras, negativo para pasadas).
+ * @returns {Date[]} Un array con 7 objetos Date, uno para cada día de la semana.
+ */
+function getWeekDays(offset = 0) {
+    const today = new Date();
+    today.setDate(today.getDate() + offset * 7);
+    const day = today.getDay();
+    const startOfWeek = new Date(today.setDate(today.getDate() - day + (day === 0 ? -6 : 1))); // Lunes de la semana
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(startOfWeek);
+        date.setDate(startOfWeek.getDate() + i);
+        weekDays.push(date);
+    }
+    return weekDays;
+}
+
+/**
+ * Carga los pedidos del calendario desde el servidor.
+ */
 async function cargarPedidosCalendario() {
+    const diasSemana = getWeekDays(semanaActualOffset);
+    document.getElementById('tituloCalendario').textContent = `Semana: ${diasSemana[0].toLocaleDateString()} - ${diasSemana[6].toLocaleDateString()}`;
+
     try {
         const res = await fetch('/pedidos_calendario');
         const pedidos = await res.json();
-        pedidosCalendario = {
-            lunes: [], martes: [], miercoles: [], jueves: [], viernes: []
-        };
-        pedidos.forEach(p => {
-            const dia = p.dia_reparto.toLowerCase();
-            if (pedidosCalendario[dia]) {
-                pedidosCalendario[dia].push(p);
-            }
-        });
-        renderizarVistaCalendario();
+
+        if (vistaCalendarioActual === 'semanal') {
+            renderizarVistaSemanal(pedidos, diasSemana);
+        } else {
+            cambiarDiaDiario(); // Recarga la vista diaria si ya estamos en ella
+        }
     } catch (err) {
         console.error('Error al cargar pedidos del calendario:', err);
     }
 }
 
-function renderizarVistaCalendario() {
-    if (vistaCalendarioActual === 'semanal') {
-        const contenedor = document.getElementById('vistaSemanal');
-        if (!contenedor) return;
-        contenedor.classList.remove('hidden');
-        contenedor.innerHTML = '';
-        Object.entries(pedidosCalendario).forEach(([dia, pedidos]) => {
-            const col = document.createElement('div');
-            col.className = 'bg-white p-4 rounded-lg shadow-sm';
-            col.innerHTML = `
-                <h4 class="font-bold mb-2 text-center text-gray-800">${dia.charAt(0).toUpperCase() + dia.slice(1)}</h4>
-                <div class="space-y-2">
-                    ${pedidos.map(p => `
-                        <div class="border border-gray-200 rounded-lg p-3">
-                            <p class="text-sm font-medium">${p.pedido}</p>
-                            <p class="text-xs text-gray-600">Para: ${p.apodo}</p>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-            contenedor.appendChild(col);
-        });
+/**
+ * Renderiza la vista semanal del calendario.
+ * @param {object[]} pedidos - El array de pedidos a mostrar.
+ * @param {Date[]} diasSemana - El array de días de la semana actual.
+ */
+function renderizarVistaSemanal(pedidos, diasSemana) {
+    const contenedor = document.getElementById('vistaSemanal');
+    if (!contenedor) return;
+
+    contenedor.innerHTML = '';
+
+    diasSemana.forEach(dia => {
+        const nombreDia = new Intl.DateTimeFormat('es-ES', { weekday: 'long' }).format(dia);
+        const fechaString = dia.toISOString().split('T')[0];
+        const pedidosDelDia = pedidos.filter(p => p.fecha_reparto.startsWith(fechaString));
+
+        const columna = document.createElement('div');
+        columna.className = 'bg-white p-4 rounded-lg shadow';
+        columna.innerHTML = `
+            <h3 class="font-bold text-gray-700 capitalize">${nombreDia}</h3>
+            <p class="text-sm text-gray-500 mb-2">${dia.toLocaleDateString()}</p>
+            <div class="space-y-2">
+                ${pedidosDelDia.length > 0 ? pedidosDelDia.map(p => `
+                    <div class="bg-gray-100 p-2 rounded-md border border-gray-200 text-sm">
+                        <p class="font-semibold">${p.apodo_cliente}</p>
+                        <p>${p.producto} (${p.cantidad})</p>
+                    </div>
+                `).join('') : '<p class="text-xs text-gray-400">Sin pedidos</p>'}
+            </div>
+        `;
+        contenedor.appendChild(columna);
+    });
+}
+
+/**
+ * Cambia entre la vista semanal y diaria del calendario.
+ * @param {string} vista - 'semanal' o 'diaria'.
+ */
+function cambiarVistaCalendario(vista) {
+    vistaCalendarioActual = vista;
+    const btnSemanal = document.getElementById('btnVistaSemanal');
+    const btnDiaria = document.getElementById('btnVistaDiaria');
+    const vistaSemanalDiv = document.getElementById('vistaSemanal');
+    const vistaDiariaDiv = document.getElementById('vistaDiaria');
+
+    if (vista === 'semanal') {
+        btnSemanal.classList.replace('bg-gray-500', 'bg-blue-600');
+        btnDiaria.classList.replace('bg-blue-600', 'bg-gray-500');
+        vistaSemanalDiv.classList.remove('hidden');
+        vistaDiariaDiv.classList.add('hidden');
+    } else {
+        btnSemanal.classList.replace('bg-blue-600', 'bg-gray-500');
+        btnDiaria.classList.replace('bg-gray-500', 'bg-blue-600');
+        vistaSemanalDiv.classList.add('hidden');
+        vistaDiariaDiv.classList.remove('hidden');
     }
-    // Lógica para vista diaria se implementará más adelante
+    cargarPedidosCalendario();
+}
+
+/**
+ * Carga y muestra los pedidos para un día específico en la vista diaria.
+ */
+async function cambiarDiaDiario() {
+    const diaSeleccionado = document.getElementById('selectDiaDiario').value;
+    const listaPedidos = document.getElementById('pedidosDiarios');
+    const mensajeVacio = document.getElementById('mensajeVacioDiario');
+    if (!listaPedidos || !mensajeVacio) return;
+
+    listaPedidos.innerHTML = '';
+
+    try {
+        const res = await fetch(`/pedidos/diarios/${diaSeleccionado}`);
+        const pedidos = await res.json();
+
+        if (pedidos.length > 0) {
+            mensajeVacio.classList.add('hidden');
+            pedidos.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'bg-white p-4 rounded-lg shadow-md';
+                div.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h3 class="font-bold text-lg">${p.apodo_cliente} - ${p.producto}</h3>
+                            <p class="text-sm text-gray-600">Cantidad: ${p.cantidad}</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-500">${p.observaciones || ''}</p>
+                `;
+                listaPedidos.appendChild(div);
+            });
+        } else {
+            mensajeVacio.classList.remove('hidden');
+        }
+    } catch (err) {
+        console.error('Error al cargar pedidos diarios:', err);
+    }
+}
+
+/**
+ * Retrocede una semana en la vista del calendario.
+ */
+function semanaAnterior() {
+    semanaActualOffset--;
+    cargarPedidosCalendario();
+}
+
+/**
+ * Avanza una semana en la vista del calendario.
+ */
+function semanaSiguiente() {
+    semanaActualOffset++;
+    cargarPedidosCalendario();
+}
+
+/**
+ * Envía los pedidos del día seleccionado a la hoja de reparto.
+ */
+function enviarDiaAHojaReparto() {
+    const dia = document.getElementById('selectDiaDiario').value;
+    alert(`Se han enviado los pedidos del ${dia} a la hoja de reparto.`);
 }
 
 // --- Funciones de Gestión BBDD ---
