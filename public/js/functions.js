@@ -568,6 +568,29 @@ function enviarDiaAHojaReparto() {
     alert(`Se han enviado los pedidos del ${dia} a la hoja de reparto.`);
 }
 
+async function moverApendientes(pedidoId) {
+    try {
+        const res = await fetch(`/pedidos/mover-a-calendario/${pedidoId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!res.ok) {
+            throw new Error('No se pudo programar el pedido en el calendario.');
+        }
+
+        const data = await res.json();
+        alert(`Pedido programado en el calendario para la fecha: ${data.fecha_reparto}`);
+
+        // Redirige al calendario después de programar
+        cambiarPestana('Calendario');
+
+    } catch (err) {
+        console.error('Error al programar el pedido:', err);
+        alert('Hubo un error al intentar programar el pedido. Revisa la consola.');
+    }
+}
+
 // --- Funciones de Gestión BBDD ---
 async function cargarConductores() {
     try {

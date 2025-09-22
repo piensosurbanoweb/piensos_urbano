@@ -260,6 +260,49 @@ app.delete("/pedidos_calendario/:id", async (req, res) => {
   }
 });
 
+// Ruta para mover un pedido de pendientes a calendario
+app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Obtener el pedido de pedidos_pendientes
+    const result = await pool.query(
+      "SELECT * FROM pedidos_pendientes WHERE historial_id = $1",
+      [id]
+    );
+    const pedido = result.rows[0];
+
+    if (!pedido) {
+      return res.status(404).json({ error: "Pedido no encontrado" });
+    }
+
+    // 2. Insertar el pedido en la tabla de pedidos del calendario
+    const insertResult = await pool.query(
+      `INSERT INTO pedidos_calendario (apodo_cliente, producto, cantidad, observaciones, zona, localidad, fecha_reparto) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING fecha_reparto`,
+      [
+        pedido.apodo,
+        pedido.pedido,
+        pedido.cantidad,
+        pedido.observaciones,
+        pedido.zona,
+        pedido.localidad,
+        pedido.fecha_programacion
+      ]
+    );
+
+    // 3. Eliminar el pedido de la tabla de pedidos_pendientes
+    await pool.query("DELETE FROM pedidos_pendientes WHERE historial_id = $1", [id]);
+
+    // 4. Enviar la fecha programada de vuelta al cliente
+    res.json({ success: true, fecha_reparto: insertResult.rows[0].fecha_reparto });
+  } catch (err) {
+    console.error('Error al mover el pedido al calendario:', err.message);
+    res.status(500).json({ error: "Error al programar el pedido en el calendario" });
+  }
+});
+
+
 // --- CONDUCTORES ---
 app.get("/conductores", async (req, res) => {
   try {
