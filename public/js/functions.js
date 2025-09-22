@@ -352,8 +352,6 @@ function renderizarPedidosPendientes(pedidos) {
         pedidos.forEach(pedido => {
             const item = document.createElement('div');
             item.className = 'bg-white rounded-lg shadow-sm p-4 border border-gray-200';
-            // Nota: Aquí estamos usando 'fecha_programacion' de tu base de datos,
-            // que se corresponde con la opción 'Fecha Entrega' del dropdown.
             item.innerHTML = `
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-sm font-semibold text-gray-700">Pedido para ${pedido.apodo} (${pedido.localidad})</span>
@@ -375,6 +373,7 @@ function renderizarPedidosPendientes(pedidos) {
     }
     totalPendientes.textContent = pedidos.length;
 }
+
 
 function ordenarPedidosPendientes() {
     const ordenarPor = document.getElementById('ordenarPendientes').value;
@@ -401,6 +400,7 @@ function ordenarPedidosPendientes() {
 
     renderizarPedidosPendientes(pedidosPendientes);
 }
+
 
 // --- Funciones de Calendario ---
 async function cargarPedidosCalendario() {
