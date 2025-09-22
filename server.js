@@ -278,8 +278,8 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
 
     // 2. Insertar el pedido en la tabla de pedidos del calendario
     const insertResult = await pool.query(
-      `INSERT INTO pedidos_calendario (apodo_cliente, producto, cantidad, observaciones, zona, localidad, fecha_reparto) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING fecha_reparto`,
+      `INSERT INTO pedidos_calendario (apodo, pedido, cantidad, observaciones, zona, localidad, fecha_programacion) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING fecha_programacion`,
       [
         pedido.apodo,
         pedido.pedido,
@@ -295,7 +295,7 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
     await pool.query("DELETE FROM pedidos_pendientes WHERE historial_id = $1", [id]);
 
     // 4. Enviar la fecha programada de vuelta al cliente
-    res.json({ success: true, fecha_reparto: insertResult.rows[0].fecha_reparto });
+    res.json({ success: true, fecha_reparto: insertResult.rows[0].fecha_programacion });
   } catch (err) {
     console.error('Error al mover el pedido al calendario:', err.message);
     res.status(500).json({ error: "Error al programar el pedido en el calendario" });
