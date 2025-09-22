@@ -265,7 +265,7 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    // 1. Obtener el pedido de pedidos_pendientes
+    // 1. Obtener el pedido completo de pedidos_pendientes
     const result = await pool.query(
       "SELECT * FROM pedidos_pendientes WHERE historial_id = $1",
       [id]
@@ -276,26 +276,24 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
       return res.status(404).json({ error: "Pedido no encontrado" });
     }
 
-    // 2. Insertar el pedido en la tabla de pedidos del calendario
-    const insertResult = await pool.query(
-      `INSERT INTO pedidos_calendario (apodo, pedido, cantidad, observaciones, zona, localidad, fecha_programacion) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING fecha_programacion`,
+    // 2. Insertar el pedido en la tabla de pedidos_calendario
+    // Mapea las columnas de pedidos_pendientes a pedidos_calendario
+    await pool.query(
+      `INSERT INTO pedidos_calendario (historial_id, cliente_id, dia_reparto, fecha_reparto, observaciones) 
+       VALUES ($1, $2, $3, $4, $5)`,
       [
-        pedido.apodo,
-        pedido.pedido,
-        pedido.cantidad,
+        pedido.historial_id,
+        pedido.cliente_id,
+        pedido.dia_semana, // Asume que existe en la tabla pedidos_pendientes
+        pedido.fecha_programacion,
         pedido.observaciones,
-        pedido.zona,
-        pedido.localidad,
-        pedido.fecha_programacion
       ]
     );
 
     // 3. Eliminar el pedido de la tabla de pedidos_pendientes
     await pool.query("DELETE FROM pedidos_pendientes WHERE historial_id = $1", [id]);
 
-    // 4. Enviar la fecha programada de vuelta al cliente
-    res.json({ success: true, fecha_reparto: insertResult.rows[0].fecha_programacion });
+    res.json({ success: true });
   } catch (err) {
     console.error('Error al mover el pedido al calendario:', err.message);
     res.status(500).json({ error: "Error al programar el pedido en el calendario" });
