@@ -393,7 +393,7 @@ function renderizarPedidosPendientes(pedidos) {
                 <p class="text-sm text-gray-500 mt-1">Programado para: ${pedido.fecha_programacion}</p>
                 <p class="text-sm text-gray-500 mt-1">Observaciones: ${pedido.observaciones || 'N/A'}</p>
                 <div class="flex justify-end gap-2 mt-4">
-                    <button onclick="moverApendientes(${pedido.historial_id})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors duration-200">
+                    <button onclick="mostrarCalendarioModal(${pedido.historial_id})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors duration-200">
                         📅 Programar en Calendario
                     </button>
                 </div>
@@ -642,13 +642,44 @@ async function cargarZonasNuevoPedido() {
     }
 }
 
-// Función para mover un pedido de pendientes a calendario
-// Función para mover un pedido de pendientes a calendario
-async function moverApendientes(pedidoId) {
+// Variable global para guardar el ID del pedido
+let pedidoParaProgramarId = null;
+
+// Función que se llama desde el botón para abrir el modal
+function mostrarCalendarioModal(pedidoId) {
+    pedidoParaProgramarId = pedidoId;
+    const modal = document.getElementById('calendarModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+// Función para cerrar el modal
+function cerrarCalendarioModal() {
+    const modal = document.getElementById('calendarModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    pedidoParaProgramarId = null;
+}
+
+// NUEVA FUNCIÓN para programar el pedido con la fecha seleccionada
+async function programarPedidoConFecha() {
+    const fechaSeleccionada = document.getElementById('fechaEntregaInput').value;
+
+    if (!fechaSeleccionada) {
+        alert("Por favor, selecciona una fecha.");
+        return;
+    }
+
+    if (!pedidoParaProgramarId) {
+        alert("Error: No se encontró el ID del pedido.");
+        return;
+    }
+
     try {
-        const res = await fetch(`/pedidos/mover-a-calendario/${pedidoId}`, {
+        const res = await fetch(`/pedidos/programar-con-fecha/${pedidoParaProgramarId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fecha: fechaSeleccionada })
         });
 
         if (!res.ok) {
@@ -656,15 +687,14 @@ async function moverApendientes(pedidoId) {
         }
 
         const data = await res.json();
-        
-        // 🌟 NUEVO MENSAJE DE ALERTA CON INFORMACIÓN COMPLETA
         alert(`Pedido programado:\n\nDía: ${data.dia_reparto}\nFecha: ${data.fecha_reparto}\nPara: ${data.apodo} - ${data.pedido}`);
 
-        // Redirige al calendario después de programar
-        await cambiarPestana('Calendario');
+        cerrarCalendarioModal();
         
-        // 🌟 ACTUALIZAR LOS PEDIDOS EN LA VISTA DE CALENDARIO
-        // Asumimos que esta función existe en Calendario.html para recargar los datos
+        // Recargar las listas para que se reflejen los cambios
+        await cargarPedidosPendientes();
+        await cambiarPestana('Calendario');
+
         if (typeof cargarPedidosCalendario === 'function') {
             cargarPedidosCalendario();
         }

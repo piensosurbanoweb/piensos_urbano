@@ -269,67 +269,71 @@ app.delete("/pedidos_calendario/:id", async (req, res) => {
 
 
 // Ruta para mover un pedido de pendientes a calendario
-app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
+app.post("/pedidos/programar-con-fecha/:id", async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { id } = req.params;
+    await client.query('BEGIN');
 
-    const result = await pool.query(
-      "SELECT historial_id, cliente_id, observaciones, fecha_programacion, dia_reparto, apodo, pedido FROM pedidos_pendientes WHERE historial_id = $1",
+    const { id } = req.params;
+    const { fecha } = req.body;
+
+    // Obtener los datos del pedido pendiente
+    const result = await client.query(
+      "SELECT historial_id, cliente_id, observaciones, dia_reparto, apodo, pedido FROM pedidos_pendientes WHERE historial_id = $1",
       [id]
     );
     const pedido = result.rows[0];
 
     if (!pedido) {
-      return res.status(404).json({ error: "Pedido no encontrado o ya programado." });
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: "Pedido no encontrado." });
     }
 
-    if (!pedido.dia_reparto) {
-        const pedidoOriginalResult = await pool.query(
-          "SELECT dia_semana FROM pedidos WHERE id = $1",
-          [pedido.historial_id]
-        );
-        const diaSemanaOriginal = pedidoOriginalResult.rows[0]?.dia_semana;
+    // Convertir la fecha a día de la semana (Lunes, Martes, etc.)
+    const diasDeLaSemana = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+    const fechaObj = new Date(fecha);
+    const diaDeLaSemana = diasDeLaSemana[fechaObj.getUTCDay()];
 
-        if (!diaSemanaOriginal) {
-            console.error('Error: El pedido no tiene un día de la semana asignado.');
-            return res.status(400).json({ error: "El pedido no tiene un día de la semana asignado." });
-        }
-        
-        await pool.query(
-          "UPDATE pedidos_pendientes SET dia_reparto = $1 WHERE historial_id = $2",
-          [diaSemanaOriginal, pedido.historial_id]
-        );
+    // Actualizar la fecha de entrega y el día de la semana en la tabla 'pedidos'
+    await client.query(
+        "UPDATE pedidos SET fecha_entrega = $1, dia_semana = $2 WHERE id = $3",
+        [fecha, diaDeLaSemana, pedido.historial_id]
+    );
 
-        pedido.dia_reparto = diaSemanaOriginal;
-    }
-    
-    await pool.query(
+    // Insertar en la tabla de 'pedidos_calendario'
+    await client.query(
       `INSERT INTO pedidos_calendario (
         historial_id, cliente_id, dia_reparto, fecha_reparto, observaciones
       ) VALUES ($1, $2, $3, $4, $5)`,
       [
         pedido.historial_id,
         pedido.cliente_id,
-        pedido.dia_reparto,
-        pedido.fecha_programacion,
+        diaDeLaSemana,
+        fecha,
         pedido.observaciones,
       ]
     );
 
-    await pool.query("DELETE FROM pedidos_pendientes WHERE historial_id = $1", [id]);
+    // Eliminar de la tabla de pendientes
+    await client.query("DELETE FROM pedidos_pendientes WHERE historial_id = $1", [id]);
+
+    await client.query('COMMIT');
 
     res.json({ 
         success: true, 
         message: "Pedido programado con éxito.",
-        dia_reparto: pedido.dia_reparto,
-        fecha_reparto: pedido.fecha_programacion,
+        dia_reparto: diaDeLaSemana,
+        fecha_reparto: fecha,
         apodo: pedido.apodo,
         pedido: pedido.pedido
     });
 
   } catch (err) {
-    console.error('Error al mover el pedido al calendario:', err.message);
-    res.status(500).json({ error: "Error al programar el pedido en el calendario" });
+    await client.query('ROLLBACK');
+    console.error('Error en la transacción de programación:', err.message);
+    res.status(500).json({ error: "Error al programar el pedido" });
+  } finally {
+    client.release();
   }
 });
 
