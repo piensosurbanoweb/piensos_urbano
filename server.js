@@ -80,7 +80,6 @@ app.post("/pedidos", async (req, res) => {
 
     const { cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones } = req.body;
 
-    // 1. Insertar en la tabla 'pedidos'
     const pedidoResult = await client.query(
       `INSERT INTO pedidos (cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, fecha_creacion`,
@@ -89,7 +88,6 @@ app.post("/pedidos", async (req, res) => {
     const newPedidoId = pedidoResult.rows[0].id;
     const fechaPedido = pedidoResult.rows[0].fecha_creacion;
 
-    // 2. Insertar en la tabla 'pedidos_historial'
     const descripcion = `${cantidad} de ${producto} - ${apodo_cliente}`;
     const historialResult = await client.query(
       `INSERT INTO pedidos_historial (cliente_id, descripcion, fecha_pedido, fecha_entrega, observaciones)
@@ -98,17 +96,14 @@ app.post("/pedidos", async (req, res) => {
     );
     const historialId = historialResult.rows[0].id;
 
-    // 3. Obtener datos del cliente para la tabla 'pedidos_pendientes'
     const clienteResult = await client.query(
       "SELECT apodo, nombre_completo, telefono, localidad, zona_reparto FROM clientes WHERE id = $1",
       [cliente_id]
     );
     const clienteData = clienteResult.rows[0];
 
-    // ** LÓGICA DE VALIDACIÓN Y CORRECCIÓN PARA EL CAMPO dia_reparto **
     let diaRepartoCorregido = dia_semana;
     if (!diaRepartoCorregido || diaRepartoCorregido.trim() === '') {
-        // Si el día está vacío o nulo, usa el de la tabla 'pedidos' como plan B
         const pedidoOriginalResult = await pool.query(
             "SELECT dia_semana FROM pedidos WHERE id = $1",
             [newPedidoId]
@@ -116,7 +111,6 @@ app.post("/pedidos", async (req, res) => {
         diaRepartoCorregido = pedidoOriginalResult.rows[0]?.dia_semana || null;
     }
     
-    // 4. Insertar en la tabla 'pedidos_pendientes' con el valor corregido
     const pedidoPendiente = `${cantidad} de ${producto}`;
     await client.query(
       `INSERT INTO pedidos_pendientes (historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto)
@@ -324,7 +318,6 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
 
     await pool.query("DELETE FROM pedidos_pendientes WHERE historial_id = $1", [id]);
 
-    // 🌟 ENVIAMOS MÁS INFORMACIÓN AL CLIENTE EN LA RESPUESTA
     res.json({ 
         success: true, 
         message: "Pedido programado con éxito.",
