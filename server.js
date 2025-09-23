@@ -260,6 +260,7 @@ app.delete("/pedidos_calendario/:id", async (req, res) => {
   }
 });
 
+
 // Ruta para mover un pedido de pendientes a calendario
 app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
   try {
