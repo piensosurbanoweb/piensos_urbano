@@ -643,6 +643,7 @@ async function cargarZonasNuevoPedido() {
 }
 
 // Función para mover un pedido de pendientes a calendario
+// Función para mover un pedido de pendientes a calendario
 async function moverApendientes(pedidoId) {
     try {
         const res = await fetch(`/pedidos/mover-a-calendario/${pedidoId}`, {
@@ -655,16 +656,25 @@ async function moverApendientes(pedidoId) {
         }
 
         const data = await res.json();
-        alert(`Pedido programado en el calendario para la fecha: ${data.fecha_reparto}`);
+        
+        // 🌟 NUEVO MENSAJE DE ALERTA CON INFORMACIÓN COMPLETA
+        alert(`Pedido programado:\n\nDía: ${data.dia_reparto}\nFecha: ${data.fecha_reparto}\nPara: ${data.apodo} - ${data.pedido}`);
 
         // Redirige al calendario después de programar
-        cambiarPestana('Calendario');
+        await cambiarPestana('Calendario');
+        
+        // 🌟 ACTUALIZAR LOS PEDIDOS EN LA VISTA DE CALENDARIO
+        // Asumimos que esta función existe en Calendario.html para recargar los datos
+        if (typeof cargarPedidosCalendario === 'function') {
+            cargarPedidosCalendario();
+        }
 
     } catch (err) {
         console.error('Error al programar el pedido:', err);
         alert('Hubo un error al intentar programar el pedido. Revisa la consola.');
     }
 }
+
 
 // Inicialización de la aplicación
 document.addEventListener('DOMContentLoaded', () => {

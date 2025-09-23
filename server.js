@@ -279,9 +279,8 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Obtener el pedido de la tabla 'pedidos_pendientes'
     const result = await pool.query(
-      "SELECT historial_id, cliente_id, observaciones, fecha_programacion, dia_reparto FROM pedidos_pendientes WHERE historial_id = $1",
+      "SELECT historial_id, cliente_id, observaciones, fecha_programacion, dia_reparto, apodo, pedido FROM pedidos_pendientes WHERE historial_id = $1",
       [id]
     );
     const pedido = result.rows[0];
@@ -290,9 +289,7 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
       return res.status(404).json({ error: "Pedido no encontrado o ya programado." });
     }
 
-    // Si el día de reparto es nulo, buscarlo y actualizarlo
     if (!pedido.dia_reparto) {
-        // Buscar el día de la semana en la tabla de pedidos original
         const pedidoOriginalResult = await pool.query(
           "SELECT dia_semana FROM pedidos WHERE id = $1",
           [pedido.historial_id]
@@ -304,7 +301,6 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
             return res.status(400).json({ error: "El pedido no tiene un día de la semana asignado." });
         }
         
-        // Actualizar el valor en la tabla de pedidos_pendientes
         await pool.query(
           "UPDATE pedidos_pendientes SET dia_reparto = $1 WHERE historial_id = $2",
           [diaSemanaOriginal, pedido.historial_id]
@@ -313,7 +309,6 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
         pedido.dia_reparto = diaSemanaOriginal;
     }
     
-    // Insertar el pedido en la tabla de 'pedidos_calendario'
     await pool.query(
       `INSERT INTO pedidos_calendario (
         historial_id, cliente_id, dia_reparto, fecha_reparto, observaciones
@@ -327,14 +322,16 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
       ]
     );
 
-    // Eliminar de la tabla de pendientes
     await pool.query("DELETE FROM pedidos_pendientes WHERE historial_id = $1", [id]);
 
-    // 🌟 AHORA SE INCLUYE LA FECHA EN LA RESPUESTA
+    // 🌟 ENVIAMOS MÁS INFORMACIÓN AL CLIENTE EN LA RESPUESTA
     res.json({ 
         success: true, 
         message: "Pedido programado con éxito.",
-        fecha_reparto: pedido.fecha_programacion // 👈 Aquí está el cambio
+        dia_reparto: pedido.dia_reparto,
+        fecha_reparto: pedido.fecha_programacion,
+        apodo: pedido.apodo,
+        pedido: pedido.pedido
     });
 
   } catch (err) {
