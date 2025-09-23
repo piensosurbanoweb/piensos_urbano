@@ -266,9 +266,18 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Obtener el pedido directamente de la tabla 'pedidos_pendientes'
+    // 1. Obtener los datos necesarios de las tablas 'pedidos_pendientes' y 'pedidos'
     const result = await pool.query(
-      "SELECT * FROM pedidos_pendientes WHERE id = $1",
+      `SELECT
+        pp.historial_id,
+        pp.cliente_id,
+        pp.observaciones,
+        pp.fecha_programacion,
+        p.dia_semana,
+        p.fecha_entrega
+      FROM pedidos_pendientes AS pp
+      JOIN pedidos AS p ON pp.historial_id = p.id
+      WHERE pp.id = $1`,
       [id]
     );
     const pedido = result.rows[0];
@@ -277,7 +286,13 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
       return res.status(404).json({ error: "Pedido no encontrado o ya programado." });
     }
 
-    // Insertar en el calendario, usando la nueva columna
+    // 2. Validar que los datos necesarios no sean nulos
+    if (!pedido.dia_semana || !pedido.fecha_entrega) {
+      console.error('Error de datos: Falta dia_semana o fecha_entrega en el pedido.', pedido);
+      return res.status(400).json({ error: "El pedido no tiene el día de la semana o la fecha de entrega asignados." });
+    }
+    
+    // 3. Insertar el pedido en la tabla de 'pedidos_calendario'
     await pool.query(
       `INSERT INTO pedidos_calendario (
         historial_id, cliente_id, dia_reparto, fecha_reparto, observaciones
@@ -285,18 +300,19 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
       [
         pedido.historial_id,
         pedido.cliente_id,
-        pedido.dia_reparto, // ¡Ahora el día está aquí!
-        pedido.fecha_programacion,
+        pedido.dia_semana,
+        pedido.fecha_entrega,
         pedido.observaciones,
       ]
     );
 
-    // Eliminar de pendientes
+    // 4. Eliminar el pedido de la tabla de 'pedidos_pendientes'
     await pool.query("DELETE FROM pedidos_pendientes WHERE id = $1", [id]);
 
     res.json({ success: true, message: "Pedido programado con éxito." });
   } catch (err) {
     console.error('Error al mover el pedido al calendario:', err.message);
+    // Este error es el que necesitamos ver en Render
     res.status(500).json({ error: "Error al programar el pedido en el calendario" });
   }
 });
