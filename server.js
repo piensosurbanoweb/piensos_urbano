@@ -171,11 +171,11 @@ app.get("/pedidos/pendientes", async (req, res) => {
 
 app.post("/pedidos_pendientes", async (req, res) => {
   try {
-    const { historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones } = req.body;
+    const { historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto } = req.body;
     const result = await pool.query(
-      `INSERT INTO pedidos_pendientes (historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-      [historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones]
+      `INSERT INTO pedidos_pendientes (historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      [historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -266,26 +266,18 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    // 1. Obtener los datos necesarios de las tablas 'pedidos_pendientes' y 'pedidos'
+    // Obtener el pedido directamente de la tabla 'pedidos_pendientes'
     const result = await pool.query(
-      `SELECT
-        p_pendientes.historial_id,
-        p_pendientes.cliente_id,
-        p_pendientes.observaciones,
-        p_pendientes.fecha_programacion,
-        p_original.dia_semana
-      FROM pedidos_pendientes AS p_pendientes
-      JOIN pedidos AS p_original ON p_pendientes.historial_id = p_original.id
-      WHERE p_pendientes.historial_id = $1`,
+      "SELECT * FROM pedidos_pendientes WHERE id = $1",
       [id]
     );
     const pedido = result.rows[0];
 
     if (!pedido) {
-      return res.status(404).json({ error: "Pedido no encontrado" });
+      return res.status(404).json({ error: "Pedido no encontrado o ya programado." });
     }
 
-    // 2. Insertar el pedido en la tabla de 'pedidos_calendario'
+    // Insertar en el calendario, usando la nueva columna
     await pool.query(
       `INSERT INTO pedidos_calendario (
         historial_id, cliente_id, dia_reparto, fecha_reparto, observaciones
@@ -293,14 +285,14 @@ app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
       [
         pedido.historial_id,
         pedido.cliente_id,
-        pedido.dia_semana,
+        pedido.dia_reparto, // ¡Ahora el día está aquí!
         pedido.fecha_programacion,
         pedido.observaciones,
       ]
     );
 
-    // 3. Eliminar el pedido de la tabla de 'pedidos_pendientes'
-    await pool.query("DELETE FROM pedidos_pendientes WHERE historial_id = $1", [id]);
+    // Eliminar de pendientes
+    await pool.query("DELETE FROM pedidos_pendientes WHERE id = $1", [id]);
 
     res.json({ success: true, message: "Pedido programado con éxito." });
   } catch (err) {
