@@ -220,12 +220,21 @@ app.put("/pedidos/programar/:id", async (req, res) => {
 
 // --- PEDIDOS CALENDARIO ---
 app.get("/pedidos_calendario", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM pedidos_calendario ORDER BY fecha_reparto, orden_reparto");
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: "Error al obtener pedidos calendario" });
-  }
+    try {
+        const result = await pool.query(
+            `SELECT 
+                pc.*, 
+                pp.apodo, 
+                pp.pedido 
+             FROM pedidos_calendario pc
+             JOIN pedidos_pendientes pp ON pc.historial_id = pp.historial_id
+             ORDER BY pc.fecha_reparto ASC`
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error al obtener pedidos del calendario:', err.message);
+        res.status(500).json({ error: "Error al obtener pedidos del calendario" });
+    }
 });
 
 app.post("/pedidos_calendario", async (req, res) => {

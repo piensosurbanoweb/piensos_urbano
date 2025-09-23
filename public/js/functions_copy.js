@@ -431,14 +431,13 @@ function ordenarPedidosPendientes() {
     renderizarPedidosPendientes(pedidosPendientes);
 }
 
-// Funciones de Calendario
-// ... (resto de las funciones de calendario que ya te di)
+// --- Funciones de Calendario ---
 async function cargarPedidosCalendario() {
     try {
         const res = await fetch('/pedidos_calendario');
         const pedidos = await res.json();
         pedidosCalendario = {
-            lunes: [], martes: [], miercoles: [], jueves: [], viernes: []
+            lunes: [], martes: [], miercoles: [], jueves: [], viernes: [], sabado: []
         };
         pedidos.forEach(p => {
             const dia = p.dia_reparto.toLowerCase();
@@ -452,35 +451,107 @@ async function cargarPedidosCalendario() {
     }
 }
 
-function renderizarVistaCalendario() {
-    if (vistaCalendarioActual === 'semanal') {
-        const contenedor = document.getElementById('vistaSemanal');
-        if (!contenedor) return;
-        contenedor.classList.remove('hidden');
-        contenedor.innerHTML = '';
-        Object.entries(pedidosCalendario).forEach(([dia, pedidos]) => {
-            const col = document.createElement('div');
-            col.className = 'bg-white p-4 rounded-lg shadow-sm';
-            col.innerHTML = `
-                <h4 class="font-bold mb-2 text-center text-gray-800">${dia.charAt(0).toUpperCase() + dia.slice(1)}</h4>
-                <div class="space-y-2">
-                    ${pedidos.map(p => `
-                        <div class="border border-gray-200 rounded-lg p-3">
-                            <p class="text-sm font-medium">${p.pedido}</p>
-                            <p class="text-xs text-gray-600">Para: ${p.apodo}</p>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-            contenedor.appendChild(col);
-        });
+// Lógica para alternar entre la vista semanal y diaria
+function cambiarVistaCalendario(vista) {
+    vistaCalendarioActual = vista;
+    const btnSemanal = document.getElementById('btnVistaSemanal');
+    const btnDiaria = document.getElementById('btnVistaDiaria');
+    const vistaSemanalDiv = document.getElementById('vistaSemanal');
+    const vistaDiariaDiv = document.getElementById('vistaDiaria');
+    const controlesNavegacion = document.getElementById('controlesNavegacion');
+
+    if (vista === 'semanal') {
+        btnSemanal.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+        btnDiaria.className = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+        vistaSemanalDiv.classList.remove('hidden');
+        vistaDiariaDiv.classList.add('hidden');
+        controlesNavegacion.classList.remove('hidden');
+        renderizarVistaSemanal();
+    } else if (vista === 'diaria') {
+        btnDiaria.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+        btnSemanal.className = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+        vistaDiariaDiv.classList.remove('hidden');
+        vistaSemanalDiv.classList.add('hidden');
+        controlesNavegacion.classList.add('hidden');
+        renderizarVistaDiaria();
     }
-    // Lógica para vista diaria se implementará más adelante
+}
+
+// Renderiza la vista semanal (la misma lógica que ya tenías)
+function renderizarVistaSemanal() {
+    const contenedor = document.getElementById('vistaSemanal');
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+    Object.entries(pedidosCalendario).forEach(([dia, pedidos]) => {
+        const col = document.createElement('div');
+        col.className = 'bg-white p-4 rounded-lg shadow-sm';
+        col.innerHTML = `
+            <h4 class="font-bold mb-2 text-center text-gray-800">${dia.charAt(0).toUpperCase() + dia.slice(1)}</h4>
+            <div class="space-y-2">
+                ${pedidos.map(p => `
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <p class="text-sm font-medium">${p.pedido}</p>
+                        <p class="text-xs text-gray-600">Para: ${p.apodo}</p>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        contenedor.appendChild(col);
+    });
+}
+
+// 📦 LÓGICA PARA LA VISTA DIARIA (NUEVA FUNCIÓN)
+function renderizarVistaDiaria() {
+    const listaPedidos = document.getElementById('pedidosDiarios');
+    const mensajeVacio = document.getElementById('mensajeVacioDiario');
+    const diaSeleccionado = document.getElementById('selectDiaDiario').value;
+
+    listaPedidos.innerHTML = '';
+    const pedidosDelDia = pedidosCalendario[diaSeleccionado] || [];
+    
+    if (pedidosDelDia.length > 0) {
+        mensajeVacio.classList.add('hidden');
+        pedidosDelDia.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'bg-white p-4 rounded-lg shadow-md';
+            div.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h3 class="font-bold text-lg">${p.apodo} - ${p.pedido}</h3>
+                        <p class="text-sm text-gray-600">Teléfono: ${p.telefono}</p>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500">Observaciones: ${p.observaciones || 'N/A'}</p>
+            `;
+            listaPedidos.appendChild(div);
+        });
+    } else {
+        mensajeVacio.classList.remove('hidden');
+    }
+}
+
+// 📦 LÓGICA PARA CAMBIAR EL DÍA EN LA VISTA DIARIA (NUEVA FUNCIÓN)
+function cambiarDiaDiario() {
+    const selectDia = document.getElementById('selectDiaDiario');
+    diaSeleccionadoDiario = selectDia.value;
+    renderizarVistaDiaria();
+}
+
+// Opcional: Funciones para navegar por las semanas
+function semanaAnterior() {
+    semanaActualOffset--;
+    // Lógica para cambiar la fecha y recargar los pedidos de la semana anterior
+    cargarPedidosCalendario();
+}
+
+function semanaSiguiente() {
+    semanaActualOffset++;
+    // Lógica para cambiar la fecha y recargar los pedidos de la semana siguiente
+    cargarPedidosCalendario();
 }
 
 
 // Funciones de gestión BBDD
-// ... (resto de las funciones)
 async function cargarConductores() {
     try {
         const res = await fetch('/conductores');
