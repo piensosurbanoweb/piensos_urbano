@@ -242,10 +242,18 @@ function cerrarModal() {
 }
 
 async function eliminarCliente(id) {
+    if (!id) {
+        console.error("ID de cliente no válido:", id);
+        return;
+    }
+
     if (!confirm("¿Seguro que deseas eliminar este cliente?")) return;
 
     try {
-        await fetch(`/clientes/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/clientes/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+            throw new Error("Error al eliminar cliente");
+        }
         cargarClientes();
     } catch (error) {
         console.error("Error eliminando cliente:", error);
