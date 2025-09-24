@@ -798,3 +798,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Iniciar con la primera pestaña
     cambiarPestana('BaseDatos');
 });
+
+function agregarConductor() {
+    const input = document.getElementById('nuevoConductor');
+    const nombreConductor = input.value.trim();
+
+    if (!nombreConductor) {
+        alert('Por favor, ingresa un nombre válido para el conductor.');
+        return;
+    }
+
+    conductores.push(nombreConductor); // Agregar el conductor al array global
+    input.value = ''; // Limpiar el campo de entrada
+    console.log('Conductor agregado:', nombreConductor);
+    cargarConductores(); // Actualizar la lista de conductores en la interfaz
+}
