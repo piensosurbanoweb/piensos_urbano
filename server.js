@@ -222,12 +222,16 @@ app.put("/pedidos/programar/:id", async (req, res) => {
 app.get("/pedidos_calendario", async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT 
-                pc.*, 
-                pp.apodo, 
-                pp.pedido 
+            `SELECT
+                pc.*,
+                ph.descripcion AS pedido,
+                c.apodo,
+                c.telefono,
+                c.localidad,
+                c.zona_reparto
              FROM pedidos_calendario pc
-             JOIN pedidos_pendientes pp ON pc.historial_id = pp.historial_id
+             JOIN pedidos_historial ph ON pc.historial_id = ph.id
+             JOIN clientes c ON pc.cliente_id = c.id
              ORDER BY pc.fecha_reparto ASC`
         );
         res.json(result.rows);
