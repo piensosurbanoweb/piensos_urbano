@@ -458,14 +458,14 @@ app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
         const { fecha } = req.body;
         
         // Obtener el día de la semana de la nueva fecha
-        const date = new Date(fecha + 'T00:00:00'); // Añadimos T00:00:00 para evitar problemas de zona horaria
+        const date = new Date(fecha + 'T00:00:00');
         const diasSemana = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
         const nuevoDia = diasSemana[date.getUTCDay()];
 
         const result = await pool.query(
             `UPDATE pedidos_calendario
              SET fecha_reparto = $1, dia_reparto = $2
-             WHERE historial_id = $3
+             WHERE id = $3
              RETURNING *`,
             [fecha, nuevoDia, id]
         );
