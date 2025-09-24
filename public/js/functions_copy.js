@@ -875,3 +875,19 @@ function agregarConductor() {
     console.log('Conductor agregado:', nombreConductor);
     cargarConductores(); // Actualizar la lista de conductores en la interfaz
 }
+
+function cargarConductores() {
+    const lista = document.getElementById('listaConductores');
+    if (!lista) {
+        console.error('El elemento listaConductores no se encontró en el DOM.');
+        return;
+    }
+
+    lista.innerHTML = ''; // Limpiar la lista antes de renderizar
+
+    conductores.forEach(conductor => {
+        const item = document.createElement('li');
+        item.textContent = conductor;
+        lista.appendChild(item);
+    });
+}
