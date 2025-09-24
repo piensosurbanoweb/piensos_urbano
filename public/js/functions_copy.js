@@ -10,6 +10,7 @@ let pedidosPendientes = [];
 let pedidosCalendario = {
     lunes: [], martes: [], miercoles: [], jueves: [], viernes: []
 };
+let pedidoParaEditarId = null; // Almacenará el ID del pedido que se está editando
 let clientes = [];
 let zonas = [];
 let conductores = ["Juan", "Pedro", "Manuel"];
@@ -61,6 +62,7 @@ async function cambiarPestana(nombrePestana) {
             inicializarPendientes();
         } else if (nombrePestana === "Calendario") {
             inicializarCalendario();
+            await cargarPedidosCalendario();
         } else if (nombrePestana === "GestionBBDD") {
             inicializarGestionBBDD();
         } else if (nombrePestana === "HojaReparto") {
@@ -485,21 +487,28 @@ function cambiarVistaCalendario(vista) {
     }
 }
 
-// Renderiza la vista semanal (la misma lógica que ya tenías)
+// Renderiza la vista semanal con el recuadro más grande y botón de edición
 function renderizarVistaSemanal() {
     const contenedor = document.getElementById('vistaSemanal');
     if (!contenedor) return;
     contenedor.innerHTML = '';
     Object.entries(pedidosCalendario).forEach(([dia, pedidos]) => {
         const col = document.createElement('div');
-        col.className = 'bg-white p-4 rounded-lg shadow-sm';
+        col.className = 'bg-white p-6 rounded-lg shadow-md min-h-64 flex flex-col items-center justify-start'; 
         col.innerHTML = `
             <h4 class="font-bold mb-2 text-center text-gray-800">${dia.charAt(0).toUpperCase() + dia.slice(1)}</h4>
-            <div class="space-y-2">
+            <div class="space-y-2 w-full flex-grow">
                 ${pedidos.map(p => `
                     <div class="border border-gray-200 rounded-lg p-3">
-                        <p class="text-sm font-medium">${p.pedido}</p>
-                        <p class="text-xs text-gray-600">Para: ${p.apodo}</p>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm font-medium">${p.pedido}</p>
+                                <p class="text-xs text-gray-600">Para: ${p.apodo}</p>
+                            </div>
+                            <button onclick="mostrarModalEditarFecha(${p.historial_id}, '${p.fecha_reparto}')" class="text-blue-500 hover:text-blue-700">
+                                ✏️
+                            </button>
+                        </div>
                     </div>
                 `).join('')}
             </div>
@@ -508,7 +517,7 @@ function renderizarVistaSemanal() {
     });
 }
 
-// 📦 LÓGICA PARA LA VISTA DIARIA (NUEVA FUNCIÓN)
+// LÓGICA PARA LA VISTA DIARIA (con botón de edición)
 function renderizarVistaDiaria() {
     const listaPedidos = document.getElementById('pedidosDiarios');
     const mensajeVacio = document.getElementById('mensajeVacioDiario');
@@ -528,6 +537,9 @@ function renderizarVistaDiaria() {
                         <h3 class="font-bold text-lg">${p.apodo} - ${p.pedido}</h3>
                         <p class="text-sm text-gray-600">Teléfono: ${p.telefono}</p>
                     </div>
+                    <button onclick="mostrarModalEditarFecha(${p.historial_id}, '${p.fecha_reparto}')" class="text-blue-500 hover:text-blue-700">
+                        ✏️
+                    </button>
                 </div>
                 <p class="text-sm text-gray-500">Observaciones: ${p.observaciones || 'N/A'}</p>
             `;
@@ -538,23 +550,73 @@ function renderizarVistaDiaria() {
     }
 }
 
-// 📦 LÓGICA PARA CAMBIAR EL DÍA EN LA VISTA DIARIA (NUEVA FUNCIÓN)
+// LÓGICA PARA MOSTRAR EL MODAL DE EDICIÓN DE FECHA (NUEVA FUNCIÓN)
+function mostrarModalEditarFecha(id, fechaActual) {
+    const modal = document.getElementById('editarFechaModal');
+    const inputFecha = document.getElementById('inputNuevaFecha');
+    
+    pedidoParaEditarId = id; // Guardamos el ID del pedido a nivel global
+    inputFecha.value = fechaActual;
+    modal.classList.remove('hidden');
+}
+
+// LÓGICA PARA CERRAR EL MODAL
+function cerrarModalEditarFecha() {
+    const modal = document.getElementById('editarFechaModal');
+    modal.classList.add('hidden');
+    pedidoParaEditarId = null; // Reiniciamos el ID
+}
+
+// LÓGICA PARA GUARDAR LA NUEVA FECHA (NUEVA FUNCIÓN)
+async function guardarNuevaFecha() {
+    if (!pedidoParaEditarId) {
+        alert('No se ha seleccionado un pedido para editar.');
+        return;
+    }
+
+    const nuevaFecha = document.getElementById('inputNuevaFecha').value;
+    if (!nuevaFecha) {
+        alert('Por favor, selecciona una fecha válida.');
+        return;
+    }
+
+    try {
+        const res = await fetch(`/pedidos/editar-fecha/${pedidoParaEditarId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fecha: nuevaFecha })
+        });
+        
+        if (!res.ok) {
+            throw new Error('Error al actualizar la fecha del pedido.');
+        }
+
+        const data = await res.json();
+        alert('Fecha del pedido actualizada con éxito.');
+        cerrarModalEditarFecha();
+        await cargarPedidosCalendario(); // Recargamos el calendario
+        
+    } catch (err) {
+        console.error('Error al guardar la nueva fecha:', err);
+        alert('Hubo un error al actualizar la fecha del pedido. Revisa la consola.');
+    }
+}
+
+// LÓGICA PARA CAMBIAR EL DÍA EN LA VISTA DIARIA
 function cambiarDiaDiario() {
     const selectDia = document.getElementById('selectDiaDiario');
     diaSeleccionadoDiario = selectDia.value;
     renderizarVistaDiaria();
 }
 
-// Opcional: Funciones para navegar por las semanas
+// Funciones para navegar por las semanas
 function semanaAnterior() {
     semanaActualOffset--;
-    // Lógica para cambiar la fecha y recargar los pedidos de la semana anterior
     cargarPedidosCalendario();
 }
 
 function semanaSiguiente() {
     semanaActualOffset++;
-    // Lógica para cambiar la fecha y recargar los pedidos de la semana siguiente
     cargarPedidosCalendario();
 }
 
