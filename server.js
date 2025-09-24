@@ -313,36 +313,6 @@ app.post("/pedidos/programar-con-fecha/:id", async (req, res) => {
       [fecha, diaDeLaSemana, pedido.historial_id]
     );
 
-    // --- RUTA PARA ACTUALIZAR LA FECHA DE UN PEDIDO EN CALENDARIO ---
-    app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
-      try {
-        const { id } = req.params;
-        const { fecha } = req.body;
-
-        // Obtener el día de la semana de la nueva fecha
-        const date = new Date(fecha);
-        const diasSemana = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-        const nuevoDia = diasSemana[date.getDay()];
-
-        const result = await pool.query(
-          `UPDATE pedidos_calendario
-             SET fecha_reparto = $1, dia_reparto = $2
-             WHERE historial_id = $3
-             RETURNING *`,
-          [fecha, nuevoDia, id]
-        );
-
-        if (result.rowCount === 0) {
-          return res.status(404).json({ error: "Pedido no encontrado" });
-        }
-
-        res.json(result.rows[0]);
-
-      } catch (err) {
-        console.error('Error al actualizar la fecha del pedido:', err.message);
-        res.status(500).json({ error: "Error al actualizar la fecha del pedido" });
-      }
-    });
 
     // Insertar en la tabla de 'pedidos_calendario'
     await client.query(
@@ -479,6 +449,37 @@ app.delete("/zonas/:id", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Error al eliminar zona" });
   }
+});
+
+// EDITAR FECHA DE LOS PEDIDOS DE CALENDARIO
+app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { fecha } = req.body;
+        
+        // Obtener el día de la semana de la nueva fecha
+        const date = new Date(fecha + 'T00:00:00'); // Añadimos T00:00:00 para evitar problemas de zona horaria
+        const diasSemana = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+        const nuevoDia = diasSemana[date.getUTCDay()];
+
+        const result = await pool.query(
+            `UPDATE pedidos_calendario
+             SET fecha_reparto = $1, dia_reparto = $2
+             WHERE historial_id = $3
+             RETURNING *`,
+            [fecha, nuevoDia, id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: "Pedido no encontrado" });
+        }
+        
+        res.json(result.rows[0]);
+
+    } catch (err) {
+        console.error('Error al actualizar la fecha del pedido:', err.message);
+        res.status(500).json({ error: "Error al actualizar la fecha del pedido" });
+    }
 });
 
 // Servir archivos estáticos desde la carpeta 'public'
