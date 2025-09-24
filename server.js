@@ -104,13 +104,13 @@ app.post("/pedidos", async (req, res) => {
 
     let diaRepartoCorregido = dia_semana;
     if (!diaRepartoCorregido || diaRepartoCorregido.trim() === '') {
-        const pedidoOriginalResult = await pool.query(
-            "SELECT dia_semana FROM pedidos WHERE id = $1",
-            [newPedidoId]
-        );
-        diaRepartoCorregido = pedidoOriginalResult.rows[0]?.dia_semana || null;
+      const pedidoOriginalResult = await pool.query(
+        "SELECT dia_semana FROM pedidos WHERE id = $1",
+        [newPedidoId]
+      );
+      diaRepartoCorregido = pedidoOriginalResult.rows[0]?.dia_semana || null;
     }
-    
+
     const pedidoPendiente = `${cantidad} de ${producto}`;
     await client.query(
       `INSERT INTO pedidos_pendientes (historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto)
@@ -220,9 +220,9 @@ app.put("/pedidos/programar/:id", async (req, res) => {
 
 // --- PEDIDOS CALENDARIO ---
 app.get("/pedidos_calendario", async (req, res) => {
-    try {
-        const result = await pool.query(
-            `SELECT
+  try {
+    const result = await pool.query(
+      `SELECT
                 pc.*,
                 ph.descripcion AS pedido,
                 c.apodo,
@@ -233,12 +233,12 @@ app.get("/pedidos_calendario", async (req, res) => {
              JOIN pedidos_historial ph ON pc.historial_id = ph.id
              JOIN clientes c ON pc.cliente_id = c.id
              ORDER BY pc.fecha_reparto ASC`
-        );
-        res.json(result.rows);
-    } catch (err) {
-        console.error('Error al obtener pedidos del calendario:', err.message);
-        res.status(500).json({ error: "Error al obtener pedidos del calendario" });
-    }
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener pedidos del calendario:', err.message);
+    res.status(500).json({ error: "Error al obtener pedidos del calendario" });
+  }
 });
 
 app.post("/pedidos_calendario", async (req, res) => {
@@ -309,9 +309,40 @@ app.post("/pedidos/programar-con-fecha/:id", async (req, res) => {
 
     // Actualizar la fecha de entrega y el día de la semana en la tabla 'pedidos'
     await client.query(
-        "UPDATE pedidos SET fecha_entrega = $1, dia_semana = $2 WHERE id = $3",
-        [fecha, diaDeLaSemana, pedido.historial_id]
+      "UPDATE pedidos SET fecha_entrega = $1, dia_semana = $2 WHERE id = $3",
+      [fecha, diaDeLaSemana, pedido.historial_id]
     );
+
+    // --- RUTA PARA ACTUALIZAR LA FECHA DE UN PEDIDO EN CALENDARIO ---
+    app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { fecha } = req.body;
+
+        // Obtener el día de la semana de la nueva fecha
+        const date = new Date(fecha);
+        const diasSemana = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+        const nuevoDia = diasSemana[date.getDay()];
+
+        const result = await pool.query(
+          `UPDATE pedidos_calendario
+             SET fecha_reparto = $1, dia_reparto = $2
+             WHERE historial_id = $3
+             RETURNING *`,
+          [fecha, nuevoDia, id]
+        );
+
+        if (result.rowCount === 0) {
+          return res.status(404).json({ error: "Pedido no encontrado" });
+        }
+
+        res.json(result.rows[0]);
+
+      } catch (err) {
+        console.error('Error al actualizar la fecha del pedido:', err.message);
+        res.status(500).json({ error: "Error al actualizar la fecha del pedido" });
+      }
+    });
 
     // Insertar en la tabla de 'pedidos_calendario'
     await client.query(
@@ -332,13 +363,13 @@ app.post("/pedidos/programar-con-fecha/:id", async (req, res) => {
 
     await client.query('COMMIT');
 
-    res.json({ 
-        success: true, 
-        message: "Pedido programado con éxito.",
-        dia_reparto: diaDeLaSemana,
-        fecha_reparto: fecha,
-        apodo: pedido.apodo,
-        pedido: pedido.pedido
+    res.json({
+      success: true,
+      message: "Pedido programado con éxito.",
+      dia_reparto: diaDeLaSemana,
+      fecha_reparto: fecha,
+      apodo: pedido.apodo,
+      pedido: pedido.pedido
     });
 
   } catch (err) {
