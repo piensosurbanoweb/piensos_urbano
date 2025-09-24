@@ -35,64 +35,81 @@ async function cambiarPestana(nombrePestana) {
     const inactiveClass = `${baseClass} bg-gray-200 text-gray-700 hover:bg-gray-300`;
     const activeClass = `${baseClass} bg-blue-600 text-white`;
 
-    botones.forEach(btn => {
-        const elemento = document.getElementById(`btn${btn}`);
-        if (elemento) {
-            elemento.className = (btn === nombrePestana) ? activeClass : inactiveClass;
+    botones.forEach(boton => {
+        const tab = document.getElementById(`tab${boton}`);
+        if (tab) {
+            if (boton.toLowerCase() === nombrePestana.toLowerCase()) {
+                tab.className = activeClass;
+            } else {
+                tab.className = inactiveClass;
+            }
         }
     });
 
     // Cargar el contenido de la pestaña
     try {
-        let contenidoHtml = '';
-        switch (nombrePestana) {
-            case 'BaseDatos':
-                contenidoHtml = await (await fetch('BaseDatos.html')).text();
-                break;
-            case 'NuevoPedido':
-                contenidoHtml = await (await fetch('NuevoPedido.html')).text();
-                break;
-            case 'PedidosPendientes':
-                contenidoHtml = await (await fetch('PedidosPendientes.html')).text();
-                break;
-            case 'Calendario':
-                contenidoHtml = await (await fetch('Calendario.html')).text();
-                break;
-            case 'GestionBBDD':
-                contenidoHtml = await (await fetch('GestionBBDD.html')).text();
-                break;
-            case 'HojaReparto':
-                contenidoHtml = await (await fetch('HojaReparto.html')).text();
-                break;
-            default:
-                contenidoHtml = '<p>Pestaña no encontrada.</p>';
+        const res = await fetch(`${nombrePestana}.html`);
+        if (!res.ok) {
+            throw new Error(`No se pudo cargar la pestaña ${nombrePestana}.html`);
         }
-        contenedor.innerHTML = contenidoHtml;
+        const html = await res.text();
+        contenedor.innerHTML = html;
+
+        // Después de que el HTML se haya inyectado, inicializar la pestaña
+        if (nombrePestana === "BaseDatos") {
+            inicializarBaseDatos();
+        } else if (nombrePestana === "NuevoPedido") {
+            inicializarNuevoPedido();
+        } else if (nombrePestana === "Pendientes") {
+            inicializarPendientes();
+        } else if (nombrePestana === "Calendario") {
+            inicializarCalendario();
+            await cargarPedidosCalendario();
+        } else if (nombrePestana === "GestionBBDD") {
+            inicializarGestionBBDD();
+        } else if (nombrePestana === "HojaReparto") {
+            inicializarHojaReparto();
+        }
     } catch (err) {
-        console.error('Error al cargar la pestaña:', err);
+        console.error(`Error al cargar la pestaña ${nombrePestana}:`, err);
     }
-
-    if (nombrePestana === 'BaseDatos') {
-        cargarClientes();
-    } else if (nombrePestana === 'NuevoPedido') {
-        await cargarZonasParaNuevoPedido();
-        await cargarClientesParaAutocompletado();
-    } else if (nombrePestana === 'PedidosPendientes') {
-        await cargarPedidosPendientes();
-    } else if (nombrePestana === 'Calendario') {
-        await cargarPedidosCalendario();
-    } else if (nombrePestana === 'GestionBBDD') {
-        cargarConductores();
-        cargarCamiones();
-        cargarZonas();
-    } else if (nombrePestana === 'HojaReparto') {
-        // Lógica de carga para la hoja de reparto, si es necesaria
-    }
-
-    vistaCalendarioActual = 'semanal';
-    semanaActualOffset = 0;
 }
 
+// Funciones de inicialización para cada pestaña
+function inicializarBaseDatos() {
+    cargarClientes();
+    const form = document.getElementById("clienteForm");
+    if (form) form.addEventListener("submit", guardarCliente);
+}
+
+function inicializarNuevoPedido() {
+    cargarZonasNuevoPedido();
+    cargarClientesParaAutocomplete();
+    inicializarFormularioPedidos();
+}
+
+async function inicializarPendientes() {
+    await cargarPedidosPendientes();
+    const ordenarPendientes = document.getElementById('ordenarPendientes');
+    if (ordenarPendientes) {
+        ordenarPendientes.addEventListener('change', ordenarPedidosPendientes);
+    }
+}
+
+function inicializarCalendario() {
+    cargarPedidosCalendario();
+}
+
+function inicializarGestionBBDD() {
+    cargarConductores();
+    cargarCamiones();
+    cargarZonas();
+}
+
+function inicializarHojaReparto() {
+    cargarPedidosHoja();
+    cargarZonasHoja();
+}
 
 // --- Funciones de Base de Datos ---
 async function cargarClientes() {
@@ -353,63 +370,248 @@ function mostrarMensajeExito(texto) {
 }
 
 // --- Funciones de Pedidos Pendientes ---
-function obtenerFechasSemana(offset) {
-    const hoy = new Date();
-    const diaActual = hoy.getDay();
-    const diferencia = hoy.getDate() - diaActual + (diaActual === 0 ? -6 : 1);
-    const inicioSemana = new Date(hoy.setDate(diferencia));
-    inicioSemana.setDate(inicioSemana.getDate() + offset * 7);
-
-    const fechas = [];
-    for (let i = 0; i < 7; i++) {
-        const fecha = new Date(inicioSemana);
-        fecha.setDate(inicioSemana.getDate() + i);
-        fechas.push(fecha);
+async function cargarPedidosPendientes() {
+    try {
+        const res = await fetch('/pedidos/pendientes');
+        pedidosPendientes = await res.json();
+        renderizarPedidosPendientes(pedidosPendientes);
+    } catch (err) {
+        console.error('Error al cargar pedidos pendientes:', err);
     }
-    return fechas;
 }
 
-function formatearFecha(fecha) {
-    return `${fecha.getDate().toString().padStart(2, '0')}/${(fecha.getMonth() + 1).toString().padStart(2, '0')}`;
+function renderizarPedidosPendientes(pedidos) {
+    const lista = document.getElementById('listaPedidosPendientes');
+    const mensajeVacio = document.getElementById('mensajeVacioPendientes');
+    const totalPendientes = document.getElementById('totalPendientes');
+    if (!lista || !mensajeVacio || !totalPendientes) return;
+
+    lista.innerHTML = '';
+    if (pedidos.length === 0) {
+        mensajeVacio.classList.remove('hidden');
+    } else {
+        mensajeVacio.classList.add('hidden');
+        pedidos.forEach(pedido => {
+            const item = document.createElement('div');
+            item.className = 'bg-white rounded-lg shadow-sm p-4 border border-gray-200';
+            item.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-semibold text-gray-700">Pedido para ${pedido.apodo} (${pedido.localidad})</span>
+                    <div class="text-xs text-gray-500">
+                        Zona: <span class="font-medium text-gray-700">${pedido.zona}</span>
+                    </div>
+                </div>
+                <p class="text-gray-800 text-lg font-bold">${pedido.pedido}</p>
+                <p class="text-sm text-gray-500 mt-1">Programado para: ${pedido.fecha_programacion}</p>
+                <p class="text-sm text-gray-500 mt-1">Observaciones: ${pedido.observaciones || 'N/A'}</p>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button onclick="mostrarCalendarioModal(${pedido.historial_id})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors duration-200">
+                        📅 Programar en Calendario
+                    </button>
+                </div>
+            `;
+            lista.appendChild(item);
+        });
+    }
+    totalPendientes.textContent = pedidos.length;
 }
 
+
+function ordenarPedidosPendientes() {
+    const ordenarPor = document.getElementById('ordenarPendientes').value;
+
+    pedidosPendientes.sort((a, b) => {
+        if (ordenarPor === 'zona') {
+            return a.zona.localeCompare(b.zona);
+        }
+        if (ordenarPor === 'apodo') {
+            return a.apodo.localeCompare(b.apodo);
+        }
+        if (ordenarPor === 'fechaEntrega') {
+            const fechaA = new Date(a.fecha_programacion);
+            const fechaB = new Date(b.fecha_programacion);
+            return fechaA - fechaB;
+        }
+        if (ordenarPor === 'fechaPedido') {
+            const fechaA = new Date(a.fecha_pedido);
+            const fechaB = new Date(b.fecha_pedido);
+            return fechaA - fechaB;
+        }
+        return 0;
+    });
+
+    renderizarPedidosPendientes(pedidosPendientes);
+}
+
+// --- Funciones de Calendario ---
 async function cargarPedidosCalendario() {
     try {
         const res = await fetch('/pedidos_calendario');
-        if (!res.ok) throw new Error('Error al obtener los pedidos del calendario.');
         const pedidos = await res.json();
-
-        // Renderizar la vista actual (semanal o diaria)
-        renderizarVistaCalendario(pedidos);
+        pedidosCalendario = {
+            lunes: [], martes: [], miercoles: [], jueves: [], viernes: [], sabado: []
+        };
+        pedidos.forEach(p => {
+            const dia = p.dia_reparto.toLowerCase();
+            if (pedidosCalendario[dia]) {
+                pedidosCalendario[dia].push(p);
+            }
+        });
+        renderizarVistaCalendario();
     } catch (err) {
         console.error('Error al cargar pedidos del calendario:', err);
     }
 }
 
+// Lógica para alternar entre la vista semanal y diaria
 function cambiarVistaCalendario(vista) {
     vistaCalendarioActual = vista;
+    const btnSemanal = document.getElementById('btnVistaSemanal');
+    const btnDiaria = document.getElementById('btnVistaDiaria');
     const vistaSemanalDiv = document.getElementById('vistaSemanal');
     const vistaDiariaDiv = document.getElementById('vistaDiaria');
     const controlesNavegacion = document.getElementById('controlesNavegacion');
-    const btnVistaSemanal = document.getElementById('btnVistaSemanal');
-    const btnVistaDiaria = document.getElementById('btnVistaDiaria');
 
     if (vista === 'semanal') {
+        btnSemanal.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+        btnDiaria.className = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
         vistaSemanalDiv.classList.remove('hidden');
         vistaDiariaDiv.classList.add('hidden');
         controlesNavegacion.classList.remove('hidden');
-        btnVistaSemanal.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
-        btnVistaDiaria.className = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
-    } else {
-        vistaSemanalDiv.classList.add('hidden');
+        renderizarVistaSemanal();
+    } else if (vista === 'diaria') {
+        btnDiaria.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+        btnSemanal.className = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
         vistaDiariaDiv.classList.remove('hidden');
+        vistaSemanalDiv.classList.add('hidden');
         controlesNavegacion.classList.add('hidden');
-        btnVistaSemanal.className = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
-        btnVistaDiaria.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+        renderizarVistaDiaria();
     }
-    cargarPedidosCalendario();
 }
 
+// Renderiza la vista semanal con el recuadro más grande y botón de edición
+function renderizarVistaSemanal() {
+    const contenedor = document.getElementById('vistaSemanal');
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+    Object.entries(pedidosCalendario).forEach(([dia, pedidos]) => {
+        const col = document.createElement('div');
+        col.className = 'bg-white p-6 rounded-lg shadow-md min-h-64 flex flex-col items-center justify-start'; 
+        col.innerHTML = `
+            <h4 class="font-bold mb-2 text-center text-gray-800">${dia.charAt(0).toUpperCase() + dia.slice(1)}</h4>
+            <div class="space-y-2 w-full flex-grow">
+                ${pedidos.map(p => `
+                    <div class="border border-gray-200 rounded-lg p-3">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm font-medium">${p.pedido}</p>
+                                <p class="text-xs text-gray-600">Para: ${p.apodo}</p>
+                            </div>
+                            <button onclick="mostrarModalEditarFecha(${p.historial_id}, '${p.fecha_reparto}')" class="text-blue-500 hover:text-blue-700">
+                                ✏️
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        contenedor.appendChild(col);
+    });
+}
+
+// LÓGICA PARA LA VISTA DIARIA (con botón de edición)
+function renderizarVistaDiaria() {
+    const listaPedidos = document.getElementById('pedidosDiarios');
+    const mensajeVacio = document.getElementById('mensajeVacioDiario');
+    const diaSeleccionado = document.getElementById('selectDiaDiario').value;
+
+    listaPedidos.innerHTML = '';
+    const pedidosDelDia = pedidosCalendario[diaSeleccionado] || [];
+    
+    if (pedidosDelDia.length > 0) {
+        mensajeVacio.classList.add('hidden');
+        pedidosDelDia.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'bg-white p-4 rounded-lg shadow-md';
+            div.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h3 class="font-bold text-lg">${p.apodo} - ${p.pedido}</h3>
+                        <p class="text-sm text-gray-600">Teléfono: ${p.telefono}</p>
+                    </div>
+                    <button onclick="mostrarModalEditarFecha(${p.historial_id}, '${p.fecha_reparto}')" class="text-blue-500 hover:text-blue-700">
+                        ✏️
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500">Observaciones: ${p.observaciones || 'N/A'}</p>
+            `;
+            listaPedidos.appendChild(div);
+        });
+    } else {
+        mensajeVacio.classList.remove('hidden');
+    }
+}
+
+// LÓGICA PARA MOSTRAR EL MODAL DE EDICIÓN DE FECHA (NUEVA FUNCIÓN)
+function mostrarModalEditarFecha(id, fechaActual) {
+    const modal = document.getElementById('editarFechaModal');
+    const inputFecha = document.getElementById('inputNuevaFecha');
+    
+    pedidoParaEditarId = id; // Guardamos el ID del pedido a nivel global
+    inputFecha.value = fechaActual;
+    modal.classList.remove('hidden');
+}
+
+// LÓGICA PARA CERRAR EL MODAL
+function cerrarModalEditarFecha() {
+    const modal = document.getElementById('editarFechaModal');
+    modal.classList.add('hidden');
+    pedidoParaEditarId = null; // Reiniciamos el ID
+}
+
+// LÓGICA PARA GUARDAR LA NUEVA FECHA (NUEVA FUNCIÓN)
+async function guardarNuevaFecha() {
+    if (!pedidoParaEditarId) {
+        alert('No se ha seleccionado un pedido para editar.');
+        return;
+    }
+
+    const nuevaFecha = document.getElementById('inputNuevaFecha').value;
+    if (!nuevaFecha) {
+        alert('Por favor, selecciona una fecha válida.');
+        return;
+    }
+
+    try {
+        const res = await fetch(`/pedidos/editar-fecha/${pedidoParaEditarId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fecha: nuevaFecha })
+        });
+        
+        if (!res.ok) {
+            throw new Error('Error al actualizar la fecha del pedido.');
+        }
+
+        const data = await res.json();
+        alert('Fecha del pedido actualizada con éxito.');
+        cerrarModalEditarFecha();
+        await cargarPedidosCalendario(); // Recargamos el calendario
+        
+    } catch (err) {
+        console.error('Error al guardar la nueva fecha:', err);
+        alert('Hubo un error al actualizar la fecha del pedido. Revisa la consola.');
+    }
+}
+
+// LÓGICA PARA CAMBIAR EL DÍA EN LA VISTA DIARIA
+function cambiarDiaDiario() {
+    const selectDia = document.getElementById('selectDiaDiario');
+    diaSeleccionadoDiario = selectDia.value;
+    renderizarVistaDiaria();
+}
+
+// Funciones para navegar por las semanas
 function semanaAnterior() {
     semanaActualOffset--;
     cargarPedidosCalendario();
@@ -418,127 +620,6 @@ function semanaAnterior() {
 function semanaSiguiente() {
     semanaActualOffset++;
     cargarPedidosCalendario();
-}
-
-
-// --- NUEVA FUNCIÓN AÑADIDA ---
-function renderizarVistaCalendario(pedidos) {
-    const vistaSemanalDiv = document.getElementById('vistaSemanal');
-    const vistaDiariaDiv = document.getElementById('vistaDiaria');
-    const tituloCalendario = document.getElementById('tituloCalendario');
-
-    const diasDeLaSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-
-    // Si la vista es semanal
-    if (vistaCalendarioActual === 'semanal') {
-        vistaSemanalDiv.innerHTML = '';
-        const fechasSemana = obtenerFechasSemana(semanaActualOffset);
-
-        // Actualizar el título del calendario
-        const fechaInicio = formatearFecha(fechasSemana[0]);
-        const fechaFin = formatearFecha(fechasSemana[6]);
-        tituloCalendario.textContent = `${fechaInicio} - ${fechaFin}`;
-
-        // Crear la estructura para cada día de la semana
-        fechasSemana.forEach((fecha, index) => {
-            const diaDiv = document.createElement('div');
-            const fechaFormateada = fecha.toISOString().split('T')[0];
-            const diaNombre = diasDeLaSemana[index];
-
-            diaDiv.className = 'bg-white p-4 rounded-lg shadow-md flex flex-col min-h-[150px]';
-            diaDiv.innerHTML = `
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="font-bold text-center w-full">${diaNombre} - ${formatearFecha(fecha)}</h3>
-                </div>
-            `;
-
-            // Filtrar y mostrar los pedidos de ese día
-            const pedidosDelDia = pedidos.filter(p => p.fecha_reparto === fechaFormateada);
-            if (pedidosDelDia.length > 0) {
-                pedidosDelDia.forEach(pedido => {
-                    const pedidoCard = crearCardPedidoSemanal(pedido);
-                    diaDiv.appendChild(pedidoCard);
-                });
-            } else {
-                diaDiv.innerHTML += `<p class="text-sm text-gray-400 mt-2 text-center">No hay pedidos</p>`;
-            }
-
-            vistaSemanalDiv.appendChild(diaDiv);
-        });
-    } else { // Si la vista es diaria
-        // Lógica de renderizado para la vista diaria (si se implementa)
-        console.log('Vista diaria aún no implementada.');
-    }
-}
-
-function crearCardPedidoSemanal(pedido) {
-    const card = document.createElement('div');
-    card.className = 'bg-gray-100 p-3 rounded-lg border border-gray-200 mb-2 hover:bg-gray-200 transition-colors duration-200';
-    card.innerHTML = `
-        <div class="flex justify-between items-start">
-            <div>
-                <p class="text-sm font-semibold">${pedido.apodo}</p>
-                <p class="text-xs text-gray-600">${pedido.pedido}</p>
-                <p class="text-xs text-blue-600 font-medium">${pedido.localidad}</p>
-            </div>
-            <div class="flex gap-1">
-                <button onclick="abrirModalEditarFecha('${pedido.id}')" class="text-gray-500 hover:text-blue-500 transition-colors duration-200">
-                    <i class="fas fa-pencil-alt"></i>
-                </button>
-            </div>
-        </div>
-        ${pedido.observaciones ? `<p class="text-xs text-gray-500 mt-1">Obs: ${pedido.observaciones}</p>` : ''}
-    `;
-    return card;
-}
-
-function abrirModalEditarFecha(idPedido) {
-    pedidoParaEditarId = idPedido;
-    const modal = document.getElementById('editarFechaModal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    }
-}
-
-function cerrarModalEditarFecha() {
-    const modal = document.getElementById('editarFechaModal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
-}
-
-async function guardarNuevaFecha() {
-    const nuevaFecha = document.getElementById('inputNuevaFecha').value;
-
-    if (!nuevaFecha || !pedidoParaEditarId) {
-        alert('Por favor, selecciona una nueva fecha y asegúrate de que el pedido esté seleccionado.');
-        return;
-    }
-
-    try {
-        const res = await fetch(`/pedidos/editar-fecha/${pedidoParaEditarId}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ fecha: nuevaFecha })
-        });
-
-        if (!res.ok) {
-            throw new Error('Error al actualizar la fecha del pedido.');
-        }
-
-        const pedidoActualizado = await res.json();
-        alert(`Fecha actualizada correctamente a ${pedidoActualizado.fecha_reparto}`);
-
-        cerrarModalEditarFecha();
-        await cargarPedidosCalendario(); // Recargar el calendario
-    } catch (err) {
-        console.error('Error al guardar la nueva fecha:', err);
-        alert('Hubo un error al guardar la fecha. Revisa la consola para más detalles.');
-    }
 }
 
 
@@ -752,7 +833,7 @@ async function programarPedidoConFecha() {
         alert(`Pedido programado:\n\nDía: ${data.dia_reparto}\nFecha: ${data.fecha_reparto}\nPara: ${data.apodo} - ${data.pedido}`);
 
         cerrarCalendarioModal();
-
+        
         // Recargar las listas para que se reflejen los cambios
         await cargarPedidosPendientes();
         await cambiarPestana('Calendario');
@@ -782,193 +863,191 @@ document.addEventListener('DOMContentLoaded', () => {
     cambiarPestana('BaseDatos');
 });
 
-// --- Gestión de Conductores ---
-async function cargarConductores() {
-    try {
-        const res = await fetch('/conductores');
-        const conductores = await res.json();
-        const lista = document.getElementById('listaConductores');
-        lista.innerHTML = '';
-        conductores.forEach(c => {
-            const li = document.createElement('li');
-            li.className = 'flex justify-between items-center p-3 text-sm';
-            li.innerHTML = `
+    // --- Gestión de Conductores ---
+    async function cargarConductores() {
+        try {
+            const res = await fetch('/conductores');
+            const conductores = await res.json();
+            const lista = document.getElementById('listaConductores');
+            lista.innerHTML = '';
+            conductores.forEach(c => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-3 text-sm';
+                li.innerHTML = `
                     <span>${c.nombre}</span>
                     <button onclick="eliminarConductor(${c.id})" class="text-red-600 hover:text-red-800">🗑️</button>
                 `;
-            lista.appendChild(li);
-        });
-    } catch (err) {
-        console.error('Error al cargar conductores:', err);
-    }
-}
-
-async function agregarConductor() {
-    const input = document.getElementById('nuevoConductor');
-    const nombre = input.value.trim();
-    if (!nombre) return;
-
-    try {
-        const res = await fetch('/conductores', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre })
-        });
-        if (res.ok) {
-            input.value = '';
-            cargarConductores();
+                lista.appendChild(li);
+            });
+        } catch (err) {
+            console.error('Error al cargar conductores:', err);
         }
-    } catch (err) {
-        console.error('Error al agregar conductor:', err);
     }
-}
 
-async function eliminarConductor(id) {
-    if (confirm('¿Estás seguro de que quieres eliminar este conductor?')) {
+    async function agregarConductor() {
+        const input = document.getElementById('nuevoConductor');
+        const nombre = input.value.trim();
+        if (!nombre) return;
+
         try {
-            const res = await fetch(`/conductores/${id}`, { method: 'DELETE' });
+            const res = await fetch('/conductores', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre })
+            });
             if (res.ok) {
+                input.value = '';
                 cargarConductores();
             }
         } catch (err) {
-            console.error('Error al eliminar conductor:', err);
+            console.error('Error al agregar conductor:', err);
         }
     }
-}
 
-// --- Gestión de Camiones ---
-async function cargarCamiones() {
-    try {
-        const res = await fetch('/camiones');
-        const camiones = await res.json();
-        const lista = document.getElementById('listaCamiones');
-        lista.innerHTML = '';
-        camiones.forEach(c => {
-            const li = document.createElement('li');
-            li.className = 'flex justify-between items-center p-3 text-sm';
-            li.innerHTML = `
+    async function eliminarConductor(id) {
+        if (confirm('¿Estás seguro de que quieres eliminar este conductor?')) {
+            try {
+                const res = await fetch(`/conductores/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    cargarConductores();
+                }
+            } catch (err) {
+                console.error('Error al eliminar conductor:', err);
+            }
+        }
+    }
+
+    // --- Gestión de Camiones ---
+    async function cargarCamiones() {
+        try {
+            const res = await fetch('/camiones');
+            const camiones = await res.json();
+            const lista = document.getElementById('listaCamiones');
+            lista.innerHTML = '';
+            camiones.forEach(c => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-3 text-sm';
+                li.innerHTML = `
                     <span>${c.matricula}</span>
                     <button onclick="eliminarCamion(${c.id})" class="text-red-600 hover:text-red-800">🗑️</button>
                 `;
-            lista.appendChild(li);
-        });
-    } catch (err) {
-        console.error('Error al cargar camiones:', err);
-    }
-}
-
-async function agregarCamion() {
-    const input = document.getElementById('nuevoCamion');
-    const matricula = input.value.trim();
-    if (!matricula) return;
-
-    try {
-        const res = await fetch('/camiones', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ matricula })
-        });
-        if (res.ok) {
-            input.value = '';
-            cargarCamiones();
+                lista.appendChild(li);
+            });
+        } catch (err) {
+            console.error('Error al cargar camiones:', err);
         }
-    } catch (err) {
-        console.error('Error al agregar camión:', err);
     }
-}
 
-async function eliminarCamion(id) {
-    if (confirm('¿Estás seguro de que quieres eliminar este camión?')) {
+    async function agregarCamion() {
+        const input = document.getElementById('nuevoCamion');
+        const matricula = input.value.trim();
+        if (!matricula) return;
+
         try {
-            const res = await fetch(`/camiones/${id}`, { method: 'DELETE' });
+            const res = await fetch('/camiones', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ matricula })
+            });
             if (res.ok) {
+                input.value = '';
                 cargarCamiones();
             }
         } catch (err) {
-            console.error('Error al eliminar camión:', err);
+            console.error('Error al agregar camión:', err);
         }
     }
-}
 
-// --- Gestión de Zonas ---
-async function cargarZonas() {
-    try {
-        const res = await fetch('/zonas');
-        const zonas = await res.json();
-        const lista = document.getElementById('listaZonas');
-        lista.innerHTML = '';
-        zonas.forEach(z => {
-            const li = document.createElement('li');
-            li.className = 'flex justify-between items-center p-3 text-sm';
-            li.innerHTML = `
+    async function eliminarCamion(id) {
+        if (confirm('¿Estás seguro de que quieres eliminar este camión?')) {
+            try {
+                const res = await fetch(`/camiones/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    cargarCamiones();
+                }
+            } catch (err) {
+                console.error('Error al eliminar camión:', err);
+            }
+        }
+    }
+
+    // --- Gestión de Zonas ---
+    async function cargarZonas() {
+        try {
+            const res = await fetch('/zonas');
+            const zonas = await res.json();
+            const lista = document.getElementById('listaZonas');
+            lista.innerHTML = '';
+            zonas.forEach(z => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-3 text-sm';
+                li.innerHTML = `
                     <span>${z.nombre}</span>
                     <button onclick="eliminarZona(${z.id})" class="text-red-600 hover:text-red-800">🗑️</button>
                 `;
-            lista.appendChild(li);
-        });
-    } catch (err) {
-        console.error('Error al cargar zonas:', err);
-    }
-}
-
-async function agregarZona() {
-    const input = document.getElementById('nuevaZona');
-    const nombre = input.value.trim();
-    if (!nombre) return;
-
-    try {
-        const res = await fetch('/zonas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre })
-        });
-        if (res.ok) {
-            input.value = '';
-            cargarZonas();
+                lista.appendChild(li);
+            });
+        } catch (err) {
+            console.error('Error al cargar zonas:', err);
         }
-    } catch (err) {
-        console.error('Error al agregar zona:', err);
     }
-}
 
-async function eliminarZona(id) {
-    if (confirm('¿Estás seguro de que quieres eliminar esta zona?')) {
+    async function agregarZona() {
+        const input = document.getElementById('nuevaZona');
+        const nombre = input.value.trim();
+        if (!nombre) return;
+
         try {
-            const res = await fetch(`/zonas/${id}`, { method: 'DELETE' });
+            const res = await fetch('/zonas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre })
+            });
             if (res.ok) {
+                input.value = '';
                 cargarZonas();
             }
         } catch (err) {
-            console.error('Error al eliminar zona:', err);
+            console.error('Error al agregar zona:', err);
         }
     }
-}
 
-// --- Herramientas de Mantenimiento (Funciones simuladas) ---
-function limpiarPedidosAntiguos() {
-    if (confirm('¿Estás seguro de que quieres limpiar los pedidos antiguos? Esta acción no se puede deshacer.')) {
-        alert('Limpieza de pedidos antiguos simulada. Se ha llamado a la API para realizar la acción.');
-        // Aquí iría el fetch a la API: await fetch('/api/limpiar-pedidos', { method: 'POST' });
+    async function eliminarZona(id) {
+        if (confirm('¿Estás seguro de que quieres eliminar esta zona?')) {
+            try {
+                const res = await fetch(`/zonas/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    cargarZonas();
+                }
+            } catch (err) {
+                console.error('Error al eliminar zona:', err);
+            }
+        }
     }
-}
 
-function exportarDatos() {
-    alert('Exportación de datos simulada. Se está preparando el archivo para descarga.');
-    // Aquí iría el fetch a la API para descargar un archivo: await fetch('/api/exportar-datos');
-}
-
-function resetearSistema() {
-    if (confirm('⚠️ ¡ADVERTENCIA! ¿Estás seguro de que quieres RESETEAR EL SISTEMA? Se eliminarán todos los clientes, pedidos y registros. Esta acción es IRREVERSIBLE.')) {
-        alert('El reseteo del sistema se ha simulado. Se ha llamado a la API para realizar la acción.');
-        // Aquí iría el fetch a la API: await fetch('/api/resetear-sistema', { method: 'POST' });
+    // --- Herramientas de Mantenimiento (Funciones simuladas) ---
+    function limpiarPedidosAntiguos() {
+        if (confirm('¿Estás seguro de que quieres limpiar los pedidos antiguos? Esta acción no se puede deshacer.')) {
+            alert('Limpieza de pedidos antiguos simulada. Se ha llamado a la API para realizar la acción.');
+            // Aquí iría el fetch a la API: await fetch('/api/limpiar-pedidos', { method: 'POST' });
+        }
     }
-}
 
-// Inicializar al cargar esta pestaña
-document.addEventListener('DOMContentLoaded', () => {
-    cambiarPestana('BaseDatos');
-    cargarConductores();
-    cargarCamiones();
-    cargarZonas();
+    function exportarDatos() {
+        alert('Exportación de datos simulada. Se está preparando el archivo para descarga.');
+        // Aquí iría el fetch a la API para descargar un archivo: await fetch('/api/exportar-datos');
+    }
 
-});
+    function resetearSistema() {
+        if (confirm('⚠️ ¡ADVERTENCIA! ¿Estás seguro de que quieres RESETEAR EL SISTEMA? Se eliminarán todos los clientes, pedidos y registros. Esta acción es IRREVERSIBLE.')) {
+            alert('El reseteo del sistema se ha simulado. Se ha llamado a la API para realizar la acción.');
+            // Aquí iría el fetch a la API: await fetch('/api/resetear-sistema', { method: 'POST' });
+        }
+    }
+
+    // Inicializar al cargar esta pestaña
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarConductores();
+        cargarCamiones();
+        cargarZonas();
+    });
