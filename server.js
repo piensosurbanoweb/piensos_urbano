@@ -482,6 +482,7 @@ app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
     }
 });
 
+
 // Servir archivos estáticos desde la carpeta 'public'
 app.use(express.static(path.join(__dirname, 'public')));
 
