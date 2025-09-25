@@ -702,6 +702,11 @@ function actualizarFranjaFechas() {
     }
 }
 
+function semanaActual() {
+    semanaActualOffset = 0;
+    cargarPedidosCalendario();
+}
+
 function semanaAnterior() {
     semanaActualOffset--;
     cargarPedidosCalendario();

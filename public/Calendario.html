@@ -1,70 +1,122 @@
 <div id="pestanaCalendario" class="p-6">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-800">📅 Calendario de Reparto</h2>
-        <div class="flex gap-4">
-            <div class="flex gap-2">
-                <button onclick="cambiarVistaCalendario('semanal')" id="btnVistaSemanal" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    📅 Vista Semanal
-                </button>
-                <button onclick="cambiarVistaCalendario('diaria')" id="btnVistaDiaria" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    📋 Vista Diaria
-                </button>
-            </div>
-            <div class="flex gap-2" id="controlesNavegacion">
-                <button onclick="semanaAnterior()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    ← Anterior
-                </button>
-                <div class="bg-gray-100 text-gray-800 px-4 py-2 rounded-lg font-medium flex items-center justify-center min-w-[150px]">
-                    <span id="tituloCalendario">Semana Actual</span>
-                </div>
-                <button onclick="semanaSiguiente()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    Siguiente →
-                </button>
-            </div>
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">📅 Calendario de Reparto</h2>
+    <div class="flex gap-4">
+      <div class="flex gap-2">
+        <button
+          onclick="cambiarVistaCalendario('semanal')"
+          id="btnVistaSemanal"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+        >
+          📅 Vista Semanal
+        </button>
+        <button
+          onclick="cambiarVistaCalendario('diaria')"
+          id="btnVistaDiaria"
+          class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+        >
+          📋 Vista Diaria
+        </button>
+      </div>
+      <div class="flex gap-2" id="controlesNavegacion">
+        <button
+          onclick="semanaAnterior()"
+          class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+        >
+          ← Anterior
+        </button>
+        <button
+          onclick="semanaActual()"
+          class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+        >
+          Semana Actual
+        </button>
+        <div
+          class="bg-gray-100 text-gray-800 px-4 py-2 rounded-lg font-medium flex items-center justify-center min-w-[150px]"
+        >
+          <span id="fechasSemana"></span>
         </div>
+        <button
+          onclick="semanaSiguiente()"
+          class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+        >
+          Siguiente →
+        </button>
+      </div>
     </div>
-    
-    <div id="vistaSemanal" class="grid grid-cols-1 md:grid-cols-7 gap-4">
-    </div>
+  </div>
 
-    <div id="vistaDiaria" class="hidden">
-        <div class="flex justify-between items-center mb-4 mt-6">
-            <select id="selectDiaDiario" onchange="cambiarDiaDiario()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
-                <option value="lunes">Lunes</option>
-                <option value="martes">Martes</option>
-                <option value="miercoles">Miércoles</option>
-                <option value="jueves">Jueves</option>
-                <option value="viernes">Viernes</option>
-                <option value="sabado">Sábado</option>
-                <option value="domingo">Domingo</option>
-            </select>
-            <button onclick="enviarDiaAHojaReparto()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                📦 Enviar a Hoja Reparto
-            </button>
-        </div>
-        <div id="pedidosDiarios" class="space-y-4">
-        </div>
-        <div id="mensajeVacioDiario" class="text-center py-12 text-gray-500 hidden">
-            <div class="text-4xl mb-4">📅</div>
-            <p class="text-lg">No hay pedidos programados para este día</p>
-        </div>
-    </div>
+  <div id="vistaSemanal" class="grid grid-cols-1 md:grid-cols-7 gap-4"></div>
 
+  <div id="vistaDiaria" class="hidden">
+    <div class="flex justify-between items-center mb-4 mt-6">
+      <select
+        id="selectDiaDiario"
+        onchange="cambiarDiaDiario()"
+        class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="lunes">Lunes</option>
+        <option value="martes">Martes</option>
+        <option value="miercoles">Miércoles</option>
+        <option value="jueves">Jueves</option>
+        <option value="viernes">Viernes</option>
+        <option value="sabado">Sábado</option>
+        <option value="domingo">Domingo</option>
+      </select>
+      <button
+        onclick="enviarDiaAHojaReparto()"
+        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+      >
+        📦 Enviar a Hoja Reparto
+      </button>
+    </div>
+    <div id="pedidosDiarios" class="space-y-4"></div>
+    <div id="mensajeVacioDiario" class="text-center py-12 text-gray-500 hidden">
+      <div class="text-4xl mb-4">📅</div>
+      <p class="text-lg">No hay pedidos programados para este día</p>
+    </div>
+  </div>
 </div>
 
-<div id="editarFechaModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex justify-center items-center">
-    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold">Editar Fecha del Pedido</h3>
-            <button onclick="cerrarModalEditarFecha()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-        </div>
-        <div class="mb-4">
-            <label for="inputNuevaFecha" class="block text-gray-700 text-sm font-medium mb-2">Nueva Fecha de Reparto:</label>
-            <input type="date" id="inputNuevaFecha" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-        </div>
-        <div class="flex justify-end gap-2">
-            <button onclick="cerrarModalEditarFecha()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium">Cancelar</button>
-            <button onclick="guardarNuevaFecha()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">Guardar Cambios</button>
-        </div>
+<div
+  id="editarFechaModal"
+  class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex justify-center items-center"
+>
+  <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold">Editar Fecha del Pedido</h3>
+      <button
+        onclick="cerrarModalEditarFecha()"
+        class="text-gray-400 hover:text-gray-600 text-2xl"
+      >
+        &times;
+      </button>
     </div>
+    <div class="mb-4">
+      <label
+        for="inputNuevaFecha"
+        class="block text-gray-700 text-sm font-medium mb-2"
+        >Nueva Fecha de Reparto:</label
+      >
+      <input
+        type="date"
+        id="inputNuevaFecha"
+        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+      />
+    </div>
+    <div class="flex justify-end gap-2">
+      <button
+        onclick="cerrarModalEditarFecha()"
+        class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium"
+      >
+        Cancelar
+      </button>
+      <button
+        onclick="guardarNuevaFecha()"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+      >
+        Guardar Cambios
+      </button>
+    </div>
+  </div>
 </div>
