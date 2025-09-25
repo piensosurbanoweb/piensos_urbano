@@ -1,6 +1,6 @@
 // Variables de control, declaradas solo una vez para toda la aplicación
 let editandoId = null;
-let semanaActualOffset = 0;
+//let semanaActualOffset = 0;
 let vistaCalendarioActual = 'semanal';
 let diaSeleccionadoDiario = 'lunes';
 let clienteSeleccionado = null; // Variable para el autocompletado
@@ -10,7 +10,7 @@ let pedidoParaEditarId = null; // Almacenará el ID del pedido que se está edit
 // Simulación de datos (reemplazar con llamadas a la API)
 let pedidosPendientes = [];
 let pedidosCalendario = {
-    lunes: [], martes: [], 'miércoles': [], jueves: [], viernes: [], 'sábado': [], domingo: []
+    lunes: [], martes: [], miercoles: [], jueves: [], viernes: [], sabado: [], domingo: []
 };
 
 let clientes = [];
@@ -447,7 +447,6 @@ function ordenarPedidosPendientes() {
 }
 
 // --- Funciones de Calendario ---
-// --- Funciones de Calendario ---
 async function cargarPedidosCalendario() {
     try {
         const res = await fetch(`/pedidos_calendario?offset=${semanaActualOffset}`);
@@ -455,7 +454,7 @@ async function cargarPedidosCalendario() {
 
         const pedidos = await res.json();
         pedidosCalendario = {
-            lunes: [], martes: [], 'miércoles': [], jueves: [], viernes: [], 'sábado': [], domingo: []
+            lunes: [], martes: [], miércoles: [], jueves: [], viernes: [], sábado: [], domingo: []
         };
         pedidos.forEach(p => {
             const dia = p.dia_reparto.toLowerCase();
