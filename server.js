@@ -386,36 +386,45 @@ app.delete("/conductores/:id", async (req, res) => {
 });
 
 // --- CAMIONES ---
-app.get("/camiones", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM camiones WHERE activo=true ORDER BY nombre");
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: "Error al obtener camiones" });
-  }
-});
 
+// La única ruta para agregar camiones
 app.post("/camiones", async (req, res) => {
-  try {
-    const { nombre } = req.body;
-    const result = await pool.query(
-      "INSERT INTO camiones (nombre) VALUES ($1) RETURNING *",
-      [nombre]
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: "Error al insertar camión" });
-  }
+    try {
+        // Asegurarse de recibir la propiedad 'matricula' del frontend
+        const { matricula } = req.body;
+
+        // Validar que la matrícula no esté vacía
+        if (!matricula) {
+            return res.status(400).json({ error: "La matrícula es requerida." });
+        }
+
+        // Usar la consulta INSERT para agregar un nuevo camión
+        // El frontend envía 'matricula', pero tu tabla tiene la columna 'nombre'.
+        // Aquí se usa 'nombre' para que coincida con tu tabla.
+        // Si quieres usar 'matricula' en la tabla, debes renombrar la columna.
+        const result = await pool.query(
+            "INSERT INTO camiones (nombre) VALUES ($1) RETURNING *",
+            [matricula] // Se inserta el valor de 'matricula' en la columna 'nombre'
+        );
+
+        // Enviar una sola respuesta de éxito con los datos del camión agregado
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error("Error al insertar camión:", err);
+        res.status(500).json({ error: "Error al insertar camión." });
+    }
 });
 
+// La ruta para eliminar camiones, esta está correcta
 app.delete("/camiones/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query("UPDATE camiones SET activo=false WHERE id=$1", [id]);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: "Error al eliminar camión" });
-  }
+    try {
+        const { id } = req.params;
+        await pool.query("UPDATE camiones SET activo=false WHERE id=$1", [id]);
+        res.status(200).json({ success: true });
+    } catch (err) {
+        console.error("Error al eliminar camión:", err);
+        res.status(500).json({ error: "Error al eliminar camión" });
+    }
 });
 
 // --- ZONAS ---
