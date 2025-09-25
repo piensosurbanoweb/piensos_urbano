@@ -100,7 +100,7 @@ async function inicializarPendientes() {
 
 function inicializarCalendario() {
     vistaCalendarioActual = 'semanal';
-    await cargarPedidosCalendario();
+    cargarPedidosCalendario();
     cambiarVistaCalendario('semanal');
 }
 
