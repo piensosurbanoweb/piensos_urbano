@@ -50,35 +50,27 @@ async function cambiarPestana(nombrePestana) {
 
     // Cargar el contenido de la pestaña
     try {
-        const res = await fetch(`templates/${nombrePestana}.html`);
+        const res = await fetch(`${nombrePestana}.html`);
         if (!res.ok) {
-            throw new Error(`No se pudo cargar la pestaña templates/${nombrePestana}.html`);
+            throw new Error(`No se pudo cargar la pestaña ${nombrePestana}.html`);
         }
         const html = await res.text();
         contenedor.innerHTML = html;
 
         // Después de que el HTML se haya inyectado, inicializar la pestaña
-        switch (nombrePestana) {
-            case 'BaseDatos':
-                inicializarBaseDatos();
-                break;
-            case 'NuevoPedido':
-                inicializarNuevoPedido();
-                break;
-            case 'PedidosPendientes':
-                inicializarPendientes();
-                break;
-            case 'Calendario':
-                vistaCalendarioActual = 'semanal'; // Establecer vista semanal por defecto
-                await cargarPedidosCalendario(); // Carga los pedidos para la semana actual
-                cambiarVistaCalendario(vistaCalendarioActual); // Renderiza la vista semanal
-                break;
-            case 'GestionBBDD':
-                inicializarGestionBBDD();
-                break;
-            case 'HojaReparto':
-                inicializarHojaReparto();
-                break;
+        if (nombrePestana === "BaseDatos") {
+            inicializarBaseDatos();
+        } else if (nombrePestana === "NuevoPedido") {
+            inicializarNuevoPedido();
+        } else if (nombrePestana === "Pendientes") {
+            inicializarPendientes();
+        } else if (nombrePestana === "Calendario") {
+            inicializarCalendario();
+            await cargarPedidosCalendario();
+        } else if (nombrePestana === "GestionBBDD") {
+            inicializarGestionBBDD();
+        } else if (nombrePestana === "HojaReparto") {
+            inicializarHojaReparto();
         }
     } catch (err) {
         console.error(`Error al cargar la pestaña ${nombrePestana}:`, err);
