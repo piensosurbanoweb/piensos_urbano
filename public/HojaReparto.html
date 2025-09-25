@@ -23,6 +23,65 @@
     
     <div id="hojaDeReparto" class="mt-8 bg-white p-6 rounded-lg shadow-md">
         <h3 class="text-xl font-bold text-gray-800 mb-4">Hoja de Reparto</h3>
+        <div class="p-6 bg-white rounded-xl shadow-lg">
+            <h2 class="text-2xl font-bold mb-4">Pedidos</h2>
+          
+            <div class="overflow-x-auto">
+              <table class="w-full border-collapse border text-sm">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="border px-2 py-2">Nº</th>
+                    <th class="border px-2 py-2">Cliente</th>
+                    <th class="border px-2 py-2">Teléfono</th>
+                    <th class="border px-2 py-2">Pedido</th>
+                    <th class="border px-2 py-2">Día</th>
+                    <th class="border px-2 py-2">Orden</th>
+                    <th class="border px-2 py-2">Zona</th>
+                    <th class="border px-2 py-2">Notas</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaPedidos" class="divide-y divide-gray-200">
+                  
+                </tbody>
+              </table>
+            </div>
+
+            <div id="loadingPedidos" class="text-center py-6 hidden">
+                <i class="fas fa-spinner fa-spin text-2xl text-green-500"></i>
+                <p class="text-gray-500 mt-2">Cargando pedidos...</p>
+            </div>
+    
+            <div id="mensajeVacioPedidos" class="text-center py-12 text-gray-500 hidden">
+                <div class="text-4xl mb-4">📦</div>
+                <p class="text-lg">No hay pedidos registrados</p>
+                <p class="text-sm">¡Agrega el primero para empezar!</p>
+            </div>
+        </div>
+    
+        <div id="pedidoModal" class="modal-container hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div class="modal-content bg-white p-6 rounded-xl w-11/12 md:w-3/4 lg:w-2/3 shadow-2xl scale-95 opacity-0 transition-transform transition-opacity duration-300">
+                <h3 id="pedidoModalTitle" class="text-xl font-bold mb-4">Agregar Pedido</h3>
+                <form id="pedidoForm" class="space-y-4">
+                    <input type="hidden" id="pedidoId">
+    
+                    <input type="text" id="cliente" name="cliente" placeholder="Cliente" class="w-full border rounded-lg p-2" required>
+                    <input type="text" id="telefono" name="telefono" placeholder="Teléfono" class="w-full border rounded-lg p-2">
+                    <textarea id="pedido" name="pedido" placeholder="Detalle del pedido" class="w-full border rounded-lg p-2" required></textarea>
+                    <input type="date" id="dia" name="dia" class="w-full border rounded-lg p-2" required>
+                    <input type="text" id="orden" name="orden" placeholder="Orden" class="w-full border rounded-lg p-2">
+                    <input type="text" id="zona" name="zona" placeholder="Zona" class="w-full border rounded-lg p-2">
+                    <textarea id="notas" name="notas" placeholder="Notas" class="w-full border rounded-lg p-2"></textarea>
+    
+                    <div class="flex justify-end gap-2">
+                        <button type="button" onclick="cerrarModalPedido()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+          </div>          
         <ul id="listaPedidosHoja" class="space-y-4">
             </ul>
         <div id="mensajeVacioHoja" class="text-center py-12 text-gray-500 hidden">
@@ -198,3 +257,4 @@
         });
     });
 </script>
+
