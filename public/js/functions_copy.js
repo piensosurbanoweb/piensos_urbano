@@ -837,7 +837,7 @@ function renderizarHojaReparto() {
 
     if (!lista || !mensajeVacio) return;
 
-    lista.innerHTML = '';
+    lista.innerHTML = ''; // Limpia la lista existente
 
     if (pedidosHojaReparto.length === 0) {
         mensajeVacio.classList.remove('hidden');
@@ -859,24 +859,29 @@ function renderizarHojaReparto() {
     }
 }
 
+
+/**
+ * Carga los pedidos específicos para la hoja de reparto haciendo una llamada a la API.
+ */
 async function cargarPedidosHoja() {
     try {
-        const res = await fetch('/pedidos_pendientes');
+        const res = await fetch('/pedidos/hoja-reparto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: [] }) // Petición vacía para cargar la vista inicial
+        });
         if (!res.ok) {
             throw new Error('Error en el servidor al cargar los pedidos.');
         }
         const pedidos = await res.json();
-        
-        // Almacena los pedidos en la variable global.
         pedidosHojaReparto = pedidos;
-        
-        // Renderiza la lista de pedidos en la interfaz de usuario.
         renderizarHojaReparto();
-        console.log("Función cargarPedidosHoja ejecutada.");
     } catch (err) {
         console.error('Error al cargar pedidos de la hoja de reparto:', err);
     }
 }
+
+
 
 /**
  * Muestra el modal del selector de pedidos y carga las zonas y pedidos disponibles.
