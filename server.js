@@ -223,10 +223,17 @@ app.get("/pedidos/detalles/:id", async (req, res) => {
     const { id } = req.params;
     const result = await pool.query(
       `SELECT 
-                p.id, p.fecha_entrega, p.cantidad, p.producto, p.observaciones,
+                p.id,
+                p.fecha_entrega AS fecha_entrega,
+                -- Derivar cantidad y producto desde la descripción del historial
+                split_part(h.descripcion, ' de ', 1) AS cantidad,
+                split_part(split_part(h.descripcion, ' - ', 1), ' de ', 2) AS producto,
+                p.observaciones,
                 c.apodo AS apodo_cliente, c.telefono, c.localidad
             FROM 
                 pedidos_calendario p
+            JOIN 
+                pedidos_historial h ON h.id = p.historial_id
             LEFT JOIN 
                 clientes c ON p.cliente_id = c.id
             WHERE 
@@ -264,10 +271,17 @@ app.get("/pedidos_calendario", async (req, res) => {
 
     const result = await pool.query(
       `SELECT
-                p.id, p.cantidad, p.producto, p.dia_reparto, p.fecha_entrega,
-                c.apodo AS apodo_cliente
+                p.id,
+                p.dia_reparto,
+                p.fecha_entrega,
+                c.apodo AS apodo_cliente,
+                -- Derivar cantidad y producto desde la descripción del historial
+                split_part(h.descripcion, ' de ', 1) AS cantidad,
+                split_part(split_part(h.descripcion, ' - ', 1), ' de ', 2) AS producto
             FROM
                 pedidos_calendario p
+            JOIN
+                pedidos_historial h ON h.id = p.historial_id
             JOIN
                 clientes c ON p.cliente_id = c.id
             WHERE
@@ -351,14 +365,7 @@ app.post("/pedidos/programar-con-fecha/:id", async (req, res) => {
     const fechaObj = new Date(fecha);
     const diaDeLaSemana = diasDeLaSemana[fechaObj.getUTCDay()];
 
-    // Actualizar la fecha de entrega y el día de la semana en la tabla 'pedidos'
-    await client.query(
-      "UPDATE pedidos SET fecha_entrega = $1, dia_semana = $2 WHERE id = $3",
-      [fecha, diaDeLaSemana, pedido.historial_id]
-    );
-
-
-    // Insertar en la tabla de 'pedidos_calendario'
+    // Insertar en la tabla de 'pedidos_calendario' (fuente de verdad de la programación)
     await client.query(
       `INSERT INTO pedidos_calendario (
         historial_id, cliente_id, dia_reparto, fecha_entrega, observaciones
@@ -574,10 +581,17 @@ app.post("/pedidos/hoja-reparto", async (req, res) => {
     // Consulta los pedidos del calendario junto con el apodo del cliente
     const queryPedidos = `
   SELECT
-      p.id, p.cliente_id, p.cantidad, p.producto, p.fecha_entrega, p.observaciones,
+      p.id,
+      p.cliente_id,
+      split_part(h.descripcion, ' de ', 1) AS cantidad,
+      split_part(split_part(h.descripcion, ' - ', 1), ' de ', 2) AS producto,
+      p.fecha_entrega AS fecha_entrega,
+      p.observaciones,
       c.apodo AS apodo_cliente
   FROM
       pedidos_calendario p
+  JOIN
+      pedidos_historial h ON h.id = p.historial_id
   JOIN
       clientes c ON p.cliente_id = c.id
   WHERE
