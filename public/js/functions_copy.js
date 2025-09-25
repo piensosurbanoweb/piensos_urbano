@@ -10,7 +10,7 @@ let pedidoParaEditarId = null; // Almacenará el ID del pedido que se está edit
 // Simulación de datos (reemplazar con llamadas a la API)
 let pedidosPendientes = [];
 let pedidosCalendario = {
-    lunes: [], martes: [], miercoles: [], jueves: [], viernes: []
+    lunes: [], martes: [], 'miércoles': [], jueves: [], viernes: [], 'sábado': [], domingo: []
 };
 
 let clientes = [];
@@ -50,27 +50,33 @@ async function cambiarPestana(nombrePestana) {
 
     // Cargar el contenido de la pestaña
     try {
-        const res = await fetch(`${nombrePestana}.html`);
+        const res = await fetch(`templates/${nombrePestana}.html`);
         if (!res.ok) {
-            throw new Error(`No se pudo cargar la pestaña ${nombrePestana}.html`);
+            throw new Error(`No se pudo cargar la pestaña templates/${nombrePestana}.html`);
         }
         const html = await res.text();
         contenedor.innerHTML = html;
 
         // Después de que el HTML se haya inyectado, inicializar la pestaña
-        if (nombrePestana === "BaseDatos") {
-            inicializarBaseDatos();
-        } else if (nombrePestana === "NuevoPedido") {
-            inicializarNuevoPedido();
-        } else if (nombrePestana === "Pendientes") {
-            inicializarPendientes();
-        } else if (nombrePestana === "Calendario") {
-            inicializarCalendario();
-            await cargarPedidosCalendario();
-        } else if (nombrePestana === "GestionBBDD") {
-            inicializarGestionBBDD();
-        } else if (nombrePestana === "HojaReparto") {
-            inicializarHojaReparto();
+        switch (nombrePestana) {
+            case 'BaseDatos':
+                inicializarBaseDatos();
+                break;
+            case 'NuevoPedido':
+                inicializarNuevoPedido();
+                break;
+            case 'PedidosPendientes':
+                inicializarPendientes();
+                break;
+            case 'Calendario':
+                inicializarCalendario();
+                break;
+            case 'GestionBBDD':
+                inicializarGestionBBDD();
+                break;
+            case 'HojaReparto':
+                inicializarHojaReparto();
+                break;
         }
     } catch (err) {
         console.error(`Error al cargar la pestaña ${nombrePestana}:`, err);
@@ -98,9 +104,9 @@ async function inicializarPendientes() {
     }
 }
 
-function inicializarCalendario() {
+async function inicializarCalendario() {
     vistaCalendarioActual = 'semanal';
-    cargarPedidosCalendario();
+    await cargarPedidosCalendario();
     cambiarVistaCalendario('semanal');
 }
 
