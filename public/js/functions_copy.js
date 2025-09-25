@@ -857,13 +857,10 @@ function renderizarHojaReparto() {
 /**
  * Carga los pedidos específicos para la hoja de reparto haciendo una llamada a la API.
  */
+// Carga los pedidos específicos para la hoja de reparto haciendo una llamada a la API.
 async function cargarPedidosHoja() {
     try {
-        const res = await fetch('/pedidos/hoja-reparto', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids: [] }) // Petición vacía para cargar la vista inicial
-        });
+        const res = await fetch('/pedidos/hoja-reparto'); // Ahora es un GET
         if (!res.ok) {
             throw new Error('Error en el servidor al cargar los pedidos.');
         }
@@ -874,7 +871,6 @@ async function cargarPedidosHoja() {
         console.error('Error al cargar pedidos de la hoja de reparto:', err);
     }
 }
-
 
 
 /**

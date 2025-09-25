@@ -248,26 +248,37 @@ app.get("/pedidos/detalles/:id", async (req, res) => {
 
 
 // --- PEDIDOS CALENDARIO ---
+// OBTENER PEDIDOS PARA EL CALENDARIO FILTRADOS POR SEMANA
 app.get("/pedidos_calendario", async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT
-                pc.*,
-                ph.descripcion AS pedido,
-                c.apodo,
-                c.telefono,
-                c.localidad,
-                c.zona_reparto
-             FROM pedidos_calendario pc
-             JOIN pedidos_historial ph ON pc.historial_id = ph.id
-             JOIN clientes c ON pc.cliente_id = c.id
-             ORDER BY pc.fecha_reparto ASC`
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error('Error al obtener pedidos del calendario:', err.message);
-    res.status(500).json({ error: "Error al obtener pedidos del calendario" });
-  }
+    try {
+        const offset = parseInt(req.query.offset) || 0;
+        const now = new Date();
+        const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (offset * 7) - now.getDay() + (now.getDay() === 0 ? -6 : 1));
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        
+        const result = await pool.query(
+            `SELECT
+                p.id, p.cantidad, p.producto, p.dia_reparto, p.fecha_entrega,
+                c.apodo AS apodo_cliente
+            FROM
+                pedidos_calendario p
+            JOIN
+                clientes c ON p.cliente_id = c.id
+            WHERE
+                p.fecha_entrega >= $1 AND p.fecha_entrega <= $2
+            ORDER BY
+                p.fecha_entrega`,
+            [startOfWeek.toISOString().split('T')[0], endOfWeek.toISOString().split('T')[0]]
+        );
+
+        const pedidos = result.rows;
+        res.json(pedidos);
+
+    } catch (err) {
+        console.error('Error al obtener pedidos del calendario:', err.message);
+        res.status(500).json({ error: "Error interno del servidor." });
+    }
 });
 
 app.post("/pedidos_calendario", async (req, res) => {
@@ -527,36 +538,86 @@ app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
 
 
 // --- FUNCIONES DE HOJA DE REPARTO ---
-app.post("/pedidos/hoja-reparto", async (req, res) => {
+// OBTENER PEDIDOS PARA LA HOJA DE REPARTO
+/*app.get("/pedidos/hoja-reparto", async (req, res) => {
   try {
-    const { ids } = req.body;
+    const result = await pool.query(`
+      SELECT 
+        p.id, p.cantidad, p.producto, p.fecha_entrega,
+        c.apodo AS apodo_cliente
+      FROM 
+        pedidos_hoja_reparto p
+      JOIN 
+        clientes c ON p.cliente_id = c.id
+      ORDER BY
+        p.fecha_entrega, c.apodo;
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener pedidos de la hoja de reparto:', err.message);
+    res.status(500).json({ error: "Error interno del servidor al cargar la hoja de reparto." });
+  }
+});*/
 
-    // Asegúrate de que los IDs no estén vacíos y sean un array
+// AGREGAR PEDIDOS A LA HOJA DE REPARTO
+app.post("/pedidos/hoja-reparto", async (req, res) => {
+  const { ids } = req.body;
+  try {
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: "Se requiere un array de IDs de pedidos." });
     }
 
-    // Consulta los pedidos del historial usando los IDs recibidos
-    // Aquí se asume que la tabla se llama 'pedidos_historial'
-    const query = `
+    // Consulta los pedidos del calendario (que son los pedidos activos) usando los IDs
+    const queryPedidos = `
       SELECT
-          h.id, h.fecha_entrega, h.cantidad, h.producto, h.observaciones,
-          c.apodo AS apodo_cliente
+          id, cliente_id, cantidad, producto, fecha_entrega, observaciones
       FROM
-          pedidos_historial h
-      JOIN
-          clientes c ON h.cliente_id = c.id
+          pedidos_calendario
       WHERE
-          h.id = ANY($1::int[])
+          id = ANY($1::int[])
     `;
-
-    const result = await pool.query(query, [ids]);
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: "No se encontraron pedidos con los IDs proporcionados." });
+    const resultPedidos = await pool.query(queryPedidos, [ids]);
+    
+    if (resultPedidos.rowCount === 0) {
+      return res.status(404).json({ error: "No se encontraron pedidos con los IDs proporcionados en el calendario." });
     }
 
-    res.status(200).json(result.rows);
+    // Prepara los datos para la inserción en la tabla de hoja de reparto
+    const pedidosAInsertar = resultPedidos.rows;
+
+    const queryInsert = `
+      INSERT INTO pedidos_hoja_reparto (id, cliente_id, cantidad, producto, fecha_entrega, observaciones)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (id) DO NOTHING;
+    `;
+    
+    // Inserta cada pedido en la tabla de hoja de reparto
+    for (const pedido of pedidosAInsertar) {
+        await pool.query(queryInsert, [
+            pedido.id,
+            pedido.cliente_id,
+            pedido.cantidad,
+            pedido.producto,
+            pedido.fecha_entrega,
+            pedido.observaciones
+        ]);
+    }
+    
+    // Ahora, obtén la lista completa de pedidos en la hoja de reparto para devolverla al frontend
+    const resultFinal = await pool.query(`
+      SELECT 
+        p.id, p.cantidad, p.producto, p.fecha_entrega,
+        c.apodo AS apodo_cliente
+      FROM 
+        pedidos_hoja_reparto p
+      JOIN 
+        clientes c ON p.cliente_id = c.id
+      ORDER BY
+        p.fecha_entrega, c.apodo;
+    `);
+
+    res.json(resultFinal.rows);
+
   } catch (err) {
     console.error('Error al agregar pedidos a la hoja de reparto:', err.message);
     res.status(500).json({ error: "Error interno del servidor al procesar la solicitud." });
