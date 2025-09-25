@@ -463,6 +463,7 @@ async function cargarPedidosCalendario() {
     }
 }
 
+
 // Lógica para alternar entre la vista semanal y diaria
 function cambiarVistaCalendario(vista) {
     vistaCalendarioActual = vista;
@@ -479,6 +480,7 @@ function cambiarVistaCalendario(vista) {
         vistaDiariaDiv.classList.add('hidden');
         controlesNavegacion.classList.remove('hidden');
         renderizarVistaSemanal();
+        actualizarFechasSemanal();
     } else if (vista === 'diaria') {
         btnDiaria.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
         btnSemanal.className = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
@@ -494,11 +496,18 @@ function renderizarVistaSemanal() {
     const contenedor = document.getElementById('vistaSemanal');
     if (!contenedor) return;
     contenedor.innerHTML = '';
-    Object.entries(pedidosCalendario).forEach(([dia, pedidos]) => {
+    const fechas = obtenerFechasSemana(); // Obtiene las fechas para la semana actual
+
+    const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+
+    diasSemana.forEach(dia => {
+        const pedidos = pedidosCalendario[dia] || [];
+        const fechaDia = fechas[dia];
         const col = document.createElement('div');
         col.className = 'bg-white p-6 rounded-lg shadow-md min-h-64 flex flex-col items-center justify-start';
         col.innerHTML = `
-            <h4 class="font-bold mb-2 text-center text-gray-800">${dia.charAt(0).toUpperCase() + dia.slice(1)}</h4>
+            <h4 class="font-bold mb-1 text-center text-gray-800">${dia.charAt(0).toUpperCase() + dia.slice(1)}</h4>
+            <p class="text-xs text-gray-500 mb-4">${fechaDia}</p>
             <div class="space-y-2 w-full flex-grow">
                 ${pedidos.map(p => `
                     <div class="border border-gray-200 rounded-lg p-3">
@@ -557,7 +566,7 @@ function mostrarModalEditarFecha(id, fechaActual) {
     const modal = document.getElementById('editarFechaModal');
     const inputFecha = document.getElementById('inputNuevaFecha');
 
-    pedidoParaEditarId = id; // Guardamos el ID del pedido a nivel global
+    pedidoParaEditarId = id;
     inputFecha.value = fechaActual;
     modal.classList.remove('hidden');
 }
@@ -566,7 +575,7 @@ function mostrarModalEditarFecha(id, fechaActual) {
 function cerrarModalEditarFecha() {
     const modal = document.getElementById('editarFechaModal');
     modal.classList.add('hidden');
-    pedidoParaEditarId = null; // Reiniciamos el ID
+    pedidoParaEditarId = null;
 }
 
 // LÓGICA PARA GUARDAR LA NUEVA FECHA (NUEVA FUNCIÓN)
@@ -596,7 +605,7 @@ async function guardarNuevaFecha() {
         const data = await res.json();
         alert('Fecha del pedido actualizada con éxito.');
         cerrarModalEditarFecha();
-        await cargarPedidosCalendario(); // Recargamos el calendario
+        await cargarPedidosCalendario();
 
     } catch (err) {
         console.error('Error al guardar la nueva fecha:', err);
@@ -615,14 +624,14 @@ function cambiarDiaDiario() {
 function obtenerFechasSemana() {
     const hoy = new Date();
     hoy.setDate(hoy.getDate() + semanaActualOffset * 7);
-    const primerDia = new Date(hoy.setDate(hoy.getDate() - hoy.getDay() + (hoy.getDay() === 0 ? -6 : 1))); // Lunes de esta semana
+    const primerDia = new Date(hoy.setDate(hoy.getDate() - hoy.getDay() + (hoy.getDay() === 0 ? -6 : 1)));
     const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const fechas = {};
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 6; i++) { // Solo hasta sábado
         const fecha = new Date(primerDia);
         fecha.setDate(primerDia.getDate() + i);
-        fechas[dias[i].toLowerCase()] = fecha.toISOString().slice(0, 10);
+        fechas[dias[i].toLowerCase()] = fecha.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
     }
     return fechas;
 }
@@ -630,27 +639,28 @@ function obtenerFechasSemana() {
 // Actualiza el texto de las fechas en la vista semanal
 function actualizarFechasSemanal() {
     const fechas = obtenerFechasSemana();
-    const contenedorFechas = document.getElementById('fechasSemana'); // Asegúrate de tener este elemento en tu HTML
+    const contenedorFechas = document.getElementById('fechasSemana');
     if (contenedorFechas) {
-        contenedorFechas.innerHTML = `Semana del ${fechas.lunes.split('-').reverse().join('/')} al ${fechas.domingo.split('-').reverse().join('/')}`;
+        // Asegúrate de que 'lunes' y 'sabado' existan en el objeto de fechas
+        const inicioSemana = fechas.lunes.split(' ')[2] + ' ' + fechas.lunes.split(' ')[3];
+        const finSemana = fechas.sabado.split(' ')[2] + ' ' + fechas.sabado.split(' ')[3];
+        contenedorFechas.innerHTML = `Semana del ${inicioSemana} al ${finSemana}`;
     }
 }
 
 // Funciones para navegar por las semanas
 function semanaAnterior() {
     semanaActualOffset--;
-    actualizarFechasSemanal();
-    cargarPedidosCalendario();
+    cargarPedidosCalendario(); // Recarga los datos para la nueva semana
 }
 
 function semanaSiguiente() {
     semanaActualOffset++;
-    actualizarFechasSemanal();
-    cargarPedidosCalendario();
+    cargarPedidosCalendario(); // Recarga los datos para la nueva semana
 }
 
 
-// Funciones de gestión BBDD
+// -- Funciones de gestión BBDD --
 async function cargarConductores() {
     try {
         const res = await fetch('/conductores');
