@@ -496,7 +496,7 @@ function renderizarVistaSemanal() {
     contenedor.innerHTML = '';
     Object.entries(pedidosCalendario).forEach(([dia, pedidos]) => {
         const col = document.createElement('div');
-        col.className = 'bg-white p-6 rounded-lg shadow-md min-h-64 flex flex-col items-center justify-start'; 
+        col.className = 'bg-white p-6 rounded-lg shadow-md min-h-64 flex flex-col items-center justify-start';
         col.innerHTML = `
             <h4 class="font-bold mb-2 text-center text-gray-800">${dia.charAt(0).toUpperCase() + dia.slice(1)}</h4>
             <div class="space-y-2 w-full flex-grow">
@@ -527,7 +527,7 @@ function renderizarVistaDiaria() {
 
     listaPedidos.innerHTML = '';
     const pedidosDelDia = pedidosCalendario[diaSeleccionado] || [];
-    
+
     if (pedidosDelDia.length > 0) {
         mensajeVacio.classList.add('hidden');
         pedidosDelDia.forEach(p => {
@@ -556,7 +556,7 @@ function renderizarVistaDiaria() {
 function mostrarModalEditarFecha(id, fechaActual) {
     const modal = document.getElementById('editarFechaModal');
     const inputFecha = document.getElementById('inputNuevaFecha');
-    
+
     pedidoParaEditarId = id; // Guardamos el ID del pedido a nivel global
     inputFecha.value = fechaActual;
     modal.classList.remove('hidden');
@@ -588,7 +588,7 @@ async function guardarNuevaFecha() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fecha: nuevaFecha })
         });
-        
+
         if (!res.ok) {
             throw new Error('Error al actualizar la fecha del pedido.');
         }
@@ -597,7 +597,7 @@ async function guardarNuevaFecha() {
         alert('Fecha del pedido actualizada con éxito.');
         cerrarModalEditarFecha();
         await cargarPedidosCalendario(); // Recargamos el calendario
-        
+
     } catch (err) {
         console.error('Error al guardar la nueva fecha:', err);
         alert('Hubo un error al actualizar la fecha del pedido. Revisa la consola.');
@@ -833,7 +833,7 @@ async function programarPedidoConFecha() {
         alert(`Pedido programado:\n\nDía: ${data.dia_reparto}\nFecha: ${data.fecha_reparto}\nPara: ${data.apodo} - ${data.pedido}`);
 
         cerrarCalendarioModal();
-        
+
         // Recargar las listas para que se reflejen los cambios
         await cargarPedidosPendientes();
         await cambiarPestana('Calendario');
@@ -863,191 +863,192 @@ document.addEventListener('DOMContentLoaded', () => {
     cambiarPestana('BaseDatos');
 });
 
-    // --- Gestión de Conductores ---
-    async function cargarConductores() {
-        try {
-            const res = await fetch('/conductores');
-            const conductores = await res.json();
-            const lista = document.getElementById('listaConductores');
-            lista.innerHTML = '';
-            conductores.forEach(c => {
-                const li = document.createElement('li');
-                li.className = 'flex justify-between items-center p-3 text-sm';
-                li.innerHTML = `
+// --- Gestión de Conductores ---
+async function cargarConductores() {
+    try {
+        const res = await fetch('/conductores');
+        const conductores = await res.json();
+        const lista = document.getElementById('listaConductores');
+        lista.innerHTML = '';
+        conductores.forEach(c => {
+            const li = document.createElement('li');
+            li.className = 'flex justify-between items-center p-3 text-sm';
+            li.innerHTML = `
                     <span>${c.nombre}</span>
                     <button onclick="eliminarConductor(${c.id})" class="text-red-600 hover:text-red-800">🗑️</button>
                 `;
-                lista.appendChild(li);
-            });
-        } catch (err) {
-            console.error('Error al cargar conductores:', err);
-        }
+            lista.appendChild(li);
+        });
+    } catch (err) {
+        console.error('Error al cargar conductores:', err);
     }
+}
 
-    async function agregarConductor() {
-        const input = document.getElementById('nuevoConductor');
-        const nombre = input.value.trim();
-        if (!nombre) return;
+async function agregarConductor() {
+    const input = document.getElementById('nuevoConductor');
+    const nombre = input.value.trim();
+    if (!nombre) return;
 
+    try {
+        const res = await fetch('/conductores', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre })
+        });
+        if (res.ok) {
+            input.value = '';
+            cargarConductores();
+        }
+    } catch (err) {
+        console.error('Error al agregar conductor:', err);
+    }
+}
+
+async function eliminarConductor(id) {
+    if (confirm('¿Estás seguro de que quieres eliminar este conductor?')) {
         try {
-            const res = await fetch('/conductores', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre })
-            });
+            const res = await fetch(`/conductores/${id}`, { method: 'DELETE' });
             if (res.ok) {
-                input.value = '';
                 cargarConductores();
             }
         } catch (err) {
-            console.error('Error al agregar conductor:', err);
+            console.error('Error al eliminar conductor:', err);
         }
     }
+}
 
-    async function eliminarConductor(id) {
-        if (confirm('¿Estás seguro de que quieres eliminar este conductor?')) {
-            try {
-                const res = await fetch(`/conductores/${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    cargarConductores();
-                }
-            } catch (err) {
-                console.error('Error al eliminar conductor:', err);
-            }
-        }
-    }
-
-    // --- Gestión de Camiones ---
-    async function cargarCamiones() {
-        try {
-            const res = await fetch('/camiones');
-            const camiones = await res.json();
-            const lista = document.getElementById('listaCamiones');
-            lista.innerHTML = '';
-            camiones.forEach(c => {
-                const li = document.createElement('li');
-                li.className = 'flex justify-between items-center p-3 text-sm';
-                li.innerHTML = `
+// --- Gestión de Camiones ---
+async function cargarCamiones() {
+    try {
+        const res = await fetch('/camiones');
+        const camiones = await res.json();
+        const lista = document.getElementById('listaCamiones');
+        lista.innerHTML = '';
+        camiones.forEach(c => {
+            const li = document.createElement('li');
+            li.className = 'flex justify-between items-center p-3 text-sm';
+            li.innerHTML = `
                     <span>${c.matricula}</span>
                     <button onclick="eliminarCamion(${c.id})" class="text-red-600 hover:text-red-800">🗑️</button>
                 `;
-                lista.appendChild(li);
-            });
-        } catch (err) {
-            console.error('Error al cargar camiones:', err);
-        }
+            lista.appendChild(li);
+        });
+    } catch (err) {
+        console.error('Error al cargar camiones:', err);
     }
+}
 
-    async function agregarCamion() {
-        const input = document.getElementById('nuevoCamion');
-        const matricula = input.value.trim();
-        if (!matricula) return;
 
+async function agregarCamion() {
+    const input = document.getElementById('nuevoCamion');
+    const matricula = input.value.trim();
+    if (!matricula) return;
+
+    try {
+        const res = await fetch('/camiones', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ matricula }) 
+        });
+        if (res.ok) {
+            input.value = '';
+            cargarCamiones();
+        }
+    } catch (err) {
+        console.error('Error al agregar camión:', err);
+    }
+}
+
+async function eliminarCamion(id) {
+    if (confirm('¿Estás seguro de que quieres eliminar este camión?')) {
         try {
-            const res = await fetch('/camiones', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ matricula })
-            });
+            const res = await fetch(`/camiones/${id}`, { method: 'DELETE' });
             if (res.ok) {
-                input.value = '';
                 cargarCamiones();
             }
         } catch (err) {
-            console.error('Error al agregar camión:', err);
+            console.error('Error al eliminar camión:', err);
         }
     }
+}
 
-    async function eliminarCamion(id) {
-        if (confirm('¿Estás seguro de que quieres eliminar este camión?')) {
-            try {
-                const res = await fetch(`/camiones/${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    cargarCamiones();
-                }
-            } catch (err) {
-                console.error('Error al eliminar camión:', err);
-            }
-        }
-    }
-
-    // --- Gestión de Zonas ---
-    async function cargarZonas() {
-        try {
-            const res = await fetch('/zonas');
-            const zonas = await res.json();
-            const lista = document.getElementById('listaZonas');
-            lista.innerHTML = '';
-            zonas.forEach(z => {
-                const li = document.createElement('li');
-                li.className = 'flex justify-between items-center p-3 text-sm';
-                li.innerHTML = `
+// --- Gestión de Zonas ---
+async function cargarZonas() {
+    try {
+        const res = await fetch('/zonas');
+        const zonas = await res.json();
+        const lista = document.getElementById('listaZonas');
+        lista.innerHTML = '';
+        zonas.forEach(z => {
+            const li = document.createElement('li');
+            li.className = 'flex justify-between items-center p-3 text-sm';
+            li.innerHTML = `
                     <span>${z.nombre}</span>
                     <button onclick="eliminarZona(${z.id})" class="text-red-600 hover:text-red-800">🗑️</button>
                 `;
-                lista.appendChild(li);
-            });
-        } catch (err) {
-            console.error('Error al cargar zonas:', err);
-        }
+            lista.appendChild(li);
+        });
+    } catch (err) {
+        console.error('Error al cargar zonas:', err);
     }
+}
 
-    async function agregarZona() {
-        const input = document.getElementById('nuevaZona');
-        const nombre = input.value.trim();
-        if (!nombre) return;
+async function agregarZona() {
+    const input = document.getElementById('nuevaZona');
+    const nombre = input.value.trim();
+    if (!nombre) return;
 
+    try {
+        const res = await fetch('/zonas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre })
+        });
+        if (res.ok) {
+            input.value = '';
+            cargarZonas();
+        }
+    } catch (err) {
+        console.error('Error al agregar zona:', err);
+    }
+}
+
+async function eliminarZona(id) {
+    if (confirm('¿Estás seguro de que quieres eliminar esta zona?')) {
         try {
-            const res = await fetch('/zonas', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre })
-            });
+            const res = await fetch(`/zonas/${id}`, { method: 'DELETE' });
             if (res.ok) {
-                input.value = '';
                 cargarZonas();
             }
         } catch (err) {
-            console.error('Error al agregar zona:', err);
+            console.error('Error al eliminar zona:', err);
         }
     }
+}
 
-    async function eliminarZona(id) {
-        if (confirm('¿Estás seguro de que quieres eliminar esta zona?')) {
-            try {
-                const res = await fetch(`/zonas/${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    cargarZonas();
-                }
-            } catch (err) {
-                console.error('Error al eliminar zona:', err);
-            }
-        }
+// --- Herramientas de Mantenimiento (Funciones simuladas) ---
+function limpiarPedidosAntiguos() {
+    if (confirm('¿Estás seguro de que quieres limpiar los pedidos antiguos? Esta acción no se puede deshacer.')) {
+        alert('Limpieza de pedidos antiguos simulada. Se ha llamado a la API para realizar la acción.');
+        // Aquí iría el fetch a la API: await fetch('/api/limpiar-pedidos', { method: 'POST' });
     }
+}
 
-    // --- Herramientas de Mantenimiento (Funciones simuladas) ---
-    function limpiarPedidosAntiguos() {
-        if (confirm('¿Estás seguro de que quieres limpiar los pedidos antiguos? Esta acción no se puede deshacer.')) {
-            alert('Limpieza de pedidos antiguos simulada. Se ha llamado a la API para realizar la acción.');
-            // Aquí iría el fetch a la API: await fetch('/api/limpiar-pedidos', { method: 'POST' });
-        }
+function exportarDatos() {
+    alert('Exportación de datos simulada. Se está preparando el archivo para descarga.');
+    // Aquí iría el fetch a la API para descargar un archivo: await fetch('/api/exportar-datos');
+}
+
+function resetearSistema() {
+    if (confirm('⚠️ ¡ADVERTENCIA! ¿Estás seguro de que quieres RESETEAR EL SISTEMA? Se eliminarán todos los clientes, pedidos y registros. Esta acción es IRREVERSIBLE.')) {
+        alert('El reseteo del sistema se ha simulado. Se ha llamado a la API para realizar la acción.');
+        // Aquí iría el fetch a la API: await fetch('/api/resetear-sistema', { method: 'POST' });
     }
+}
 
-    function exportarDatos() {
-        alert('Exportación de datos simulada. Se está preparando el archivo para descarga.');
-        // Aquí iría el fetch a la API para descargar un archivo: await fetch('/api/exportar-datos');
-    }
-
-    function resetearSistema() {
-        if (confirm('⚠️ ¡ADVERTENCIA! ¿Estás seguro de que quieres RESETEAR EL SISTEMA? Se eliminarán todos los clientes, pedidos y registros. Esta acción es IRREVERSIBLE.')) {
-            alert('El reseteo del sistema se ha simulado. Se ha llamado a la API para realizar la acción.');
-            // Aquí iría el fetch a la API: await fetch('/api/resetear-sistema', { method: 'POST' });
-        }
-    }
-
-    // Inicializar al cargar esta pestaña
-    document.addEventListener('DOMContentLoaded', () => {
-        cargarConductores();
-        cargarCamiones();
-        cargarZonas();
-    });
+// Inicializar al cargar esta pestaña
+document.addEventListener('DOMContentLoaded', () => {
+    cargarConductores();
+    cargarCamiones();
+    cargarZonas();
+});
