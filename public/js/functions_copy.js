@@ -10,10 +10,10 @@ let pedidoParaEditarId = null; // Almacenará el ID del pedido que se está edit
 // Simulación de datos (reemplazar con llamadas a la API)
 let pedidosPendientes = [];
 let pedidosCalendario = {
-    lunes: [], martes: [], 'miércoles': [], jueves: [], viernes: [], 'sábado': [], domingo: []
+    lunes: [], martes: [], miercoles: [], jueves: [], viernes: [], sabado: [], domingo: []
 };
-const diasSemana = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+const dias = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'];
 
 let clientes = [];
 let zonas = [];
@@ -449,35 +449,26 @@ function ordenarPedidosPendientes() {
 }
 
 // --- Funciones de Calendario ---
-// Carga los pedidos del calendario desde el servidor para la semana actual o con offset
 async function cargarPedidosCalendario() {
     try {
-        const url = `/pedidos_calendario?offset=${semanaActualOffset}`;
-        const res = await fetch(url);
-        if (!res.ok) {
-            throw new Error(`Error HTTP: ${res.status}`);
-        }
-        const pedidos = await res.json();
+        const res = await fetch(`/pedidos_calendario?offset=${semanaActualOffset}`);
+        if (!res.ok) throw new Error('Error al cargar los pedidos del calendario.');
 
-        // Reinicia la estructura del calendario con arrays vacíos
+        const pedidos = await res.json();
         pedidosCalendario = {
-            lunes: [], martes: [], 'miércoles': [], jueves: [], viernes: [], 'sábado': [], domingo: []
+            lunes: [], martes: [], miercoles: [], jueves: [], viernes: [], sabado: [], domingo: []
         };
-        
-        // Agrupa los pedidos por día
-        pedidos.forEach(pedido => {
-            const dia = pedido.dia_reparto;
-            if (pedidosCalendario.hasOwnProperty(dia)) {
-                pedidosCalendario[dia].push(pedido);
+
+
+        pedidos.forEach(p => {
+            const dia = p.dia_reparto.toLowerCase();
+            if (pedidosCalendario[dia]) {
+                pedidosCalendario[dia].push(p);
             }
         });
-        
-        renderizarCalendario();
-        actualizarFechasSemana();
-        // Carga la vista de Hoja de Reparto si es la que está activa
-        if (vistaCalendarioActual === 'diaria') {
-            cambiarDiaDiario();
-        }
+
+        actualizarFranjaFechas();
+        renderizarVistaCalendario();
     } catch (err) {
         console.error('Error al cargar pedidos del calendario:', err);
     }
