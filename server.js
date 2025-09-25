@@ -497,6 +497,44 @@ app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
 });
 
 
+// --- FUNCIONES DE HOJA DE REPARTO ---
+app.post("/pedidos/hoja-reparto", async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    // Asegúrate de que los IDs no estén vacíos y sean un array
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "Se requiere un array de IDs de pedidos." });
+    }
+
+    // Consulta los pedidos del historial usando los IDs recibidos
+    // Aquí se asume que la tabla se llama 'pedidos_historial'
+    const query = `
+      SELECT
+          h.id, h.fecha_entrega, h.cantidad, h.producto, h.observaciones,
+          c.apodo AS apodo_cliente
+      FROM
+          pedidos_historial h
+      JOIN
+          clientes c ON h.cliente_id = c.id
+      WHERE
+          h.id = ANY($1::int[])
+    `;
+
+    const result = await pool.query(query, [ids]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "No se encontraron pedidos con los IDs proporcionados." });
+    }
+
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error('Error al agregar pedidos a la hoja de reparto:', err.message);
+    res.status(500).json({ error: "Error interno del servidor al procesar la solicitud." });
+  }
+});
+
+
 // Servir archivos estáticos desde la carpeta 'public'
 app.use(express.static(path.join(__dirname, 'public')));
 
