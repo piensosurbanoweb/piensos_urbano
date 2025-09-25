@@ -862,10 +862,9 @@ function renderizarHojaReparto() {
 /**
  * Carga los pedidos específicos para la hoja de reparto haciendo una llamada a la API.
  */
-// Carga los pedidos específicos para la hoja de reparto haciendo una llamada a la API.
 async function cargarPedidosHoja() {
     try {
-        const res = await fetch('/pedidos/hoja-reparto'); // Ahora es un GET
+        const res = await fetch('/pedidos/hoja-reparto');
         if (!res.ok) {
             throw new Error('Error en el servidor al cargar los pedidos.');
         }

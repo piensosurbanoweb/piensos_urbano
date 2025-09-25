@@ -249,14 +249,19 @@ app.get("/pedidos/detalles/:id", async (req, res) => {
 
 // --- PEDIDOS CALENDARIO ---
 // OBTENER PEDIDOS PARA EL CALENDARIO FILTRADOS POR SEMANA
+// OBTENER PEDIDOS PARA EL CALENDARIO
 app.get("/pedidos_calendario", async (req, res) => {
     try {
         const offset = parseInt(req.query.offset) || 0;
         const now = new Date();
-        const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (offset * 7) - now.getDay() + (now.getDay() === 0 ? -6 : 1));
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        now.setUTCHours(0, 0, 0, 0); 
+
+        const firstDayOfWeek = new Date(now);
+        firstDayOfWeek.setDate(now.getDate() + (offset * 7) - now.getDay() + (now.getDay() === 0 ? -6 : 1));
         
+        const lastDayOfWeek = new Date(firstDayOfWeek);
+        lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
+
         const result = await pool.query(
             `SELECT
                 p.id, p.cantidad, p.producto, p.dia_reparto, p.fecha_entrega,
@@ -266,14 +271,13 @@ app.get("/pedidos_calendario", async (req, res) => {
             JOIN
                 clientes c ON p.cliente_id = c.id
             WHERE
-                p.fecha_entrega >= $1 AND p.fecha_entrega <= $2
+                p.fecha_entrega BETWEEN $1 AND $2
             ORDER BY
                 p.fecha_entrega`,
-            [startOfWeek.toISOString().split('T')[0], endOfWeek.toISOString().split('T')[0]]
+            [firstDayOfWeek.toISOString().split('T')[0], lastDayOfWeek.toISOString().split('T')[0]]
         );
 
-        const pedidos = result.rows;
-        res.json(pedidos);
+        res.json(result.rows);
 
     } catch (err) {
         console.error('Error al obtener pedidos del calendario:', err.message);
@@ -506,19 +510,19 @@ app.delete("/zonas/:id", async (req, res) => {
 });
 
 // EDITAR FECHA DE LOS PEDIDOS DE CALENDARIO
+// EDITAR FECHA DE LOS PEDIDOS DE CALENDARIO
 app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
     try {
         const { id } = req.params;
         const { fecha } = req.body;
         
-        // Obtener el día de la semana de la nueva fecha
         const date = new Date(fecha + 'T00:00:00');
         const diasSemana = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
         const nuevoDia = diasSemana[date.getUTCDay()];
 
         const result = await pool.query(
             `UPDATE pedidos_calendario
-             SET fecha_reparto = $1, dia_reparto = $2
+             SET fecha_entrega = $1, dia_reparto = $2
              WHERE id = $3
              RETURNING *`,
             [fecha, nuevoDia, id]
@@ -539,7 +543,8 @@ app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
 
 // --- FUNCIONES DE HOJA DE REPARTO ---
 // OBTENER PEDIDOS PARA LA HOJA DE REPARTO
-/*app.get("/pedidos/hoja-reparto", async (req, res) => {
+// OBTENER PEDIDOS PARA LA HOJA DE REPARTO
+app.get("/pedidos/hoja-reparto", async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -557,7 +562,7 @@ app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
     console.error('Error al obtener pedidos de la hoja de reparto:', err.message);
     res.status(500).json({ error: "Error interno del servidor al cargar la hoja de reparto." });
   }
-});*/
+});
 
 // AGREGAR PEDIDOS A LA HOJA DE REPARTO
 app.post("/pedidos/hoja-reparto", async (req, res) => {
