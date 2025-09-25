@@ -50,27 +50,35 @@ async function cambiarPestana(nombrePestana) {
 
     // Cargar el contenido de la pestaña
     try {
-        const res = await fetch(`${nombrePestana}.html`);
+        const res = await fetch(`templates/${nombrePestana}.html`);
         if (!res.ok) {
-            throw new Error(`No se pudo cargar la pestaña ${nombrePestana}.html`);
+            throw new Error(`No se pudo cargar la pestaña templates/${nombrePestana}.html`);
         }
         const html = await res.text();
         contenedor.innerHTML = html;
 
         // Después de que el HTML se haya inyectado, inicializar la pestaña
-        if (nombrePestana === "BaseDatos") {
-            inicializarBaseDatos();
-        } else if (nombrePestana === "NuevoPedido") {
-            inicializarNuevoPedido();
-        } else if (nombrePestana === "Pendientes") {
-            inicializarPendientes();
-        } else if (nombrePestana === "Calendario") {
-            inicializarCalendario();
-            await cargarPedidosCalendario();
-        } else if (nombrePestana === "GestionBBDD") {
-            inicializarGestionBBDD();
-        } else if (nombrePestana === "HojaReparto") {
-            inicializarHojaReparto();
+        switch (nombrePestana) {
+            case 'BaseDatos':
+                inicializarBaseDatos();
+                break;
+            case 'NuevoPedido':
+                inicializarNuevoPedido();
+                break;
+            case 'PedidosPendientes':
+                inicializarPendientes();
+                break;
+            case 'Calendario':
+                vistaCalendarioActual = 'semanal'; // Establecer vista semanal por defecto
+                await cargarPedidosCalendario(); // Carga los pedidos para la semana actual
+                cambiarVistaCalendario(vistaCalendarioActual); // Renderiza la vista semanal
+                break;
+            case 'GestionBBDD':
+                inicializarGestionBBDD();
+                break;
+            case 'HojaReparto':
+                inicializarHojaReparto();
+                break;
         }
     } catch (err) {
         console.error(`Error al cargar la pestaña ${nombrePestana}:`, err);
@@ -448,7 +456,9 @@ function ordenarPedidosPendientes() {
 // --- Funciones de Calendario ---
 async function cargarPedidosCalendario() {
     try {
-        const res = await fetch('/pedidos_calendario');
+        const res = await fetch(`/pedidos_calendario?offset=${semanaActualOffset}`);
+        if (!res.ok) throw new Error('Error al cargar los pedidos del calendario.');
+
         const pedidos = await res.json();
         pedidosCalendario = {
             lunes: [], martes: [], miercoles: [], jueves: [], viernes: [], sabado: []
@@ -459,14 +469,23 @@ async function cargarPedidosCalendario() {
                 pedidosCalendario[dia].push(p);
             }
         });
+
+        // Actualiza el título de la semana aquí, después de cargar los datos
+        actualizarFranjaFechas();
         renderizarVistaCalendario();
     } catch (err) {
         console.error('Error al cargar pedidos del calendario:', err);
     }
 }
 
+function renderizarVistaCalendario() {
+    if (vistaCalendarioActual === 'semanal') {
+        renderizarVistaSemanal();
+    } else {
+        renderizarVistaDiaria();
+    }
+}
 
-// Lógica para alternar entre la vista semanal y diaria
 function cambiarVistaCalendario(vista) {
     vistaCalendarioActual = vista;
     const btnSemanal = document.getElementById('btnVistaSemanal');
@@ -482,7 +501,6 @@ function cambiarVistaCalendario(vista) {
         vistaDiariaDiv.classList.add('hidden');
         controlesNavegacion.classList.remove('hidden');
         renderizarVistaSemanal();
-        actualizarFechasSemanal();
     } else if (vista === 'diaria') {
         btnDiaria.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
         btnSemanal.className = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
@@ -493,12 +511,11 @@ function cambiarVistaCalendario(vista) {
     }
 }
 
-// Renderiza la vista semanal con el recuadro más grande y botón de edición
 function renderizarVistaSemanal() {
     const contenedor = document.getElementById('vistaSemanal');
     if (!contenedor) return;
     contenedor.innerHTML = '';
-    const fechas = obtenerFechasSemana(); // Obtiene las fechas para la semana actual
+    const fechas = obtenerFechasSemana();
 
     const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 
@@ -508,19 +525,16 @@ function renderizarVistaSemanal() {
         const col = document.createElement('div');
         col.className = 'bg-white p-6 rounded-lg shadow-md min-h-64 flex flex-col items-center justify-start';
         col.innerHTML = `
-            <h4 class="font-bold mb-1 text-center text-gray-800">${dia.charAt(0).toUpperCase() + dia.slice(1)}</h4>
-            <p class="text-xs text-gray-500 mb-4">${fechaDia}</p>
+            <h4 class="text-lg font-bold text-center text-gray-800">${fechaDia.split(' ')[0]}</h4>
+            <p class="text-sm text-gray-500 mb-4">${dia.charAt(0).toUpperCase() + dia.slice(1)}</p>
             <div class="space-y-2 w-full flex-grow">
                 ${pedidos.map(p => `
-                    <div class="border border-gray-200 rounded-lg p-3">
+                    <div class="border border-gray-200 rounded-lg p-3 cursor-pointer hover:bg-gray-100" onclick="mostrarDetallesPedido(${p.id})">
                         <div class="flex justify-between items-center">
                             <div>
-                                <p class="text-sm font-medium">${p.pedido}</p>
-                                <p class="text-xs text-gray-600">Para: ${p.apodo}</p>
+                                <p class="text-sm font-medium">${p.apodo_cliente}</p>
+                                <p class="text-xs text-gray-600">${p.producto} (${p.cantidad})</p>
                             </div>
-                            <button onclick="mostrarModalEditarFecha(${p.historial_id}, '${p.fecha_reparto}')" class="text-blue-500 hover:text-blue-700">
-                                ✏️
-                            </button>
                         </div>
                     </div>
                 `).join('')}
@@ -530,11 +544,76 @@ function renderizarVistaSemanal() {
     });
 }
 
-// LÓGICA PARA LA VISTA DIARIA (con botón de edición)
+// Nueva función para mostrar los detalles del pedido
+async function mostrarDetallesPedido(id) {
+    try {
+        const res = await fetch(`/pedidos/detalles/${id}`);
+        if (!res.ok) throw new Error('Error al obtener los detalles del pedido.');
+
+        const pedido = await res.json();
+        const modal = document.getElementById('detallesPedidoModal');
+        const contenido = document.getElementById('detallesPedidoContenido');
+
+        if (!modal || !contenido) return;
+
+        // Guarda el ID para la edición
+        pedidoParaEditarId = pedido.id;
+
+        // Renderiza el contenido del pop-up
+        contenido.innerHTML = `
+            <div class="p-6">
+                <h3 class="font-bold text-2xl mb-4 text-center">Detalles del Pedido</h3>
+                <p><strong>Cliente:</strong> ${pedido.apodo_cliente}</p>
+                <p><strong>Producto:</strong> ${pedido.producto} (${pedido.cantidad} unidades)</p>
+                <p><strong>Fecha de Entrega:</strong> ${new Date(pedido.fecha_entrega).toLocaleDateString()}</p>
+                <p><strong>Teléfono:</strong> ${pedido.telefono || 'N/A'}</p>
+                <p><strong>Dirección:</strong> ${pedido.localidad || 'N/A'}</p>
+                <p><strong>Observaciones:</strong> ${pedido.observaciones || 'N/A'}</p>
+                <div class="mt-6 flex justify-center">
+                    <button onclick="mostrarModalEditarFecha('${new Date(pedido.fecha_entrega).toISOString().split('T')[0]}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        Editar Fecha
+                    </button>
+                </div>
+            </div>
+        `;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    } catch (err) {
+        console.error('Error al mostrar los detalles del pedido:', err);
+        alert('Hubo un error al cargar los detalles del pedido.');
+    }
+}
+
+// Cierra el pop-up de detalles
+function cerrarDetallesPedidoModal() {
+    const modal = document.getElementById('detallesPedidoModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+// Modificada para recibir la fecha actual y mostrar el modal
+function mostrarModalEditarFecha(fechaActual) {
+    const modal = document.getElementById('editarFechaModal');
+    const inputFecha = document.getElementById('inputNuevaFecha');
+
+    // Cierra el modal de detalles antes de abrir el de edición
+    cerrarDetallesPedidoModal();
+
+    if (!modal || !inputFecha) return;
+
+    inputFecha.value = fechaActual;
+    modal.classList.remove('hidden');
+}
+
+// Renderiza la vista diaria (se mantiene igual, pero los detalles ahora usan la nueva función)
 function renderizarVistaDiaria() {
     const listaPedidos = document.getElementById('pedidosDiarios');
     const mensajeVacio = document.getElementById('mensajeVacioDiario');
     const diaSeleccionado = document.getElementById('selectDiaDiario').value;
+
+    if (!listaPedidos || !mensajeVacio) return;
 
     listaPedidos.innerHTML = '';
     const pedidosDelDia = pedidosCalendario[diaSeleccionado] || [];
@@ -543,16 +622,14 @@ function renderizarVistaDiaria() {
         mensajeVacio.classList.add('hidden');
         pedidosDelDia.forEach(p => {
             const div = document.createElement('div');
-            div.className = 'bg-white p-4 rounded-lg shadow-md';
+            div.className = 'bg-white p-4 rounded-lg shadow-md cursor-pointer hover:bg-gray-100';
+            div.onclick = () => mostrarDetallesPedido(p.id);
             div.innerHTML = `
                 <div class="flex justify-between items-start mb-2">
                     <div>
-                        <h3 class="font-bold text-lg">${p.apodo} - ${p.pedido}</h3>
-                        <p class="text-sm text-gray-600">Teléfono: ${p.telefono}</p>
+                        <h3 class="font-bold text-lg">${p.apodo_cliente} - ${p.producto}</h3>
+                        <p class="text-sm text-gray-600">Para: ${p.apodo_cliente}</p>
                     </div>
-                    <button onclick="mostrarModalEditarFecha(${p.historial_id}, '${p.fecha_reparto}')" class="text-blue-500 hover:text-blue-700">
-                        ✏️
-                    </button>
                 </div>
                 <p class="text-sm text-gray-500">Observaciones: ${p.observaciones || 'N/A'}</p>
             `;
@@ -563,24 +640,16 @@ function renderizarVistaDiaria() {
     }
 }
 
-// LÓGICA PARA MOSTRAR EL MODAL DE EDICIÓN DE FECHA (NUEVA FUNCIÓN)
-function mostrarModalEditarFecha(id, fechaActual) {
-    const modal = document.getElementById('editarFechaModal');
-    const inputFecha = document.getElementById('inputNuevaFecha');
-
-    pedidoParaEditarId = id;
-    inputFecha.value = fechaActual;
-    modal.classList.remove('hidden');
-}
-
 // LÓGICA PARA CERRAR EL MODAL
 function cerrarModalEditarFecha() {
     const modal = document.getElementById('editarFechaModal');
-    modal.classList.add('hidden');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
     pedidoParaEditarId = null;
 }
 
-// LÓGICA PARA GUARDAR LA NUEVA FECHA (NUEVA FUNCIÓN)
+// LÓGICA PARA GUARDAR LA NUEVA FECHA
 async function guardarNuevaFecha() {
     if (!pedidoParaEditarId) {
         alert('No se ha seleccionado un pedido para editar.');
@@ -597,15 +666,13 @@ async function guardarNuevaFecha() {
         const res = await fetch(`/pedidos/editar-fecha/${pedidoParaEditarId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fecha: nuevaFecha }) // CORREGIDO: ahora usa 'fecha'
+            body: JSON.stringify({ fecha: nuevaFecha })
         });
 
         if (!res.ok) {
             throw new Error('Error al actualizar la fecha del pedido.');
         }
 
-        const data = await res.json();
-        alert('Fecha del pedido actualizada con éxito.');
         cerrarModalEditarFecha();
         await cargarPedidosCalendario();
 
@@ -633,19 +700,18 @@ function obtenerFechasSemana() {
     for (let i = 0; i < 6; i++) { // Solo hasta sábado
         const fecha = new Date(primerDia);
         fecha.setDate(primerDia.getDate() + i);
-        fechas[dias[i].toLowerCase()] = fecha.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+        fechas[dias[i].toLowerCase()] = fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
     }
     return fechas;
 }
 
-// Actualiza el texto de las fechas en la vista semanal
-function actualizarFechasSemanal() {
+// Nueva función para actualizar la franja de fechas en el título
+function actualizarFranjaFechas() {
     const fechas = obtenerFechasSemana();
     const contenedorFechas = document.getElementById('fechasSemana');
     if (contenedorFechas) {
-        // Asegúrate de que 'lunes' y 'sabado' existan en el objeto de fechas
-        const inicioSemana = fechas.lunes.split(' ')[2] + ' ' + fechas.lunes.split(' ')[3];
-        const finSemana = fechas.sabado.split(' ')[2] + ' ' + fechas.sabado.split(' ')[3];
+        const inicioSemana = fechas.lunes;
+        const finSemana = fechas.sabado;
         contenedorFechas.innerHTML = `Semana del ${inicioSemana} al ${finSemana}`;
     }
 }
@@ -653,14 +719,13 @@ function actualizarFechasSemanal() {
 // Funciones para navegar por las semanas
 function semanaAnterior() {
     semanaActualOffset--;
-    cargarPedidosCalendario(); // Recarga los datos para la nueva semana
+    cargarPedidosCalendario();
 }
 
 function semanaSiguiente() {
     semanaActualOffset++;
-    cargarPedidosCalendario(); // Recarga los datos para la nueva semana
+    cargarPedidosCalendario();
 }
-
 
 // -- Funciones de gestión BBDD --
 async function cargarConductores() {
