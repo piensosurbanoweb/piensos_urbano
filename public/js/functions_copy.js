@@ -99,7 +99,9 @@ async function inicializarPendientes() {
 }
 
 function inicializarCalendario() {
-    cargarPedidosCalendario();
+    vistaCalendarioActual = 'semanal';
+    await cargarPedidosCalendario();
+    cambiarVistaCalendario('semanal');
 }
 
 function inicializarGestionBBDD() {
@@ -446,15 +448,15 @@ function ordenarPedidosPendientes() {
 }
 
 // --- Funciones de Calendario ---
-// --- Funciones de Calendario ---
 async function cargarPedidosCalendario() {
     try {
         const res = await fetch(`/pedidos_calendario?offset=${semanaActualOffset}`);
         if (!res.ok) throw new Error('Error al cargar los pedidos del calendario.');
 
         const pedidos = await res.json();
+        // CORREGIDO: Asegurar que los nombres de los días coincidan
         pedidosCalendario = {
-            lunes: [], martes: [], miercoles: [], jueves: [], viernes: [], sabado: []
+            lunes: [], martes: [], 'miércoles': [], jueves: [], viernes: [], 'sábado': []
         };
         pedidos.forEach(p => {
             const dia = p.dia_reparto.toLowerCase();
@@ -509,7 +511,8 @@ function renderizarVistaSemanal() {
     contenedor.innerHTML = '';
     const fechas = obtenerFechasSemana();
 
-    const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+    // CORREGIDO: Nombres de los días con acentos para la iteración
+    const diasSemana = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
     diasSemana.forEach(dia => {
         const pedidos = pedidosCalendario[dia] || [];
@@ -681,6 +684,7 @@ function obtenerFechasSemana() {
     for (let i = 0; i < 6; i++) {
         const fecha = new Date(primerDia);
         fecha.setDate(primerDia.getDate() + i);
+        // CORREGIDO: Asegurarse de que las claves del objeto 'fechas' también tengan acentos
         fechas[dias[i].toLowerCase()] = fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
     }
     return fechas;
@@ -691,7 +695,7 @@ function actualizarFranjaFechas() {
     const contenedorFechas = document.getElementById('fechasSemana');
     if (contenedorFechas) {
         const inicioSemana = fechas.lunes;
-        const finSemana = fechas.sabado;
+        const finSemana = fechas.sábado;
         contenedorFechas.innerHTML = `Semana del ${inicioSemana} al ${finSemana}`;
     }
 }
