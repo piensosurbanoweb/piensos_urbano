@@ -18,6 +18,8 @@ let zonas = [];
 let conductores = ["Juan", "Pedro", "Manuel"];
 let camiones = ["Camión 1", "Camión 2"];
 
+let pedidosHojaReparto = [];
+
 // --- Funciones de pestañas ---
 async function cambiarPestana(nombrePestana) {
     const contenedor = document.getElementById('contenidoPestanas');
@@ -771,21 +773,56 @@ async function eliminarZona(id) {
 }
 
 // --- Funciones de Hoja de Reparto ---
-async function cargarPedidosHoja() {
-    try {
-        // Lógica para cargar pedidos específicos de la hoja de reparto.
-        // Por ahora, lo dejamos vacío para evitar errores.
-        console.log("Función cargarPedidosHoja ejecutada.");
-    } catch (err) {
-        console.error('Error al cargar pedidos de la hoja de reparto:', err);
+function renderizarHojaReparto() {
+    const lista = document.getElementById('listaPedidosHoja');
+    const mensajeVacio = document.getElementById('mensajeVacioHoja');
+
+    if (!lista || !mensajeVacio) return;
+
+    lista.innerHTML = '';
+
+    if (pedidosHojaReparto.length === 0) {
+        mensajeVacio.classList.remove('hidden');
+    } else {
+        mensajeVacio.classList.add('hidden');
+        pedidosHojaReparto.forEach(pedido => {
+            const li = document.createElement('li');
+            li.className = 'flex justify-between items-center p-4 bg-gray-50 rounded-lg border';
+            li.innerHTML = `
+                <div>
+                    <p class="font-bold text-lg">${pedido.apodo_cliente} - ${pedido.producto}</p>
+                    <p class="text-sm text-gray-600">${pedido.cantidad} unidades</p>
+                    <p class="text-xs text-gray-400">Entrega: ${new Date(pedido.fecha_entrega).toLocaleDateString()}</p>
+                </div>
+                <button onclick="eliminarPedidoHoja(${pedido.id})" class="text-red-600 hover:text-red-800 no-print">🗑️</button>
+            `;
+            lista.appendChild(li);
+        });
     }
 }
 
+/**
+ * Muestra el modal del selector de pedidos y carga las zonas y pedidos disponibles.
+ */
+async function mostrarSelectorPedidos() {
+    const modal = document.getElementById('selectorPedidosModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    // Cargar zonas y pedidos simultáneamente para optimizar
+    await Promise.all([cargarZonasHoja(), cargarPedidosDisponibles()]);
+}
+
+/**
+ * Carga las zonas para el filtro de la hoja de reparto.
+ */
 async function cargarZonasHoja() {
     try {
         const res = await fetch('/zonas');
         const zonasData = await res.json();
         const select = document.getElementById('filtroZonaHoja');
+
         if (!select) return;
 
         select.innerHTML = '<option value="">Todas las zonas</option>';
@@ -799,6 +836,139 @@ async function cargarZonasHoja() {
         console.error('Error al cargar zonas de la hoja de reparto:', err);
     }
 }
+
+/**
+ * Carga los pedidos disponibles para ser agregados a la hoja de reparto,
+ * con la opción de filtrar por zona.
+ */
+async function cargarPedidosDisponibles() {
+    const zonaFiltro = document.getElementById('filtroZonaHoja').value;
+    const lista = document.getElementById('listaPedidosSelector');
+
+    if (!lista) return;
+
+    lista.innerHTML = '<p class="text-center text-gray-500">Cargando pedidos...</p>';
+
+    try {
+        const res = await fetch('/pedidos_pendientes');
+        let pedidos = await res.json();
+
+        if (zonaFiltro) {
+            pedidos = pedidos.filter(p => p.zona_reparto === zonaFiltro);
+        }
+
+        lista.innerHTML = '';
+        if (pedidos.length > 0) {
+            pedidos.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-3 bg-gray-100 p-3 rounded-md';
+                div.innerHTML = `
+                    <input type="checkbox" data-pedido-id="${p.id}" class="form-checkbox text-blue-600 h-5 w-5">
+                    <div>
+                        <p class="font-bold">${p.apodo_cliente}</p>
+                        <p class="text-sm text-gray-600">${p.producto} (${p.cantidad})</p>
+                    </div>
+                `;
+                lista.appendChild(div);
+            });
+        } else {
+            lista.innerHTML = '<p class="text-center text-gray-500">No hay pedidos disponibles para esta zona.</p>';
+        }
+    } catch (err) {
+        console.error('Error al cargar pedidos disponibles:', err);
+        lista.innerHTML = '<p class="text-center text-red-500">Error al cargar los pedidos.</p>';
+    }
+}
+
+/**
+ * Cierra el modal del selector de pedidos.
+ */
+function cerrarSelectorPedidos() {
+    const modal = document.getElementById('selectorPedidosModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+/**
+ * Agrega los pedidos seleccionados en el modal a la hoja de reparto.
+ */
+async function agregarSeleccionadosALaHoja() {
+    const checkboxes = document.querySelectorAll('#listaPedidosSelector input[type="checkbox"]:checked');
+    const ids = Array.from(checkboxes).map(cb => cb.dataset.pedidoId);
+
+    if (ids.length === 0) {
+        alert('Por favor, selecciona al menos un pedido.');
+        return;
+    }
+
+    try {
+        const res = await fetch('/pedidos/hoja-reparto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+        });
+
+        if (!res.ok) {
+            throw new Error('Error en el servidor al agregar pedidos.');
+        }
+
+        const nuevosPedidos = await res.json();
+        pedidosHojaReparto = [...pedidosHojaReparto, ...nuevosPedidos];
+        renderizarHojaReparto();
+        cerrarSelectorPedidos();
+    } catch (err) {
+        console.error('Error al agregar pedidos a la hoja:', err);
+        alert('Hubo un error al agregar los pedidos. Revisa la consola.');
+    }
+}
+
+/**
+ * Elimina un pedido de la hoja de reparto (solo del frontend).
+ */
+function eliminarPedidoHoja(id) {
+    if (confirm('¿Quieres eliminar este pedido de la hoja de reparto?')) {
+        pedidosHojaReparto = pedidosHojaReparto.filter(p => p.id !== id);
+        renderizarHojaReparto();
+    }
+}
+
+/**
+ * Limpia todos los pedidos de la hoja de reparto (solo del frontend).
+ */
+function limpiarHojaReparto() {
+    if (confirm('¿Estás seguro de que quieres limpiar la hoja de reparto?')) {
+        pedidosHojaReparto = [];
+        renderizarHojaReparto();
+    }
+}
+
+/**
+ * Imprime el contenido de la hoja de reparto.
+ */
+function imprimirHojaReparto() {
+    window.print();
+}
+
+
+// Inicialización de eventos al cargar el DOM
+document.addEventListener('DOMContentLoaded', () => {
+    renderizarHojaReparto();
+    const filtroZona = document.getElementById('filtroZonaHoja');
+    if (filtroZona) {
+        filtroZona.addEventListener('change', cargarPedidosDisponibles);
+    }
+    const modal = document.getElementById('selectorPedidosModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                cerrarSelectorPedidos();
+            }
+        });
+    }
+});
+
 
 // --- Funciones de Nuevo Pedido ---
 async function cargarZonasNuevoPedido() {
