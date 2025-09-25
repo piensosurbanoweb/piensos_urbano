@@ -163,25 +163,15 @@ app.post("/pedidos_historial", async (req, res) => {
 
 
 // --- PEDIDOS PENDIENTES ---
-// --- PEDIDOS PENDIENTES ---
-app.get("/pedidos_pendientes", async (req, res) => {
+app.get("/pedidos/pendientes", async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT
-        p.id, p.fecha_entrega, p.cantidad, p.producto, p.observaciones,
-        c.apodo AS apodo_cliente, c.zona_reparto
-      FROM
-        pedidos_historial p
-      JOIN
-        clientes c ON p.cliente_id = c.id
-      WHERE
-        p.fecha_entrega IS NULL
-      ORDER BY p.id DESC
-    `);
+    const result = await pool.query(
+      "SELECT * FROM pedidos_pendientes ORDER BY fecha_programacion DESC"
+    );
     res.json(result.rows);
   } catch (err) {
     console.error('Error al obtener pedidos pendientes:', err.message);
-    res.status(500).json({ error: "Error al obtener pedidos pendientes." });
+    res.status(500).json({ error: "Error al obtener pedidos pendientes" });
   }
 });
 
