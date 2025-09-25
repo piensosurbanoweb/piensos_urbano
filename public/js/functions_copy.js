@@ -10,7 +10,7 @@ let pedidoParaEditarId = null; // Almacenará el ID del pedido que se está edit
 // Simulación de datos (reemplazar con llamadas a la API)
 let pedidosPendientes = [];
 let pedidosCalendario = {
-    lunes: [], martes: [], miercoles: [], jueves: [], viernes: []
+    lunes: [], martes: [], 'miércoles': [], jueves: [], viernes: [], 'sábado': [], domingo: []
 };
 
 let clientes = [];
@@ -66,7 +66,6 @@ async function cambiarPestana(nombrePestana) {
             inicializarPendientes();
         } else if (nombrePestana === "Calendario") {
             inicializarCalendario();
-            await cargarPedidosCalendario();
         } else if (nombrePestana === "GestionBBDD") {
             inicializarGestionBBDD();
         } else if (nombrePestana === "HojaReparto") {
