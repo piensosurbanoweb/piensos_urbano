@@ -398,24 +398,21 @@ app.get("/camiones", async (req, res) => {
 
 app.post("/camiones", async (req, res) => {
     try {
-        // Asegurarse de recibir la propiedad 'matricula' del frontend
+        // El frontend ya envía la propiedad 'matricula', no hay que cambiarla aquí.
         const { matricula } = req.body;
 
-        // Validar que la matrícula no esté vacía
         if (!matricula) {
             return res.status(400).json({ error: "La matrícula es requerida." });
         }
 
-        // Usar la consulta INSERT para agregar un nuevo camión
-        // El frontend envía 'matricula', pero tu tabla tiene la columna 'nombre'.
-        // Aquí se usa 'nombre' para que coincida con tu tabla.
-        // Si quieres usar 'matricula' en la tabla, debes renombrar la columna.
+        // Cambia la columna 'nombre' a 'matricula' en la consulta SQL
+        // para que coincida con tu base de datos o usa el campo 'nombre'
+        // de tu base de datos y la variable 'matricula' que te llega del front-end.
         const result = await pool.query(
             "INSERT INTO camiones (nombre) VALUES ($1) RETURNING *",
-            [matricula] // Se inserta el valor de 'matricula' en la columna 'nombre'
+            [matricula] // Usa la variable 'matricula' que recibiste
         );
 
-        // Enviar una sola respuesta de éxito con los datos del camión agregado
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error("Error al insertar camión:", err);

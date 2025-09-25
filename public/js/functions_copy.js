@@ -956,9 +956,9 @@ async function cargarCamiones() {
             const li = document.createElement('li');
             li.className = 'flex justify-between items-center p-3 text-sm';
             li.innerHTML = `
-                    <span>${c.matricula}</span>
-                    <button onclick="eliminarCamion(${c.id})" class="text-red-600 hover:text-red-800">🗑️</button>
-                `;
+                <span>${c.nombre}</span>
+                <button onclick="eliminarCamion(${c.id})" class="text-red-600 hover:text-red-800">🗑️</button>
+            `;
             lista.appendChild(li);
         });
     } catch (err) {
