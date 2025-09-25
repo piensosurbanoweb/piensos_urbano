@@ -586,7 +586,7 @@ async function guardarNuevaFecha() {
         const res = await fetch(`/pedidos/editar-fecha/${pedidoParaEditarId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nuevaFecha: nuevaFecha }) // Cambiado el nombre de la propiedad
+            body: JSON.stringify({ fecha: nuevaFecha }) // CORREGIDO: ahora usa 'fecha'
         });
 
         if (!res.ok) {
@@ -689,24 +689,24 @@ async function eliminarConductor(id) {
 }
 
 async function cargarCamiones() {
-        try {
-            const res = await fetch('/camiones');
-            const camiones = await res.json();
-            const lista = document.getElementById('listaCamiones'); // Ahora 'lista' no será null
-            lista.innerHTML = '';
-            camiones.forEach(c => {
-                const li = document.createElement('li');
-                li.className = 'flex justify-between items-center p-3 text-sm';
-                li.innerHTML = `
+    try {
+        const res = await fetch('/camiones');
+        const camiones = await res.json();
+        const lista = document.getElementById('listaCamiones'); // Ahora 'lista' no será null
+        lista.innerHTML = '';
+        camiones.forEach(c => {
+            const li = document.createElement('li');
+            li.className = 'flex justify-between items-center p-3 text-sm';
+            li.innerHTML = `
                     <span>${c.matricula}</span>
                     <button onclick="eliminarCamion(${c.id})" class="text-red-600 hover:text-red-800">🗑️</button>
                 `;
-                lista.appendChild(li);
-            });
-        } catch (err) {
-            console.error('Error al cargar camiones:', err);
-        }
+            lista.appendChild(li);
+        });
+    } catch (err) {
+        console.error('Error al cargar camiones:', err);
     }
+}
 
 async function eliminarCamion(id) {
     if (confirm("¿Estás seguro de que quieres eliminar este camión?")) {
@@ -886,6 +886,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Iniciar con la primera pestaña
     cambiarPestana('BaseDatos');
+    cargarConductores();
+    cargarCamiones();
+    cargarZonas();
 });
 
 // --- Gestión de Conductores ---
@@ -1070,10 +1073,3 @@ function resetearSistema() {
         // Aquí iría el fetch a la API: await fetch('/api/resetear-sistema', { method: 'POST' });
     }
 }
-
-// Inicializar al cargar esta pestaña
-document.addEventListener('DOMContentLoaded', () => {
-    cargarConductores();
-    cargarCamiones();
-    cargarZonas();
-});

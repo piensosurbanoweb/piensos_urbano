@@ -386,8 +386,16 @@ app.delete("/conductores/:id", async (req, res) => {
 });
 
 // --- CAMIONES ---
+app.get("/camiones", async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM camiones WHERE activo=true ORDER BY nombre");
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: "Error al obtener camiones" });
+    }
+});
 
-// La única ruta para agregar camiones
 app.post("/camiones", async (req, res) => {
     try {
         // Asegurarse de recibir la propiedad 'matricula' del frontend
