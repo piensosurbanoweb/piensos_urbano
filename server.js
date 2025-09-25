@@ -353,6 +353,33 @@ app.get("/pedidos_calendario", async (req, res) => {
   }
 });
 
+// Pedidos diarios por dia_reparto (para vista diaria del frontend)
+app.get('/pedidos/diarios/:dia', async (req, res) => {
+  try {
+    const { dia } = req.params; // esperado: 'lunes'..'domingo' sin acentos
+    const result = await pool.query(
+      `SELECT
+          p.id,
+          p.dia_reparto,
+          p.fecha_entrega AS fecha_reparto,
+          c.apodo AS apodo_cliente,
+          split_part(h.descripcion, ' de ', 1) AS cantidad,
+          split_part(split_part(h.descripcion, ' - ', 1), ' de ', 2) AS producto,
+          p.observaciones
+        FROM pedidos_calendario p
+        JOIN pedidos_historial h ON h.id = p.historial_id
+        LEFT JOIN clientes c ON p.cliente_id = c.id
+        WHERE p.dia_reparto = $1
+        ORDER BY p.fecha_entrega, c.apodo`,
+      [dia]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener pedidos diarios:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+});
+
 app.post("/pedidos_calendario", async (req, res) => {
   try {
     const { historial_id, cliente_id, dia_reparto, fecha_entrega, orden_reparto, conductor, camion, observaciones, enviado_reparto, fecha_envio_reparto } = req.body;
@@ -441,6 +468,69 @@ app.post("/pedidos/programar-con-fecha/:id", async (req, res) => {
       message: "Pedido programado con éxito.",
       dia_reparto: diaDeLaSemana,
       fecha_entrega: fecha,
+      fecha_reparto: fecha,
+      apodo: pedido.apodo,
+      pedido: pedido.pedido
+    });
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error en la transacción de programación:', err.message);
+    res.status(500).json({ error: "Error al programar el pedido" });
+  } finally {
+    client.release();
+  }
+});
+
+// Alias para compatibilidad con el frontend actual
+app.post("/pedidos/mover-a-calendario/:id", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { id } = req.params;
+    const { fecha } = req.body;
+
+    // Obtener los datos del pedido pendiente
+    const result = await client.query(
+      "SELECT historial_id, cliente_id, observaciones, dia_reparto, apodo, pedido FROM pedidos_pendientes WHERE historial_id = $1",
+      [id]
+    );
+    const pedido = result.rows[0];
+
+    if (!pedido) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: "Pedido no encontrado." });
+    }
+
+    // Obtener nombre de día normalizado (sin acentos) en UTC
+    const diaDeLaSemana = getDiaRepartoUTC(fecha);
+
+    // Insertar en la tabla de 'pedidos_calendario' (fuente de verdad de la programación)
+    await client.query(
+      `INSERT INTO pedidos_calendario (
+        historial_id, cliente_id, dia_reparto, fecha_entrega, observaciones
+      ) VALUES ($1, $2, $3, $4, $5)`,
+      [
+        pedido.historial_id,
+        pedido.cliente_id,
+        diaDeLaSemana,
+        fecha,
+        pedido.observaciones,
+      ]
+    );
+
+    // Eliminar de la tabla de pendientes
+    await client.query("DELETE FROM pedidos_pendientes WHERE historial_id = $1", [id]);
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: "Pedido programado con éxito.",
+      dia_reparto: diaDeLaSemana,
+      fecha_entrega: fecha,
+      fecha_reparto: fecha,
       apodo: pedido.apodo,
       pedido: pedido.pedido
     });
