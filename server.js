@@ -217,6 +217,34 @@ app.put("/pedidos/programar/:id", async (req, res) => {
   }
 });
 
+// OBTENER DETALLES DE UN PEDIDO ESPECÍFICO
+app.get("/pedidos/detalles/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            `SELECT 
+                p.id, p.fecha_entrega, p.cantidad, p.producto, p.observaciones,
+                c.apodo AS apodo_cliente, c.telefono, c.localidad
+            FROM 
+                pedidos_calendario p
+            JOIN 
+                clientes c ON p.cliente_id = c.id
+            WHERE 
+                p.id = $1`,
+            [id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: "Pedido no encontrado." });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error("Error al obtener detalles del pedido:", err.message);
+        res.status(500).json({ error: "Error interno del servidor." });
+    }
+});
+
 
 // --- PEDIDOS CALENDARIO ---
 app.get("/pedidos_calendario", async (req, res) => {
