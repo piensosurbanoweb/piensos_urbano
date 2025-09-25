@@ -586,7 +586,7 @@ async function guardarNuevaFecha() {
         const res = await fetch(`/pedidos/editar-fecha/${pedidoParaEditarId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fecha: nuevaFecha })
+            body: JSON.stringify({ nuevaFecha: nuevaFecha }) // Cambiado el nombre de la propiedad
         });
 
         if (!res.ok) {
@@ -611,14 +611,41 @@ function cambiarDiaDiario() {
     renderizarVistaDiaria();
 }
 
+// Lógica para obtener las fechas de la semana
+function obtenerFechasSemana() {
+    const hoy = new Date();
+    hoy.setDate(hoy.getDate() + semanaActualOffset * 7);
+    const primerDia = new Date(hoy.setDate(hoy.getDate() - hoy.getDay() + (hoy.getDay() === 0 ? -6 : 1))); // Lunes de esta semana
+    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const fechas = {};
+
+    for (let i = 0; i < 7; i++) {
+        const fecha = new Date(primerDia);
+        fecha.setDate(primerDia.getDate() + i);
+        fechas[dias[i].toLowerCase()] = fecha.toISOString().slice(0, 10);
+    }
+    return fechas;
+}
+
+// Actualiza el texto de las fechas en la vista semanal
+function actualizarFechasSemanal() {
+    const fechas = obtenerFechasSemana();
+    const contenedorFechas = document.getElementById('fechasSemana'); // Asegúrate de tener este elemento en tu HTML
+    if (contenedorFechas) {
+        contenedorFechas.innerHTML = `Semana del ${fechas.lunes.split('-').reverse().join('/')} al ${fechas.domingo.split('-').reverse().join('/')}`;
+    }
+}
+
 // Funciones para navegar por las semanas
 function semanaAnterior() {
     semanaActualOffset--;
+    actualizarFechasSemanal();
     cargarPedidosCalendario();
 }
 
 function semanaSiguiente() {
     semanaActualOffset++;
+    actualizarFechasSemanal();
     cargarPedidosCalendario();
 }
 
@@ -662,26 +689,24 @@ async function eliminarConductor(id) {
 }
 
 async function cargarCamiones() {
-    try {
-        const res = await fetch('/camiones');
-        const camionesData = await res.json();
-        const lista = document.getElementById('listaCamiones');
-        if (!lista) return;
-
-        lista.innerHTML = '';
-        camionesData.forEach(camion => {
-            const li = document.createElement('li');
-            li.className = 'p-3 flex items-center justify-between hover:bg-gray-100 transition-colors duration-200';
-            li.innerHTML = `
-                <span class="text-gray-800">${camion.nombre}</span>
-                <button onclick="eliminarCamion(${camion.id})" class="text-red-600 hover:text-red-800 text-lg">🗑️</button>
-            `;
-            lista.appendChild(li);
-        });
-    } catch (err) {
-        console.error('Error al cargar camiones:', err);
+        try {
+            const res = await fetch('/camiones');
+            const camiones = await res.json();
+            const lista = document.getElementById('listaCamiones'); // Ahora 'lista' no será null
+            lista.innerHTML = '';
+            camiones.forEach(c => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center p-3 text-sm';
+                li.innerHTML = `
+                    <span>${c.matricula}</span>
+                    <button onclick="eliminarCamion(${c.id})" class="text-red-600 hover:text-red-800">🗑️</button>
+                `;
+                lista.appendChild(li);
+            });
+        } catch (err) {
+            console.error('Error al cargar camiones:', err);
+        }
     }
-}
 
 async function eliminarCamion(id) {
     if (confirm("¿Estás seguro de que quieres eliminar este camión?")) {
@@ -948,7 +973,7 @@ async function agregarCamion() {
         const res = await fetch('/camiones', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ matricula }) 
+            body: JSON.stringify({ matricula })
         });
         if (res.ok) {
             input.value = '';
