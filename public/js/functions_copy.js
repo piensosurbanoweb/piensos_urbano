@@ -773,6 +773,7 @@ async function eliminarZona(id) {
 }
 
 // --- Funciones de Hoja de Reparto ---
+
 function renderizarHojaReparto() {
     const lista = document.getElementById('listaPedidosHoja');
     const mensajeVacio = document.getElementById('mensajeVacioHoja');
@@ -798,6 +799,25 @@ function renderizarHojaReparto() {
             `;
             lista.appendChild(li);
         });
+    }
+}
+
+async function cargarPedidosHoja() {
+    try {
+        const res = await fetch('/pedidos_pendientes');
+        if (!res.ok) {
+            throw new Error('Error en el servidor al cargar los pedidos.');
+        }
+        const pedidos = await res.json();
+        
+        // Almacena los pedidos en la variable global.
+        pedidosHojaReparto = pedidos;
+        
+        // Renderiza la lista de pedidos en la interfaz de usuario.
+        renderizarHojaReparto();
+        console.log("Función cargarPedidosHoja ejecutada.");
+    } catch (err) {
+        console.error('Error al cargar pedidos de la hoja de reparto:', err);
     }
 }
 
@@ -961,7 +981,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const modal = document.getElementById('selectorPedidosModal');
     if (modal) {
-        modal.addEventListener('click', function(e) {
+        modal.addEventListener('click', function (e) {
             if (e.target === this) {
                 cerrarSelectorPedidos();
             }
