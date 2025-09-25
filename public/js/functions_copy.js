@@ -446,6 +446,7 @@ function ordenarPedidosPendientes() {
 }
 
 // --- Funciones de Calendario ---
+// --- Funciones de Calendario ---
 async function cargarPedidosCalendario() {
     try {
         const res = await fetch(`/pedidos_calendario?offset=${semanaActualOffset}`);
@@ -462,7 +463,6 @@ async function cargarPedidosCalendario() {
             }
         });
 
-        // Actualiza el título de la semana aquí, después de cargar los datos
         actualizarFranjaFechas();
         renderizarVistaCalendario();
     } catch (err) {
@@ -487,18 +487,18 @@ function cambiarVistaCalendario(vista) {
     const controlesNavegacion = document.getElementById('controlesNavegacion');
 
     if (vista === 'semanal') {
-        btnSemanal.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
-        btnDiaria.className = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
-        vistaSemanalDiv.classList.remove('hidden');
-        vistaDiariaDiv.classList.add('hidden');
-        controlesNavegacion.classList.remove('hidden');
+        if (btnSemanal) btnSemanal.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+        if (btnDiaria) btnDiaria.className = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+        if (vistaSemanalDiv) vistaSemanalDiv.classList.remove('hidden');
+        if (vistaDiariaDiv) vistaDiariaDiv.classList.add('hidden');
+        if (controlesNavegacion) controlesNavegacion.classList.remove('hidden');
         renderizarVistaSemanal();
     } else if (vista === 'diaria') {
-        btnDiaria.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
-        btnSemanal.className = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
-        vistaDiariaDiv.classList.remove('hidden');
-        vistaSemanalDiv.classList.add('hidden');
-        controlesNavegacion.classList.add('hidden');
+        if (btnDiaria) btnDiaria.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+        if (btnSemanal) btnSemanal.className = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+        if (vistaDiariaDiv) vistaDiariaDiv.classList.remove('hidden');
+        if (vistaSemanalDiv) vistaSemanalDiv.classList.add('hidden');
+        if (controlesNavegacion) controlesNavegacion.classList.add('hidden');
         renderizarVistaDiaria();
     }
 }
@@ -517,7 +517,7 @@ function renderizarVistaSemanal() {
         const col = document.createElement('div');
         col.className = 'bg-white p-6 rounded-lg shadow-md min-h-64 flex flex-col items-center justify-start';
         col.innerHTML = `
-            <h4 class="text-lg font-bold text-center text-gray-800">${fechaDia.split(' ')[0]}</h4>
+            <p class="font-bold text-lg text-center text-gray-800">${fechaDia}</p>
             <p class="text-sm text-gray-500 mb-4">${dia.charAt(0).toUpperCase() + dia.slice(1)}</p>
             <div class="space-y-2 w-full flex-grow">
                 ${pedidos.map(p => `
@@ -536,7 +536,6 @@ function renderizarVistaSemanal() {
     });
 }
 
-// Nueva función para mostrar los detalles del pedido
 async function mostrarDetallesPedido(id) {
     try {
         const res = await fetch(`/pedidos/detalles/${id}`);
@@ -548,10 +547,8 @@ async function mostrarDetallesPedido(id) {
 
         if (!modal || !contenido) return;
 
-        // Guarda el ID para la edición
         pedidoParaEditarId = pedido.id;
 
-        // Renderiza el contenido del pop-up
         contenido.innerHTML = `
             <div class="p-6">
                 <h3 class="font-bold text-2xl mb-4 text-center">Detalles del Pedido</h3>
@@ -576,7 +573,6 @@ async function mostrarDetallesPedido(id) {
     }
 }
 
-// Cierra el pop-up de detalles
 function cerrarDetallesPedidoModal() {
     const modal = document.getElementById('detallesPedidoModal');
     if (modal) {
@@ -585,12 +581,10 @@ function cerrarDetallesPedidoModal() {
     }
 }
 
-// Modificada para recibir la fecha actual y mostrar el modal
 function mostrarModalEditarFecha(fechaActual) {
     const modal = document.getElementById('editarFechaModal');
     const inputFecha = document.getElementById('inputNuevaFecha');
 
-    // Cierra el modal de detalles antes de abrir el de edición
     cerrarDetallesPedidoModal();
 
     if (!modal || !inputFecha) return;
@@ -599,7 +593,6 @@ function mostrarModalEditarFecha(fechaActual) {
     modal.classList.remove('hidden');
 }
 
-// Renderiza la vista diaria (se mantiene igual, pero los detalles ahora usan la nueva función)
 function renderizarVistaDiaria() {
     const listaPedidos = document.getElementById('pedidosDiarios');
     const mensajeVacio = document.getElementById('mensajeVacioDiario');
@@ -632,7 +625,6 @@ function renderizarVistaDiaria() {
     }
 }
 
-// LÓGICA PARA CERRAR EL MODAL
 function cerrarModalEditarFecha() {
     const modal = document.getElementById('editarFechaModal');
     if (modal) {
@@ -641,7 +633,6 @@ function cerrarModalEditarFecha() {
     pedidoParaEditarId = null;
 }
 
-// LÓGICA PARA GUARDAR LA NUEVA FECHA
 async function guardarNuevaFecha() {
     if (!pedidoParaEditarId) {
         alert('No se ha seleccionado un pedido para editar.');
@@ -674,14 +665,12 @@ async function guardarNuevaFecha() {
     }
 }
 
-// LÓGICA PARA CAMBIAR EL DÍA EN LA VISTA DIARIA
 function cambiarDiaDiario() {
     const selectDia = document.getElementById('selectDiaDiario');
     diaSeleccionadoDiario = selectDia.value;
     renderizarVistaDiaria();
 }
 
-// Lógica para obtener las fechas de la semana
 function obtenerFechasSemana() {
     const hoy = new Date();
     hoy.setDate(hoy.getDate() + semanaActualOffset * 7);
@@ -689,7 +678,7 @@ function obtenerFechasSemana() {
     const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const fechas = {};
 
-    for (let i = 0; i < 6; i++) { // Solo hasta sábado
+    for (let i = 0; i < 6; i++) {
         const fecha = new Date(primerDia);
         fecha.setDate(primerDia.getDate() + i);
         fechas[dias[i].toLowerCase()] = fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
@@ -697,7 +686,6 @@ function obtenerFechasSemana() {
     return fechas;
 }
 
-// Nueva función para actualizar la franja de fechas en el título
 function actualizarFranjaFechas() {
     const fechas = obtenerFechasSemana();
     const contenedorFechas = document.getElementById('fechasSemana');
@@ -708,7 +696,6 @@ function actualizarFranjaFechas() {
     }
 }
 
-// Funciones para navegar por las semanas
 function semanaAnterior() {
     semanaActualOffset--;
     cargarPedidosCalendario();
@@ -718,6 +705,7 @@ function semanaSiguiente() {
     semanaActualOffset++;
     cargarPedidosCalendario();
 }
+
 
 // -- Funciones de gestión BBDD --
 async function cargarConductores() {
