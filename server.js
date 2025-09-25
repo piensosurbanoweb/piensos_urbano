@@ -65,6 +65,15 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
+// Helper para obtener día de la semana (UTC) en minúsculas y sin acentos
+function getDiaRepartoUTC(fechaISO) {
+  // fechaISO ejemplo: 'YYYY-MM-DD'
+  const d = new Date(fechaISO);
+  const nombres = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+  const n = d.getUTCDay(); // 0..6 (domingo..sabado)
+  return nombres[n];
+}
+
 // || RUTAS DE API ||
 
 // --- CLIENTES ---
@@ -318,7 +327,7 @@ app.get("/pedidos_calendario", async (req, res) => {
       `SELECT
                 p.id,
                 p.dia_reparto,
-                p.fecha_entrega,
+                p.fecha_entrega AS fecha_reparto,
                 c.apodo AS apodo_cliente,
                 -- Derivar cantidad y producto desde la descripción del historial
                 split_part(h.descripcion, ' de ', 1) AS cantidad,
@@ -405,10 +414,8 @@ app.post("/pedidos/programar-con-fecha/:id", async (req, res) => {
       return res.status(404).json({ error: "Pedido no encontrado." });
     }
 
-    // Convertir la fecha a día de la semana (Lunes, Martes, etc.)
-    const diasDeLaSemana = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
-    const fechaObj = new Date(fecha);
-    const diaDeLaSemana = diasDeLaSemana[fechaObj.getUTCDay()];
+    // Obtener nombre de día normalizado (sin acentos) en UTC
+    const diaDeLaSemana = getDiaRepartoUTC(fecha);
 
     // Insertar en la tabla de 'pedidos_calendario' (fuente de verdad de la programación)
     await client.query(
@@ -567,9 +574,8 @@ app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
     const { id } = req.params;
     const { fecha } = req.body;
 
-    const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
-    const date = new Date(fecha + 'T00:00:00');
-    const nuevoDia = diasSemana[date.getUTCDay()];
+    // Usar helper normalizado para evitar undefined y problemas de acentos/índices
+    const nuevoDia = getDiaRepartoUTC(fecha);
 
     const result = await pool.query(
       `UPDATE pedidos_calendario
