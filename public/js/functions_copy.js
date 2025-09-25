@@ -448,15 +448,15 @@ function ordenarPedidosPendientes() {
 }
 
 // --- Funciones de Calendario ---
+// --- Funciones de Calendario ---
 async function cargarPedidosCalendario() {
     try {
         const res = await fetch(`/pedidos_calendario?offset=${semanaActualOffset}`);
         if (!res.ok) throw new Error('Error al cargar los pedidos del calendario.');
 
         const pedidos = await res.json();
-        // CORREGIDO: Asegurar que los nombres de los días coincidan
         pedidosCalendario = {
-            lunes: [], martes: [], 'miércoles': [], jueves: [], viernes: [], 'sábado': []
+            lunes: [], martes: [], 'miércoles': [], jueves: [], viernes: [], 'sábado': [], domingo: []
         };
         pedidos.forEach(p => {
             const dia = p.dia_reparto.toLowerCase();
@@ -511,8 +511,7 @@ function renderizarVistaSemanal() {
     contenedor.innerHTML = '';
     const fechas = obtenerFechasSemana();
 
-    // CORREGIDO: Nombres de los días con acentos para la iteración
-    const diasSemana = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const diasSemana = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
     diasSemana.forEach(dia => {
         const pedidos = pedidosCalendario[dia] || [];
@@ -542,7 +541,11 @@ function renderizarVistaSemanal() {
 async function mostrarDetallesPedido(id) {
     try {
         const res = await fetch(`/pedidos/detalles/${id}`);
-        if (!res.ok) throw new Error('Error al obtener los detalles del pedido.');
+        if (!res.ok) {
+            // Se lanza un error con un mensaje más detallado
+            const errorData = await res.json();
+            throw new Error(errorData.error || 'Error al obtener los detalles del pedido.');
+        }
 
         const pedido = await res.json();
         const modal = document.getElementById('detallesPedidoModal');
@@ -555,7 +558,7 @@ async function mostrarDetallesPedido(id) {
         contenido.innerHTML = `
             <div class="p-6">
                 <h3 class="font-bold text-2xl mb-4 text-center">Detalles del Pedido</h3>
-                <p><strong>Cliente:</strong> ${pedido.apodo_cliente}</p>
+                <p><strong>Cliente:</strong> ${pedido.apodo_cliente || 'N/A'}</p>
                 <p><strong>Producto:</strong> ${pedido.producto} (${pedido.cantidad} unidades)</p>
                 <p><strong>Fecha de Entrega:</strong> ${new Date(pedido.fecha_entrega).toLocaleDateString()}</p>
                 <p><strong>Teléfono:</strong> ${pedido.telefono || 'N/A'}</p>
@@ -572,7 +575,7 @@ async function mostrarDetallesPedido(id) {
         modal.classList.add('flex');
     } catch (err) {
         console.error('Error al mostrar los detalles del pedido:', err);
-        alert('Hubo un error al cargar los detalles del pedido.');
+        alert(`Hubo un error al cargar los detalles del pedido: ${err.message}`);
     }
 }
 
@@ -656,7 +659,8 @@ async function guardarNuevaFecha() {
         });
 
         if (!res.ok) {
-            throw new Error('Error al actualizar la fecha del pedido.');
+            const errorData = await res.json();
+            throw new Error(errorData.error || 'Error al actualizar la fecha del pedido.');
         }
 
         cerrarModalEditarFecha();
@@ -664,7 +668,7 @@ async function guardarNuevaFecha() {
 
     } catch (err) {
         console.error('Error al guardar la nueva fecha:', err);
-        alert('Hubo un error al actualizar la fecha del pedido. Revisa la consola.');
+        alert(`Hubo un error al actualizar la fecha del pedido: ${err.message}`);
     }
 }
 
@@ -681,10 +685,9 @@ function obtenerFechasSemana() {
     const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const fechas = {};
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 7; i++) {
         const fecha = new Date(primerDia);
         fecha.setDate(primerDia.getDate() + i);
-        // CORREGIDO: Asegurarse de que las claves del objeto 'fechas' también tengan acentos
         fechas[dias[i].toLowerCase()] = fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
     }
     return fechas;
@@ -695,7 +698,7 @@ function actualizarFranjaFechas() {
     const contenedorFechas = document.getElementById('fechasSemana');
     if (contenedorFechas) {
         const inicioSemana = fechas.lunes;
-        const finSemana = fechas.sábado;
+        const finSemana = fechas.domingo;
         contenedorFechas.innerHTML = `Semana del ${inicioSemana} al ${finSemana}`;
     }
 }

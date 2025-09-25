@@ -227,7 +227,7 @@ app.get("/pedidos/detalles/:id", async (req, res) => {
                 c.apodo AS apodo_cliente, c.telefono, c.localidad
             FROM 
                 pedidos_calendario p
-            JOIN 
+            LEFT JOIN 
                 clientes c ON p.cliente_id = c.id
             WHERE 
                 p.id = $1`,
@@ -235,6 +235,7 @@ app.get("/pedidos/detalles/:id", async (req, res) => {
         );
 
         if (result.rowCount === 0) {
+            // Si el pedido no se encuentra, devuelve un 404
             return res.status(404).json({ error: "Pedido no encontrado." });
         }
 
