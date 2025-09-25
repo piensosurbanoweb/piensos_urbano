@@ -163,7 +163,7 @@ app.post("/pedidos_historial", async (req, res) => {
 
 
 // --- PEDIDOS PENDIENTES ---
-app.get("/pedidos/pendientes", async (req, res) => {
+app.get("/pedidos_pendientes", async (req, res) => {
   try {
     const result = await pool.query(
       "SELECT * FROM pedidos_pendientes ORDER BY fecha_programacion DESC"
@@ -219,10 +219,10 @@ app.put("/pedidos/programar/:id", async (req, res) => {
 
 // OBTENER DETALLES DE UN PEDIDO ESPECÍFICO
 app.get("/pedidos/detalles/:id", async (req, res) => {
-    try {
-        const { id } = req.params;
-        const result = await pool.query(
-            `SELECT 
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `SELECT 
                 p.id, p.fecha_entrega, p.cantidad, p.producto, p.observaciones,
                 c.apodo AS apodo_cliente, c.telefono, c.localidad
             FROM 
@@ -231,19 +231,19 @@ app.get("/pedidos/detalles/:id", async (req, res) => {
                 clientes c ON p.cliente_id = c.id
             WHERE 
                 p.id = $1`,
-            [id]
-        );
+      [id]
+    );
 
-        if (result.rowCount === 0) {
-            // Si el pedido no se encuentra, devuelve un 404
-            return res.status(404).json({ error: "Pedido no encontrado." });
-        }
-
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error("Error al obtener detalles del pedido:", err.message);
-        res.status(500).json({ error: "Error interno del servidor." });
+    if (result.rowCount === 0) {
+      // Si el pedido no se encuentra, devuelve un 404
+      return res.status(404).json({ error: "Pedido no encontrado." });
     }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Error al obtener detalles del pedido:", err.message);
+    res.status(500).json({ error: "Error interno del servidor." });
+  }
 });
 
 
@@ -251,19 +251,19 @@ app.get("/pedidos/detalles/:id", async (req, res) => {
 // OBTENER PEDIDOS PARA EL CALENDARIO FILTRADOS POR SEMANA
 // OBTENER PEDIDOS PARA EL CALENDARIO
 app.get("/pedidos_calendario", async (req, res) => {
-    try {
-        const offset = parseInt(req.query.offset) || 0;
-        const now = new Date();
-        now.setUTCHours(0, 0, 0, 0); 
+  try {
+    const offset = parseInt(req.query.offset) || 0;
+    const now = new Date();
+    now.setUTCHours(0, 0, 0, 0);
 
-        const firstDayOfWeek = new Date(now);
-        firstDayOfWeek.setDate(now.getDate() + (offset * 7) - now.getDay() + (now.getDay() === 0 ? -6 : 1));
-        
-        const lastDayOfWeek = new Date(firstDayOfWeek);
-        lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
+    const firstDayOfWeek = new Date(now);
+    firstDayOfWeek.setDate(now.getDate() + (offset * 7) - now.getDay() + (now.getDay() === 0 ? -6 : 1));
 
-        const result = await pool.query(
-            `SELECT
+    const lastDayOfWeek = new Date(firstDayOfWeek);
+    lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
+
+    const result = await pool.query(
+      `SELECT
                 p.id, p.cantidad, p.producto, p.dia_reparto, p.fecha_entrega,
                 c.apodo AS apodo_cliente
             FROM
@@ -274,24 +274,24 @@ app.get("/pedidos_calendario", async (req, res) => {
                 p.fecha_entrega BETWEEN $1 AND $2
             ORDER BY
                 p.fecha_entrega`,
-            [firstDayOfWeek.toISOString().split('T')[0], lastDayOfWeek.toISOString().split('T')[0]]
-        );
+      [firstDayOfWeek.toISOString().split('T')[0], lastDayOfWeek.toISOString().split('T')[0]]
+    );
 
-        res.json(result.rows);
+    res.json(result.rows);
 
-    } catch (err) {
-        console.error('Error al obtener pedidos del calendario:', err.message);
-        res.status(500).json({ error: "Error interno del servidor." });
-    }
+  } catch (err) {
+    console.error('Error al obtener pedidos del calendario:', err.message);
+    res.status(500).json({ error: "Error interno del servidor." });
+  }
 });
 
 app.post("/pedidos_calendario", async (req, res) => {
   try {
-    const { historial_id, cliente_id, dia_reparto, fecha_reparto, orden_reparto, conductor, camion, observaciones, enviado_reparto, fecha_envio_reparto } = req.body;
+    const { historial_id, cliente_id, dia_reparto, fecha_entrega, orden_reparto, conductor, camion, observaciones, enviado_reparto, fecha_envio_reparto } = req.body;
     const result = await pool.query(
-      `INSERT INTO pedidos_calendario (historial_id, cliente_id, dia_reparto, fecha_reparto, orden_reparto, conductor, camion, observaciones, enviado_reparto, fecha_envio_reparto)
+      `INSERT INTO pedidos_calendario (historial_id, cliente_id, dia_reparto, fecha_entrega, orden_reparto, conductor, camion, observaciones, enviado_reparto, fecha_envio_reparto)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [historial_id, cliente_id, dia_reparto, fecha_reparto, orden_reparto, conductor, camion, observaciones, enviado_reparto, fecha_envio_reparto]
+      [historial_id, cliente_id, dia_reparto, fecha_entrega, orden_reparto, conductor, camion, observaciones, enviado_reparto, fecha_envio_reparto]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -347,7 +347,7 @@ app.post("/pedidos/programar-con-fecha/:id", async (req, res) => {
     }
 
     // Convertir la fecha a día de la semana (Lunes, Martes, etc.)
-    const diasDeLaSemana = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+    const diasDeLaSemana = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
     const fechaObj = new Date(fecha);
     const diaDeLaSemana = diasDeLaSemana[fechaObj.getUTCDay()];
 
@@ -361,7 +361,7 @@ app.post("/pedidos/programar-con-fecha/:id", async (req, res) => {
     // Insertar en la tabla de 'pedidos_calendario'
     await client.query(
       `INSERT INTO pedidos_calendario (
-        historial_id, cliente_id, dia_reparto, fecha_reparto, observaciones
+        historial_id, cliente_id, dia_reparto, fecha_entrega, observaciones
       ) VALUES ($1, $2, $3, $4, $5)`,
       [
         pedido.historial_id,
@@ -381,7 +381,7 @@ app.post("/pedidos/programar-con-fecha/:id", async (req, res) => {
       success: true,
       message: "Pedido programado con éxito.",
       dia_reparto: diaDeLaSemana,
-      fecha_reparto: fecha,
+      fecha_entrega: fecha,
       apodo: pedido.apodo,
       pedido: pedido.pedido
     });
@@ -431,49 +431,49 @@ app.delete("/conductores/:id", async (req, res) => {
 
 // --- CAMIONES ---
 app.get("/camiones", async (req, res) => {
-    try {
-        const result = await pool.query("SELECT * FROM camiones WHERE activo=true ORDER BY nombre");
-        res.json(result.rows);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ error: "Error al obtener camiones" });
-    }
+  try {
+    const result = await pool.query("SELECT * FROM camiones WHERE activo=true ORDER BY nombre");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Error al obtener camiones" });
+  }
 });
 
 app.post("/camiones", async (req, res) => {
-    try {
-        // El frontend ya envía la propiedad 'matricula', no hay que cambiarla aquí.
-        const { matricula } = req.body;
+  try {
+    // El frontend ya envía la propiedad 'matricula', no hay que cambiarla aquí.
+    const { matricula } = req.body;
 
-        if (!matricula) {
-            return res.status(400).json({ error: "La matrícula es requerida." });
-        }
-
-        // Cambia la columna 'nombre' a 'matricula' en la consulta SQL
-        // para que coincida con tu base de datos o usa el campo 'nombre'
-        // de tu base de datos y la variable 'matricula' que te llega del front-end.
-        const result = await pool.query(
-            "INSERT INTO camiones (nombre) VALUES ($1) RETURNING *",
-            [matricula] // Usa la variable 'matricula' que recibiste
-        );
-
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error("Error al insertar camión:", err);
-        res.status(500).json({ error: "Error al insertar camión." });
+    if (!matricula) {
+      return res.status(400).json({ error: "La matrícula es requerida." });
     }
+
+    // Cambia la columna 'nombre' a 'matricula' en la consulta SQL
+    // para que coincida con tu base de datos o usa el campo 'nombre'
+    // de tu base de datos y la variable 'matricula' que te llega del front-end.
+    const result = await pool.query(
+      "INSERT INTO camiones (nombre) VALUES ($1) RETURNING *",
+      [matricula] // Usa la variable 'matricula' que recibiste
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("Error al insertar camión:", err);
+    res.status(500).json({ error: "Error al insertar camión." });
+  }
 });
 
 // La ruta para eliminar camiones, esta está correcta
 app.delete("/camiones/:id", async (req, res) => {
-    try {
-        const { id } = req.params;
-        await pool.query("UPDATE camiones SET activo=false WHERE id=$1", [id]);
-        res.status(200).json({ success: true });
-    } catch (err) {
-        console.error("Error al eliminar camión:", err);
-        res.status(500).json({ error: "Error al eliminar camión" });
-    }
+  try {
+    const { id } = req.params;
+    await pool.query("UPDATE camiones SET activo=false WHERE id=$1", [id]);
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error("Error al eliminar camión:", err);
+    res.status(500).json({ error: "Error al eliminar camión" });
+  }
 });
 
 // --- ZONAS ---
@@ -510,34 +510,33 @@ app.delete("/zonas/:id", async (req, res) => {
 });
 
 // EDITAR FECHA DE LOS PEDIDOS DE CALENDARIO
-// EDITAR FECHA DE LOS PEDIDOS DE CALENDARIO
 app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { fecha } = req.body;
-        
-        const date = new Date(fecha + 'T00:00:00');
-        const diasSemana = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-        const nuevoDia = diasSemana[date.getUTCDay()];
+  try {
+    const { id } = req.params;
+    const { fecha } = req.body;
 
-        const result = await pool.query(
-            `UPDATE pedidos_calendario
+    const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+    const date = new Date(fecha + 'T00:00:00');
+    const nuevoDia = diasSemana[date.getUTCDay()];
+
+    const result = await pool.query(
+      `UPDATE pedidos_calendario
              SET fecha_entrega = $1, dia_reparto = $2
              WHERE id = $3
              RETURNING *`,
-            [fecha, nuevoDia, id]
-        );
+      [fecha, nuevoDia, id]
+    );
 
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: "Pedido no encontrado" });
-        }
-        
-        res.json(result.rows[0]);
-
-    } catch (err) {
-        console.error('Error al actualizar la fecha del pedido:', err.message);
-        res.status(500).json({ error: "Error al actualizar la fecha del pedido" });
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Pedido no encontrado" });
     }
+
+    res.json(result.rows[0]);
+
+  } catch (err) {
+    console.error('Error al actualizar la fecha del pedido:', err.message);
+    res.status(500).json({ error: "Error al actualizar la fecha del pedido" });
+  }
 });
 
 
@@ -572,17 +571,21 @@ app.post("/pedidos/hoja-reparto", async (req, res) => {
       return res.status(400).json({ error: "Se requiere un array de IDs de pedidos." });
     }
 
-    // Consulta los pedidos del calendario (que son los pedidos activos) usando los IDs
+    // Consulta los pedidos del calendario junto con el apodo del cliente
     const queryPedidos = `
-      SELECT
-          id, cliente_id, cantidad, producto, fecha_entrega, observaciones
-      FROM
-          pedidos_calendario
-      WHERE
-          id = ANY($1::int[])
-    `;
+  SELECT
+      p.id, p.cliente_id, p.cantidad, p.producto, p.fecha_entrega, p.observaciones,
+      c.apodo AS apodo_cliente
+  FROM
+      pedidos_calendario p
+  JOIN
+      clientes c ON p.cliente_id = c.id
+  WHERE
+      p.id = ANY($1::int[])
+`;
+
     const resultPedidos = await pool.query(queryPedidos, [ids]);
-    
+
     if (resultPedidos.rowCount === 0) {
       return res.status(404).json({ error: "No se encontraron pedidos con los IDs proporcionados en el calendario." });
     }
@@ -595,19 +598,19 @@ app.post("/pedidos/hoja-reparto", async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6)
       ON CONFLICT (id) DO NOTHING;
     `;
-    
+
     // Inserta cada pedido en la tabla de hoja de reparto
     for (const pedido of pedidosAInsertar) {
-        await pool.query(queryInsert, [
-            pedido.id,
-            pedido.cliente_id,
-            pedido.cantidad,
-            pedido.producto,
-            pedido.fecha_entrega,
-            pedido.observaciones
-        ]);
+      await pool.query(queryInsert, [
+        pedido.id,
+        pedido.cliente_id,
+        pedido.cantidad,
+        pedido.producto,
+        pedido.fecha_entrega,
+        pedido.observaciones
+      ]);
     }
-    
+
     // Ahora, obtén la lista completa de pedidos en la hoja de reparto para devolverla al frontend
     const resultFinal = await pool.query(`
       SELECT 

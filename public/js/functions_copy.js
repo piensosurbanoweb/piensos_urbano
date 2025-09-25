@@ -1,6 +1,6 @@
 // Variables de control, declaradas solo una vez para toda la aplicación
 let editandoId = null;
-//let semanaActualOffset = 0;
+let semanaActualOffset = 0;
 let vistaCalendarioActual = 'semanal';
 let diaSeleccionadoDiario = 'lunes';
 let clienteSeleccionado = null; // Variable para el autocompletado
@@ -12,6 +12,8 @@ let pedidosPendientes = [];
 let pedidosCalendario = {
     lunes: [], martes: [], miercoles: [], jueves: [], viernes: [], sabado: [], domingo: []
 };
+const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+const dias = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'];
 
 let clientes = [];
 let zonas = [];
@@ -454,8 +456,10 @@ async function cargarPedidosCalendario() {
 
         const pedidos = await res.json();
         pedidosCalendario = {
-            lunes: [], martes: [], miércoles: [], jueves: [], viernes: [], sábado: [], domingo: []
+            lunes: [], martes: [], miercoles: [], jueves: [], viernes: [], sabado: [], domingo: []
         };
+
+
         pedidos.forEach(p => {
             const dia = p.dia_reparto.toLowerCase();
             if (pedidosCalendario[dia]) {
@@ -540,9 +544,14 @@ async function mostrarDetallesPedido(id) {
     try {
         const res = await fetch(`/pedidos/detalles/${id}`);
         if (!res.ok) {
-            // Se lanza un error con un mensaje más detallado
-            const errorData = await res.json();
-            throw new Error(errorData.error || 'Error al obtener los detalles del pedido.');
+            let mensaje = 'Error al obtener los detalles del pedido.';
+            try {
+                const errorData = await res.json();
+                if (errorData.error) mensaje = errorData.error;
+            } catch (e) {
+                // ignorar si no es JSON
+            }
+            throw new Error(mensaje);
         }
 
         const pedido = await res.json();
@@ -680,7 +689,7 @@ function obtenerFechasSemana() {
     const hoy = new Date();
     hoy.setDate(hoy.getDate() + semanaActualOffset * 7);
     const primerDia = new Date(hoy.setDate(hoy.getDate() - hoy.getDay() + (hoy.getDay() === 0 ? -6 : 1)));
-    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const dias = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'];
     const fechas = {};
 
     for (let i = 0; i < 7; i++) {
@@ -1110,7 +1119,7 @@ async function programarPedidoConFecha() {
         }
 
         const data = await res.json();
-        alert(`Pedido programado:\n\nDía: ${data.dia_reparto}\nFecha: ${data.fecha_reparto}\nPara: ${data.apodo} - ${data.pedido}`);
+        alert(`Pedido programado:\n\nDía: ${data.dia_reparto}\nFecha: ${data.fecha_entrega}\nPara: ${data.apodo} - ${data.pedido}`);
 
         cerrarCalendarioModal();
 
