@@ -1,3 +1,48 @@
+/*const bcrypt = require('bcrypt');
+const saltRounds = 10; // Cifra alta, cuanto más alta más segura
+
+// RUTA PARA REGISTRAR UN NUEVO USUARIO (OPCIONAL, PERO ÚTIL)
+app.post("/register", async (req, res) => {
+    try {
+        const { nombre_usuario, contrasena } = req.body;
+        const contrasena_hash = await bcrypt.hash(contrasena, saltRounds);
+        const result = await pool.query(
+            "INSERT INTO usuarios (nombre_usuario, contrasena_hash) VALUES ($1, $2) RETURNING *",
+            [nombre_usuario, contrasena_hash]
+        );
+        res.status(201).json({ message: "Usuario registrado con éxito" });
+    } catch (err) {
+        console.error("Error al registrar usuario:", err.message);
+        res.status(500).json({ error: "Error al registrar usuario" });
+    }
+});
+
+// RUTA PARA EL INICIO DE SESIÓN
+app.post("/login", async (req, res) => {
+    try {
+        const { nombre_usuario, contrasena } = req.body;
+        const result = await pool.query("SELECT * FROM usuarios WHERE nombre_usuario = $1", [nombre_usuario]);
+        
+        if (result.rowCount === 0) {
+            return res.status(401).json({ error: "Credenciales incorrectas" });
+        }
+        
+        const usuario = result.rows[0];
+        const contrasenaEsValida = await bcrypt.compare(contrasena, usuario.contrasena_hash);
+        
+        if (!contrasenaEsValida) {
+            return res.status(401).json({ error: "Credenciales incorrectas" });
+        }
+        
+        // Aquí podrías generar un token (JWT) para mantener la sesión
+        res.status(200).json({ message: "Inicio de sesión exitoso" });
+    } catch (err) {
+        console.error("Error en el inicio de sesión:", err.message);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});*/
+
+
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
