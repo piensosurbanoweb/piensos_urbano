@@ -659,37 +659,38 @@ app.delete("/zonas/:id", async (req, res) => {
 });
 
 // EDITAR FECHA DE LOS PEDIDOS DE CALENDARIO
+// EDITAR FECHA DE LOS PEDIDOS DE CALENDARIO
 app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { fecha } = req.body;
+    try {
+        const { id } = req.params;
+        const { fecha } = req.body;
+        
+        const date = new Date(fecha + 'T00:00:00');
+        const diasSemana = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+        const nuevoDia = diasSemana[date.getUTCDay()];
 
-    // Usar helper normalizado para evitar undefined y problemas de acentos/índices
-    const nuevoDia = getDiaRepartoUTC(fecha);
-
-    const result = await pool.query(
-      `UPDATE pedidos_calendario
+        const result = await pool.query(
+            `UPDATE pedidos_calendario
              SET fecha_entrega = $1, dia_reparto = $2
              WHERE id = $3
              RETURNING *`,
-      [fecha, nuevoDia, id]
-    );
+            [fecha, nuevoDia, id]
+        );
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: "Pedido no encontrado" });
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: "Pedido no encontrado" });
+        }
+        
+        res.json(result.rows[0]);
+
+    } catch (err) {
+        console.error('Error al actualizar la fecha del pedido:', err.message);
+        res.status(500).json({ error: "Error al actualizar la fecha del pedido" });
     }
-
-    res.json(result.rows[0]);
-
-  } catch (err) {
-    console.error('Error al actualizar la fecha del pedido:', err.message);
-    res.status(500).json({ error: "Error al actualizar la fecha del pedido" });
-  }
 });
 
 
 // --- FUNCIONES DE HOJA DE REPARTO ---
-// OBTENER PEDIDOS PARA LA HOJA DE REPARTO
 // OBTENER PEDIDOS PARA LA HOJA DE REPARTO
 app.get("/pedidos/hoja-reparto", async (req, res) => {
   try {
