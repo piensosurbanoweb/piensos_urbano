@@ -229,6 +229,27 @@ app.get("/pedidos_pendientes", async (req, res) => {
   }
 });
 
+// RUTA PARA OBTENER TODOS LOS PEDIDOS PENDIENTES
+app.get("/pedidos/pendientes", async (req, res) => {
+    try {
+        // Consulta la tabla 'pedidos_pendientes' que guarda los pedidos a repartir
+        const result = await pool.query(`
+            SELECT 
+                id, historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona,
+                pedido, fecha_programacion, observaciones, dia_reparto
+            FROM 
+                pedidos_pendientes
+            ORDER BY 
+                dia_reparto, apodo;
+        `);
+        
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Error al obtener pedidos pendientes:", err.message);
+        res.status(500).json({ error: "Error al obtener pedidos pendientes." });
+    }
+});
+
 app.post("/pedidos_pendientes", async (req, res) => {
   try {
     const { historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto } = req.body;
@@ -689,7 +710,6 @@ app.patch("/pedidos/editar-fecha/:id", async (req, res) => {
 
 
 // --- FUNCIONES DE HOJA DE REPARTO ---
-// OBTENER PEDIDOS PARA LA HOJA DE REPARTO
 // OBTENER PEDIDOS PARA LA HOJA DE REPARTO
 app.get("/pedidos/hoja-reparto", async (req, res) => {
   try {
