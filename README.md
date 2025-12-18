@@ -64,7 +64,7 @@ pm2 logs tienda            # Ver logs en tiempo real
 ### 🗄️ MySQL
 \`\`\`bash
 # Acceder a la base de datos
-mysql -u piensos_user -p piensos_urbano
+mysql -u piensos_user -p piensos_urbano ```
 
 # Importar un script SQL (desde la terminal de Linux)
 mysql -u piensos_user -p piensos_urbano < estructura.sql
