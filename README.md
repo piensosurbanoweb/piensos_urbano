@@ -27,9 +27,6 @@ Host piensos-ec2
     User ubuntu
     IdentityFile ~/.ssh/piensosurbano-key.pem
 \`\`\`
-
-> **Nota:** Sustituir \`<IP_PÚBLICA_DE_EC2>\` por la IP real del servidor proporcionada por AWS.
-
 ---
 
 ## 🔹 Conexión al Servidor
@@ -65,9 +62,6 @@ pm2 logs tienda            # Ver logs en tiempo real
 \`\`\`bash
 # Acceder a la base de datos
 mysql -u piensos_user -p piensos_urbano ```
-
-# Importar un script SQL (desde la terminal de Linux)
-mysql -u piensos_user -p piensos_urbano < estructura.sql
 \`\`\`
 
 ---
@@ -75,10 +69,8 @@ mysql -u piensos_user -p piensos_urbano < estructura.sql
 ## 🔹 Acceso desde el Navegador
 Dependiendo de la configuración de red:
 
-* **Vía IP:** \`http://<IP_PUBLICA_EC2>\` (Si el puerto 80 está mapeado o usas Nginx).
-* **Vía Puerto:** \`http://<IP_PUBLICA_EC2>:3000\` (Acceso directo a Node).
-* **Vía Dominio:** \`https://<DOMINIO>\` (Si se configuró Certbot/SSL).
-
+* **Vía IP:** \`http://35.180.196.225\` (Si el puerto 80 está mapeado o usas Nginx).
+* **Vía Puerto:** \`http://35.180.196.225:3000\` (Acceso directo a Node).
 ---
 
 ## ⚠️ Notas de Seguridad
