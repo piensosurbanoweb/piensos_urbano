@@ -87,5 +87,3 @@ Dependiendo de la configuración de red:
 | **Clave .pem** | \`~/.ssh/piensosurbano-key.pem\` |
 | **Directorio Proyecto** | \`/home/ubuntu/piensos_urbano\` |
 | **Config SSH Local** | \`~/.ssh/config\` |
-| **Script SQL** | \`/home/ubuntu/piensos_urbano/estructura.sql\` |
-EOF
