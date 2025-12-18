@@ -1,4 +1,3 @@
-cat << 'EOF' > README.md
 # 🐾 Proyecto Piensos Urbano
 
 ## 🔹 Descripción
