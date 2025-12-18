@@ -21,12 +21,10 @@ Desplegada en un servidor **AWS EC2**, con base de datos **MySQL** y edición re
 3. Seleccionar tu archivo de configuración de usuario (normalmente \`~/.ssh/config\`).
 4. Añadir el siguiente bloque:
 
-\`\`\`ssh
 Host piensos-ec2
-    HostName <IP_PÚBLICA_DE_EC2>
+    HostName 35.180.196.225
     User ubuntu
     IdentityFile ~/.ssh/piensosurbano-key.pem
-\`\`\`
 ---
 
 ## 🔹 Conexión al Servidor
@@ -69,8 +67,8 @@ mysql -u piensos_user -p piensos_urbano ```
 ## 🔹 Acceso desde el Navegador
 Dependiendo de la configuración de red:
 
-* **Vía IP:** \`http://35.180.196.225\` (Si el puerto 80 está mapeado o usas Nginx).
-* **Vía Puerto:** \`http://35.180.196.225:3000\` (Acceso directo a Node).
+* **Vía IP:** http://35.180.196.225\ (Si el puerto 80 está mapeado o usas Nginx).
+* **Vía Puerto:** http://35.180.196.225:3000 (Acceso directo a Node).
 ---
 
 ## ⚠️ Notas de Seguridad
