@@ -1,143 +1,100 @@
-# Conexión a la base de datos `piensosurbano-db` en Render
+cat << 'EOF' > README.md
+# 🐾 Proyecto Piensos Urbano
 
-Este documento explica cómo instalar el cliente de PostgreSQL y conectarse a la base de datos **piensosurbano-db** alojada en [Render](https://render.com), en distintos sistemas operativos.
-
----
-
-## Datos de conexión de Render
-
-- **Host:** `dpg-d2mr240gjchc73d0nivg-a.frankfurt-postgres.render.com`
-- **Puerto:** `5432`
-- **Base de datos:** `piensosurbano_db`
-- **Usuario:** `piensosurbano_db_user`
-- **Contraseña:** `1XHe24nwUm90KH3NfjAezbTagdzXZVOI`
+## 🔹 Descripción
+Aplicación **Node.js** para la gestión de pedidos y clientes de la tienda **Piensos Urbano**.  
+Desplegada en un servidor **AWS EC2**, con base de datos **MySQL** y edición remota mediante **VS Code Remote – SSH**.
 
 ---
 
-## 🔹 Ubuntu / WSL (Windows Subsystem for Linux)
-
-1. Actualizar los repositorios:
-   ```bash
-   sudo apt update
-   ```
-
-2. Instalar el cliente de PostgreSQL:
-   ```bash
-   sudo apt install postgresql-client -y
-   ```
-
-3. Verificar la instalación:
-   ```bash
-   psql --version
-   ```
-
-4. Conectarse a la base de datos:
-   ```bash
-   PGPASSWORD="1XHe24nwUm90KH3NfjAezbTagdzXZVOI" psql -h dpg-d2mr240gjchc73d0nivg-a.frankfurt-postgres.render.com -U piensosurbano_db_user -d piensosurbano_db -p 5432
-   ```
-
-5. Contraseña base de datos:
-   ```bash
-   1XHe24nwUm90KH3NfjAezbTagdzXZVOI
-   ```
-6. Salir de la consola de PostgreSQL. Dentro de `psql`, puedes salir con:
-
-```sql
-\q
-```
----
-
-## 🔹 Windows (CMD o PowerShell)
-
-1. Descargar e instalar [PostgreSQL Client](https://www.postgresql.org/download/windows/).  
-   ⚠️ Asegúrate de marcar la opción **Command Line Tools** en el instalador.
-
-2. Abrir **PowerShell** y establecer la variable de entorno para la contraseña:
-   ```powershell
-   $env:PGPASSWORD="1XHe24nwUm90KH3NfjAezbTagdzXZVOI"
-   ```
-
-3. Conectarse a la base de datos:
-   ```powershell
-   psql -h dpg-d2mr240gjchc73d0nivg-a.frankfurt-postgres.render.com -U piensosurbano_db_user -d piensosurbano_db -p 5432
-   ```
+## 🔹 Requisitos para acceder al servidor
+* **Visual Studio Code**
+* Extensión: **Remote – SSH**
+* Clave \`.pem\` para conexión segura (\`~/.ssh/piensosurbano-key.pem\`)
+* **Node.js y npm** (instalados en el servidor)
 
 ---
 
-## 🔹 macOS (Homebrew)
+## 🔹 Configuración SSH en VS Code
 
-1. Instalar PostgreSQL Client con Homebrew:
-   ```bash
-   brew install postgresql
-   ```
+1. Abrir **VS Code**.
+2. Pulsar \`F1\` o \`Ctrl+Shift+P\` → \`Remote-SSH: Open Configuration File...\`.
+3. Seleccionar tu archivo de configuración de usuario (normalmente \`~/.ssh/config\`).
+4. Añadir el siguiente bloque:
 
-2. Verificar la instalación:
-   ```bash
-   psql --version
-   ```
+\`\`\`ssh
+Host piensos-ec2
+    HostName <IP_PÚBLICA_DE_EC2>
+    User ubuntu
+    IdentityFile ~/.ssh/piensosurbano-key.pem
+\`\`\`
 
-3. Conectarse a la base de datos:
-   ```bash
-   PGPASSWORD="1XHe24nwUm90KH3NfjAezbTagdzXZVOI" psql -h dpg-d2mr240gjchc73d0nivg-a.frankfurt-postgres.render.com -U piensosurbano_db_user -d piensosurbano_db -p 5432
-   ```
-
----
-## Verifica que todo se creó:
-
- ```bash
-   \dt
-   ```
-
-Y deberías ver las tablas:
-
- ```bash
-piensosurbano_db=> \dt
-                      List of relations
- Schema |        Name        | Type  |         Owner
---------+--------------------+-------+-----------------------
- public | camiones           | table | piensosurbano_db_user
- public | clientes           | table | piensosurbano_db_user
- public | conductores        | table | piensosurbano_db_user
- public | pedidos_calendario | table | piensosurbano_db_user
- public | pedidos_historial  | table | piensosurbano_db_user
- public | pedidos_pendientes | table | piensosurbano_db_user
- public | zonas              | table | piensosurbano_db_user
-(7 rows)
- ```
----
-
-## ✅ Notas
-
-- Nunca compartas la contraseña de la base de datos en repositorios públicos.
-- Si quieres ejecutar un script `.sql`, usa:
-  ```bash
-  \i ruta/a/tu/script.sql
-  ```
-  
-  dentro de la sesión de `psql`.
+> **Nota:** Sustituir \`<IP_PÚBLICA_DE_EC2>\` por la IP real del servidor proporcionada por AWS.
 
 ---
 
-## 🚀 Despliegue en Render
+## 🔹 Conexión al Servidor
 
-Esta sección explica cómo desplegar el servidor Node.js (`server.js`) en [Render](https://render.com/) usando PostgreSQL.
+1. Pulsar \`F1\` → **Remote-SSH: Connect to Host...**
+2. Seleccionar \`piensos-ec2\`.
+3. Se abrirá una nueva ventana de VS Code conectada remotamente al EC2.
+4. **Abrir el proyecto:** \`File\` → \`Open Folder\` → \`/home/ubuntu/piensos_urbano\`
+5. **Abrir terminal:** Usa el atajo \`Ctrl + @\` para ejecutar comandos directamente en el servidor.
 
-### 1️⃣ Configuración del proyecto
-- En tu terminal local, ejecuta:
+---
 
-```bash
+## 🔹 Comandos útiles en el servidor
 
-npm install
-```
+### 📂 Navegación y Archivos
+\`\`\`bash
+pwd                        # Mostrar ruta actual
+ls -l                      # Listar archivos con detalles
+cd /home/ubuntu/piensos_urbano  # Ir a la carpeta del proyecto
+\`\`\`
 
-Para subir a Render:
-```bash
-git add .
-git commit -m "Prepara deploy para Render"
-git push origin main
-```
+### 🚀 Node.js y PM2
+\`\`\`bash
+npm install                # Instalar dependencias
+node app.js                # Ejecutar Node directamente (pruebas)
+pm2 start app.js --name tienda # Ejecutar con PM2 en segundo plano
+pm2 list                   # Ver estado de los procesos
+pm2 restart tienda         # Reiniciar la aplicación
+pm2 logs tienda            # Ver logs en tiempo real
+\`\`\`
 
-⚠️ Si hay errores de push por permisos (403) o diferencias con el repositorio remoto, primero haz:
-```bash
-git pull origin main --rebase
-```
+### 🗄️ MySQL
+\`\`\`bash
+# Acceder a la base de datos
+mysql -u piensos_user -p piensos_urbano
+
+# Importar un script SQL (desde la terminal de Linux)
+mysql -u piensos_user -p piensos_urbano < estructura.sql
+\`\`\`
+
+---
+
+## 🔹 Acceso desde el Navegador
+Dependiendo de la configuración de red:
+
+* **Vía IP:** \`http://<IP_PUBLICA_EC2>\` (Si el puerto 80 está mapeado o usas Nginx).
+* **Vía Puerto:** \`http://<IP_PUBLICA_EC2>:3000\` (Acceso directo a Node).
+* **Vía Dominio:** \`https://<DOMINIO>\` (Si se configuró Certbot/SSL).
+
+---
+
+## ⚠️ Notas de Seguridad
+* **No compartir** nunca la clave \`.pem\`.
+* El puerto SSH (22) solo debe estar abierto para IPs autorizadas en el **Security Group** de AWS.
+* Mantener el archivo \`.gitignore\` actualizado para no subir las credenciales de la DB al repositorio.
+
+---
+
+## 📍 Resumen de Rutas Importantes
+
+| Elemento | Ruta |
+| :--- | :--- |
+| **Clave .pem** | \`~/.ssh/piensosurbano-key.pem\` |
+| **Directorio Proyecto** | \`/home/ubuntu/piensos_urbano\` |
+| **Config SSH Local** | \`~/.ssh/config\` |
+| **Script SQL** | \`/home/ubuntu/piensos_urbano/estructura.sql\` |
+EOF
