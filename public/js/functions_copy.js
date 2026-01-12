@@ -1153,6 +1153,7 @@ async function cargarConductores() {
         const res = await fetch('/conductores');
         const conductores = await res.json();
         const lista = document.getElementById('listaConductores');
+        if (!lista) return;
         lista.innerHTML = '';
         conductores.forEach(c => {
             const li = document.createElement('li');
