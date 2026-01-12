@@ -1129,8 +1129,9 @@ async function programarPedidoConFecha() {
         }
 
     } catch (err) {
-        console.error('Error al programar el pedido:', err);
-        alert('Hubo un error al intentar programar el pedido. Revisa la consola.');
+        await client.query('ROLLBACK');
+        console.error('FALLO TÉCNICO:', err.message); // <--- ESTO ES LO IMPORTANTE
+        res.status(500).json({ error: err.message });
     }
 }
 
