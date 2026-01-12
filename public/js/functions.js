@@ -96,8 +96,11 @@ async function cargarClientes() {
         document.getElementById("mensajeVacio").classList.add("hidden");
 
         const response = await fetch('/clientes');
-        const clientesData = await response.json();
-        clientes = clientesData; // Guardar en variable global
+        // Asegúrate de que la respuesta sea OK antes de seguir
+        if (!response.ok) throw new Error("Error en la respuesta del servidor");
+        
+        const datos = await response.json(); 
+        clientes = datos; // Actualizamos la variable global
 
         const tabla = document.getElementById("listaClientes");
         tabla.innerHTML = "";
@@ -109,26 +112,24 @@ async function cargarClientes() {
 
         clientes.forEach(cliente => {
             const fila = document.createElement("tr");
-
             fila.innerHTML = `
-        <td class="px-4 py-2 border">${cliente.apodo || ''}</td>
-        <td class="px-4 py-2 border">${cliente.nombre_completo || ''}</td>
-        <td class="px-4 py-2 border">${cliente.telefono || ''}</td>
-        <td class="px-4 py-2 border">${cliente.localidad || ''}</td>
-        <td class="px-4 py-2 border">${cliente.zona_reparto || ''}</td>
-        <td class="px-4 py-2 border">${cliente.observaciones || ''}</td>
-        <td class="px-4 py-2 border flex gap-2">
-            <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
-                onclick='abrirModal(${JSON.stringify(cliente)})'>
-                <i class="fa-solid fa-pen-to-square"></i>
-            </button>
-            <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-                onclick="eliminarCliente(${cliente.id})">
-                <i class="fa-solid fa-trash"></i> 
-            </button>
-        </td>
-    `;
-
+                <td class="px-4 py-2 border">${cliente.apodo || ''}</td>
+                <td class="px-4 py-2 border">${cliente.nombre_completo || ''}</td>
+                <td class="px-4 py-2 border">${cliente.telefono || ''}</td>
+                <td class="px-4 py-2 border">${cliente.localidad || ''}</td>
+                <td class="px-4 py-2 border">${cliente.zona_reparto || ''}</td>
+                <td class="px-4 py-2 border">${cliente.observaciones || ''}</td>
+                <td class="px-4 py-2 border flex gap-2">
+                    <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
+                        onclick='abrirModal(${JSON.stringify(cliente)})'>
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                        onclick="eliminarCliente(${cliente.id})">
+                        <i class="fa-solid fa-trash"></i> 
+                    </button>
+                </td>
+            `;
             tabla.appendChild(fila);
         });
 
