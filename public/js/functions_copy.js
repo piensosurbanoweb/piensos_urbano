@@ -327,16 +327,21 @@ function inicializarFormularioPedidos() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(pedidoData)
             });
-
-            if (!res.ok) throw new Error('Error al registrar pedido');
-
-            const nuevoPedido = await res.json();
-            console.log('Pedido registrado:', nuevoPedido);
+        
+            const data = await res.json(); // Intentamos leer el JSON del error
+        
+            if (!res.ok) {
+                // Si el servidor mandó un detalle del error, lo lanzamos
+                throw new Error(data.details || data.error  || 'Error desconocido en el servidor');
+            }
+        
+            console.log('Pedido registrado:', data);
             mostrarMensajeExito('Pedido registrado con éxito!');
         } catch (err) {
-            console.error('Error al registrar pedido:', err);
-            alert('No se pudo registrar el pedido. Revisa la consola.');
+            console.error('ERROR DETALLADO:', err.message);
+            alert('Error: ' + err.message); // Ahora el alert te dirá el fallo real (ej: "column zona does not exist")
         }
+        
     });
 }
 
