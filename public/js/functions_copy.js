@@ -373,7 +373,7 @@ function mostrarMensajeExito(texto) {
 // --- Funciones de Pedidos Pendientes ---
 async function cargarPedidosPendientes() {
     try {
-        const res = await fetch('/pedidos/pendientes');
+        const res = await fetch('/pedidos_pendientes');
         pedidosPendientes = await res.json();
         renderizarPedidosPendientes(pedidosPendientes);
     } catch (err) {
