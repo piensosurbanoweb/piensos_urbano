@@ -1105,7 +1105,7 @@ async function programarPedidoConFecha() {
     }
 
     try {
-        const res = await fetch(`/pedidos/programar-con-fecha/${pedidoParaProgramarId}`, {
+        const res = await fetch(`/pedidos/programar-con-fecha/${id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fecha: fechaSeleccionada })
