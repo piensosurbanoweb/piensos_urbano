@@ -760,6 +760,7 @@ async function cargarCamiones() {
         const res = await fetch('/camiones');
         const camiones = await res.json();
         const lista = document.getElementById('listaCamiones'); // Ahora 'lista' no será null
+        if (!lista) return;
         lista.innerHTML = '';
         camiones.forEach(c => {
             const li = document.createElement('li');
@@ -1206,6 +1207,7 @@ async function cargarCamiones() {
         const res = await fetch('/camiones');
         const camiones = await res.json();
         const lista = document.getElementById('listaCamiones');
+        if(!lista) return;
         lista.innerHTML = '';
         camiones.forEach(c => {
             const li = document.createElement('li');
@@ -1261,6 +1263,7 @@ async function cargarZonas() {
         const res = await fetch('/zonas');
         const zonas = await res.json();
         const lista = document.getElementById('listaZonas');
+        if(!lista) return;
         lista.innerHTML = '';
         zonas.forEach(z => {
             const li = document.createElement('li');
