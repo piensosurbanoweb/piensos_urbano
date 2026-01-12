@@ -57,7 +57,7 @@ app.use(express.json()); // Para parsear JSON en POST
 
 // 🔑 CONFIGURACIÓN DE CONEXIÓN A POSTGRESQL
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: process.env.DATABASE_URL || 'postgresql://piensosurbarno_db_user:J2Nkg3f8HodoTmnZb63POFbTW3ypshmz@dpg-d5icrver433s73c9dcog-a/piensosurbarno_db',
     ssl: { rejectUnauthorized: false }
 });
 
