@@ -119,27 +119,21 @@ function inicializarHojaReparto() {
 // --- Funciones de Base de Datos ---
 async function cargarClientes() {
     try {
-        const loadingEl = document.getElementById("loading");
-        const mensajeVacioEl = document.getElementById("mensajeVacio");
-        const tablaEl = document.getElementById("listaClientes");
-
-        // Asegurarse de que los elementos existen antes de interactuar con ellos
-        if (!loadingEl || !mensajeVacioEl || !tablaEl) {
-            console.error("Elementos HTML para la pestaña 'BaseDatos' no encontrados.");
-            return;
-        }
-
-        loadingEl.classList.remove("hidden");
-        mensajeVacioEl.classList.add("hidden");
+        document.getElementById("loading").classList.remove("hidden");
+        document.getElementById("mensajeVacio").classList.add("hidden");
 
         const response = await fetch('/clientes');
-        const clientesData = await response.json();
-        clientes = clientesData; // Guardar en variable global
+        // Asegúrate de que la respuesta sea OK antes de seguir
+        if (!response.ok) throw new Error("Error en la respuesta del servidor");
+        
+        const datos = await response.json(); 
+        clientes = datos; // Actualizamos la variable global
 
-        tablaEl.innerHTML = "";
+        const tabla = document.getElementById("listaClientes");
+        tabla.innerHTML = "";
 
         if (clientes.length === 0) {
-            mensajeVacioEl.classList.remove("hidden");
+            document.getElementById("mensajeVacio").classList.remove("hidden");
             return;
         }
 
@@ -158,21 +152,18 @@ async function cargarClientes() {
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
                     <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-                        onclick="eliminarCliente('${cliente.id}')">
-                        <i class="fa-solid fa-trash"></i>
+                        onclick="eliminarCliente(${cliente.id})">
+                        <i class="fa-solid fa-trash"></i> 
                     </button>
                 </td>
             `;
-            tablaEl.appendChild(fila);
+            tabla.appendChild(fila);
         });
 
     } catch (error) {
         console.error("Error cargando clientes:", error);
     } finally {
-        const loadingEl = document.getElementById("loading");
-        if (loadingEl) {
-            loadingEl.classList.add("hidden");
-        }
+        document.getElementById("loading").classList.add("hidden");
     }
 }
 
