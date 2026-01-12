@@ -1091,16 +1091,11 @@ function cerrarCalendarioModal() {
 }
 
 // NUEVA FUNCIÓN para programar el pedido con la fecha seleccionada
-async function programarPedidoConFecha() {
-    const fechaSeleccionada = document.getElementById('fechaEntregaInput').value;
+async function programarPedidoConFecha( id ) {
+    const fechaSeleccionada = document.getElementById('fechaProgramacion').value;
 
     if (!fechaSeleccionada) {
         alert("Por favor, selecciona una fecha.");
-        return;
-    }
-
-    if (!pedidoParaProgramarId) {
-        alert("Error: No se encontró el ID del pedido.");
         return;
     }
 
