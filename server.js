@@ -427,7 +427,7 @@ app.post("/pedidos/programar-con-fecha/:id", async (req, res) => {
 
     // Obtener los datos del pedido pendiente
     const result = await client.query(
-      "SELECT historial_id, cliente_id, observaciones, dia_reparto, apodo, pedido FROM pedidos_pendientes WHERE historial_id = $1",
+      "SELECT , cliente_id, observaciones, dia_reparto, apodo, pedido FROM pedidos_pendientes WHERE historial_id = $1",
       [id]
     );
     const pedido = result.rows[0];

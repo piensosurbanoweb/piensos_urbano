@@ -406,7 +406,7 @@ function renderizarPedidosPendientes(pedidos) {
                 <p class="text-sm text-gray-500 mt-1">Programado para: ${pedido.fecha_programacion}</p>
                 <p class="text-sm text-gray-500 mt-1">Observaciones: ${pedido.observaciones || 'N/A'}</p>
                 <div class="flex justify-end gap-2 mt-4">
-                    <button onclick="mostrarCalendarioModal(${pedido.historial_id})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors duration-200">
+                    <button onclick="mostrarCalendarioModal(${pedido.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors duration-200">
                         📅 Programar en Calendario
                     </button>
                 </div>
@@ -1075,8 +1075,8 @@ async function cargarZonasNuevoPedido() {
 let pedidoParaProgramarId = null;
 
 // Función que se llama desde el botón para abrir el modal
-function mostrarCalendarioModal(pedidoId) {
-    pedidoParaProgramarId = pedidoId;
+function mostrarCalendarioModal(id) {
+    pedidoParaProgramarId = id;
     const modal = document.getElementById('calendarModal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
