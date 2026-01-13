@@ -1125,7 +1125,6 @@ async function programarPedidoConFecha( id ) {
 
     } catch (err) {
         console.error('FALLO TÉCNICO:', err.message); // <--- ESTO ES LO IMPORTANTE
-        res.status(500).json({ error: err.message });
     }
 }
 
