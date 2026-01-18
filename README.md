@@ -67,14 +67,11 @@ Crea un archivo .env dentro de la raíz del proyecto si no existe:
 ```bash
 nano .env
 
-#Añade la configuración de conexión a MySQL:
-
-Ini, TOML
-
+#Añade la configuración de conexión a MySQL (Copia y pega en .env):
 DB_HOST=localhost
-DB_USER=tu_usuario
-DB_PASSWORD=tu_password
-DB_NAME=piensos_urbano
+DB_USER=piensos_urbano
+DB_PASSWORD=Proyecto2025-
+DB_NAME=piensos_urbano_db
 PORT=3000
 ```
 Para guardar en nano: presiona Ctrl+O, luego Enter, y finalmente Ctrl+X para salir.
