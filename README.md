@@ -6,12 +6,21 @@ Desplegada en un servidor **AWS EC2**, con base de datos **MySQL** y edición re
 
 ---
 
+## 🔹 AWS EC2
+Para acceder a AWS EC2 entra en https://signin.aws.amazon.com/signin?redirect_uri=https%3A%2F%2Feu-south-2.console.aws.amazon.com%2Fec2%2Fhome%3Fca-oauth-flow-id%3D0202%26hashArgs%3D%2523Instances%253A%26isauthcode%3Dtrue%26oauthStart%3D1768775671914%26region%3Deu-south-2%26state%3DhashArgsFromTB_eu-south-2_bd0fe12835f2737e&client_id=arn%3Aaws%3Asignin%3A%3A%3Aconsole%2Fec2-tb&forceMobileApp=0&code_challenge=K5e0TRasumHXYa8LrZ1PQeae45IzVS69zq4oSNSt-Vo&code_challenge_method=SHA-256 e inicia sesion con un email raiz con Root User
+
+CORREO: piensosurbanoweb@gmail.com
+CONTRASEÑA: Proyecto2025-
+
+*Tienes que configurar un modo de acceso con la app en el móvil de Google Authenticator (Pregunta esta parte a Paula sino te enteras)*
+
+---
+
 ## Conexión al servidor y trabajo en el proyecto
 
 Sigue estos pasos para conectarte al servidor EC2 y trabajar con el proyecto **piensos_urbano**.
 
 ---
-
 ### 1️⃣ Requisitos previos
 
 - Tener **VS Code** instalado en tu ordenador.
