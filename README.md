@@ -28,10 +28,9 @@ Sigue estos pasos para conectarte al servidor EC2 y trabajar con el proyecto **p
 
 ```bash
 ssh -i "C:\Users\TU_USUARIO\Downloads\piensos_urbano_keys.pem" ubuntu@51.92.72.240
+````
 
-Markdown
-
-Guarda en el archivo de configuración que VS Code te propone (generalmente `C:\Users\TU_USUARIO\.ssh\config`).
+3. Guarda en el archivo de configuración que VS Code te propone (generalmente `C:\Users\TU_USUARIO\.ssh\config`).
 
 ### 3️⃣ Conectarse al servidor
 
@@ -50,24 +49,25 @@ Una vez conectado (verás el indicador verde en la esquina inferior izquierda):
 
 ```text
 /home/ubuntu/piensos_urbano
+````
 Haz clic en Open. Ahora el proyecto se abrirá en tu VS Code como si fuera local.
 
 5️⃣ Instalar dependencias (Node.js)
 Abre la terminal integrada de VS Code (ya estarás conectado a la EC2) y ejecuta:
 
-Bash
-
+```bash
 cd /home/ubuntu/piensos_urbano
 npm install
+````
 Esto instalará todas las dependencias de Node.js definidas en el package.json.
 
 6️⃣ Configurar la base de datos
 Crea un archivo .env dentro de la raíz del proyecto si no existe:
 
-Bash
-
+```bash
 nano .env
-Añade la configuración de conexión a MySQL:
+
+#Añade la configuración de conexión a MySQL:
 
 Ini, TOML
 
@@ -76,16 +76,17 @@ DB_USER=tu_usuario
 DB_PASSWORD=tu_password
 DB_NAME=piensos_urbano
 PORT=3000
+```
 Para guardar en nano: presiona Ctrl+O, luego Enter, y finalmente Ctrl+X para salir.
 
 7️⃣ Ejecutar la aplicación
 Para iniciar el servidor:
 
-Bash
-
+```bash
 npm start
+```
 La app debería correr en el servidor. Puedes abrirla en tu navegador (asegúrate de que el puerto 3000 esté abierto en el Security Group de AWS):
 
-Plaintext
-
+```bash
 [http://51.92.72.240:3000](http://51.92.72.240:3000)
+```
