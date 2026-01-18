@@ -37,7 +37,7 @@ Sigue estos pasos para conectarte al servidor EC2 y trabajar con el proyecto **p
 ssh -i "C:\Users\TU_USUARIO\Downloads\piensos_urbano_keys.pem" ubuntu@51.92.72.240
 ````
 
-### 2️⃣B Configurar la conexión SSH desde PowerShell
+### 2️⃣B Configurar la conexión SSH desde PowerShell (Recomendable empezar a comprobar si funciona por aqui)
 
 1. Abre una terminal en **Powershell** y comprueba que tienes el archivo **piensos_urbano_keys.pem** en descargas. 
 2. Pega el siguiente comando (ajusta la ruta, recuerda cambiar `TU_USUARIO`) También puedes copiar la ruta del archivo desde tu Explorador de Archivos:
