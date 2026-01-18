@@ -46,6 +46,7 @@ ssh -i "C:\Users\TU_USUARIO\Downloads\piensos_urbano_keys.pem" ubuntu@51.92.72.2
 ssh -i "C:\Users\TU_USUARIO\Downloads\piensos_urbano_keys.pem" ubuntu@51.92.72.240
 ````
 *Si se queda enganchado o te da error prueba primero a poner este comando `ssh-keygen -R 51.92.72.240`*
+
 3. Pasa al punto 5 y 6
 
 ### 3️⃣ Conectarse al servidor
