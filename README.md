@@ -14,74 +14,25 @@ Desplegada en un servidor **AWS EC2**, con base de datos **MySQL** y edición re
 
 ---
 
-## 🔹 Configuración SSH en VS Code
+## Conexión al servidor y trabajo en el proyecto
 
-1. Abrir **VS Code**.
-2. Pulsar \`F1\` o \`Ctrl+Shift+P\` → \`Remote-SSH: Open Configuration File...\`.
-3. Seleccionar tu archivo de configuración de usuario (normalmente \`~/.ssh/config\`).
-4. Añadir el siguiente bloque:
-
-Host piensos-ec2
-    HostName 35.180.196.225
-    User ubuntu
-    IdentityFile ~/.ssh/piensosurbano-key.pem
----
-
-## 🔹 Conexión al Servidor
-
-1. Pulsar \`F1\` → **Remote-SSH: Connect to Host...**
-2. Seleccionar \`piensos-ec2\`.
-3. Se abrirá una nueva ventana de VS Code conectada remotamente al EC2.
-4. **Abrir el proyecto:** \`File\` → \`Open Folder\` → \`/home/ubuntu/piensos_urbano\`
-5. **Abrir terminal:** Usa el atajo \`Ctrl + @\` para ejecutar comandos directamente en el servidor.
+Sigue estos pasos para conectarte al servidor EC2 y trabajar con el proyecto **piensos_urbano**.
 
 ---
 
-## 🔹 Comandos útiles en el servidor
+### 1️⃣ Requisitos previos
 
-### 📂 Navegación y Archivos
-\`\`\`bash
-pwd                        # Mostrar ruta actual
-ls -l                      # Listar archivos con detalles
-cd /home/ubuntu/piensos_urbano  # Ir a la carpeta del proyecto
-\`\`\`
-
-### 🚀 Node.js y PM2
-\`\`\`bash
-npm install                # Instalar dependencias
-node app.js                # Ejecutar Node directamente (pruebas)
-pm2 start app.js --name tienda # Ejecutar con PM2 en segundo plano
-pm2 list                   # Ver estado de los procesos
-pm2 restart tienda         # Reiniciar la aplicación
-pm2 logs tienda            # Ver logs en tiempo real
-\`\`\`
-
-### 🗄️ MySQL
-\`\`\`bash
-# Acceder a la base de datos
-mysql -u piensos_user -p piensos_urbano ```
-\`\`\`
+- Tener **VS Code** instalado en tu ordenador.
+- Instalar la extensión **Remote - SSH** en VS Code.
+- Tener la clave privada `.pem` para la instancia (`piensos_urbano_keys.pem`).
+- Conexión a internet.
 
 ---
 
-## 🔹 Acceso desde el Navegador
-Dependiendo de la configuración de red:
+### 2️⃣ Configurar la conexión SSH en VS Code
 
-* **Vía IP:** http://35.180.196.225\ (Si el puerto 80 está mapeado o usas Nginx).
-* **Vía Puerto:** http://35.180.196.225:3000 (Acceso directo a Node).
----
+1. Abre **VS Code** → **Command Palette** (Ctrl+Shift+P) → `Remote-SSH: Add New SSH Host...`
+2. Pega este comando (ajusta la ruta a tu `.pem` si es diferente):
 
-## ⚠️ Notas de Seguridad
-* **No compartir** nunca la clave \`.pem\`.
-* El puerto SSH (22) solo debe estar abierto para IPs autorizadas en el **Security Group** de AWS.
-* Mantener el archivo \`.gitignore\` actualizado para no subir las credenciales de la DB al repositorio.
-
----
-
-## 📍 Resumen de Rutas Importantes
-
-| Elemento | Ruta |
-| :--- | :--- |
-| **Clave .pem** | \`~/.ssh/piensosurbano-key.pem\` |
-| **Directorio Proyecto** | \`/home/ubuntu/piensos_urbano\` |
-| **Config SSH Local** | \`~/.ssh/config\` |
+```bash
+ssh -i "C:\Users\TU_USUARIO\Downloads\piensos_urbano_keys.pem" ubuntu@51.92.72.240
