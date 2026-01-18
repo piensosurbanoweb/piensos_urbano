@@ -6,14 +6,6 @@ Desplegada en un servidor **AWS EC2**, con base de datos **MySQL** y edición re
 
 ---
 
-## 🔹 Requisitos para acceder al servidor
-* **Visual Studio Code**
-* Extensión: **Remote – SSH**
-* Clave \`.pem\` para conexión segura (\`~/.ssh/piensosurbano-key.pem\`)
-* **Node.js y npm** (instalados en el servidor)
-
----
-
 ## Conexión al servidor y trabajo en el proyecto
 
 Sigue estos pasos para conectarte al servidor EC2 y trabajar con el proyecto **piensos_urbano**.
