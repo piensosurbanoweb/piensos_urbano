@@ -25,9 +25,7 @@ Sigue estos pasos para conectarte al servidor EC2 y trabajar con el proyecto **p
 
 - Tener **VS Code** instalado en tu ordenador.
 - Instalar la extensión **Remote - SSH** en VS Code.
-- Tener la clave privada `.pem` para la instancia (`piensos_urbano_keys.pem`).
-- Conexión a internet.
-
+- Tener la clave privada `.pem` para la instancia (`piensos_urbano_keys.pem`). Clave necesaria debes tener descargada en Descargas para poder hacer los pasos siguientes. La puedes encontrar en el repositorio.
 ---
 
 ### 2️⃣ Configurar la conexión SSH en VS Code
@@ -39,7 +37,16 @@ Sigue estos pasos para conectarte al servidor EC2 y trabajar con el proyecto **p
 ssh -i "C:\Users\TU_USUARIO\Downloads\piensos_urbano_keys.pem" ubuntu@51.92.72.240
 ````
 
-3. Guarda en el archivo de configuración que VS Code te propone (generalmente `C:\Users\TU_USUARIO\.ssh\config`).
+### 2️⃣B Configurar la conexión SSH desde PowerShell
+
+1. Abre una terminal en **Powershell** y comprueba que tienes el archivo **piensos_urbano_keys.pem** en descargas. 
+2. Pega el siguiente comando (ajusta la ruta, recuerda cambiar `TU_USUARIO`) También puedes copiar la ruta del archivo desde tu Explorador de Archivos:
+
+```bash
+ssh -i "C:\Users\TU_USUARIO\Downloads\piensos_urbano_keys.pem" ubuntu@51.92.72.240
+````
+
+3. Pasa al punto 5 y 6
 
 ### 3️⃣ Conectarse al servidor
 
