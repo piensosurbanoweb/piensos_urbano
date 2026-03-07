@@ -56,10 +56,10 @@ app.use(express.json());
 
 // Configuración de la conexión (asegúrate de que esto reemplaza a lo que tienes en la línea 58)
 const pool = mysql.createPool({
-  host: 'tu-endpoint-de-rds.amazonaws.com', // El que te dio AWS
-  user: 'admin',                           // Tu usuario
-  password: 'TuPasswordSegura',            // Tu contraseña
-  database: 'nombre_de_tu_bd',             // Tu base de datos
+  host: '127.0.0.1', 
+  user: 'piensos_user',
+  password: 'Proyecto2025-',
+  database: 'piensos_urbano',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -786,7 +786,6 @@ app.get('*', (req, res) => {
 });
 
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`Servidor escuchando en puerto ${PORT}`);
+app.listen(port, () => {
+  console.log(`Servidor escuchando en puerto ${port}`);
 });
