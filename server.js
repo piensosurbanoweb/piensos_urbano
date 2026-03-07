@@ -64,9 +64,6 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
-// Para usar promesas (opcional pero recomendado)
-const db = pool.promise();
-
 // Helper para obtener día de la semana (UTC)
 function getDiaRepartoUTC(fechaISO) {
   const d = new Date(fechaISO);
