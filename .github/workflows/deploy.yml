@@ -11,9 +11,10 @@ jobs:
       - name: Desplegar vía SSH
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ secrets.REMOTE_HOST }}        # <--- Mira que esto se llame igual en Secrets
+          username: ${{ secrets.REMOTE_USER }}    # <--- Y esto también
+          key: ${{ secrets.SSH_PRIVATE_KEY }}     # <--- Y esto
+          port: 22
           script: |
             cd ~/piensos_urbano
             git pull origin main
