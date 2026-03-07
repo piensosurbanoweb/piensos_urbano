@@ -59,7 +59,7 @@ PORT=3000
 Necesitas el archivo de clave privada `.pem` (pídelo a Paula).
 
 ```bash
-ssh -i "tu-clave.pem" ubuntu@51.48.60.111
+ssh -i "piensos_urbano_keys.pem" ubuntu@51.48.60.111
 ```
 
 El proyecto está en:
