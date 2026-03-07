@@ -1,7 +1,6 @@
-SCRIPT BASE DE DATOS PIENSOSURBANO
-
+-- Tabla clientes
 CREATE TABLE clientes (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     apodo VARCHAR(100) NOT NULL UNIQUE,
     nombre_completo VARCHAR(255) NOT NULL,
     telefono VARCHAR(20) NOT NULL,
@@ -10,13 +9,14 @@ CREATE TABLE clientes (
     observaciones TEXT
 );
 
+-- Tabla pedidos
 CREATE TABLE pedidos (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     cliente_id INT NOT NULL,
     apodo_cliente VARCHAR(100),
     tipo VARCHAR(50),
     dia_semana VARCHAR(20),
-    cantidad DECIMAL(10, 2),
+    cantidad DECIMAL(10,2),
     producto VARCHAR(255),
     fecha_entrega DATE,
     observaciones TEXT,
@@ -24,8 +24,9 @@ CREATE TABLE pedidos (
     FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
 );
 
+-- Tabla pedidos_historial
 CREATE TABLE pedidos_historial (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     cliente_id INT NOT NULL,
     descripcion TEXT NOT NULL,
     fecha_pedido DATE NOT NULL,
@@ -34,8 +35,9 @@ CREATE TABLE pedidos_historial (
     FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
 );
 
+-- Tabla pedidos_pendientes
 CREATE TABLE pedidos_pendientes (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     historial_id INT NOT NULL,
     cliente_id INT NOT NULL,
     apodo VARCHAR(100) NOT NULL,
@@ -50,13 +52,13 @@ CREATE TABLE pedidos_pendientes (
     FOREIGN KEY (historial_id) REFERENCES pedidos_historial(id) ON DELETE CASCADE
 );
 
-
+-- Tabla pedidos_calendario
 CREATE TABLE pedidos_calendario (
-    id SERIAL PRIMARY KEY,  -- mejor un ID autoincremental en lugar de VARCHAR
+    id INT AUTO_INCREMENT PRIMARY KEY,
     historial_id INT NOT NULL,
     cliente_id INT,
-    dia_reparto TEXT CHECK (dia_reparto IN ('lunes', 'martes', 'miercoles', 'jueves', 'viernes')) NOT NULL,
-    fecha_reparto DATE NOT NULL,   -- 📌 Nueva columna: permite repetir el mismo pedido en distintas fechas
+    dia_reparto ENUM('lunes','martes','miercoles','jueves','viernes') NOT NULL,
+    fecha_reparto DATE NOT NULL,
     orden_reparto INT DEFAULT 1,
     conductor VARCHAR(100) DEFAULT 'Sin asignar',
     camion VARCHAR(100) DEFAULT 'Sin asignar',
@@ -68,23 +70,25 @@ CREATE TABLE pedidos_calendario (
     FOREIGN KEY (historial_id) REFERENCES pedidos_historial(id) ON DELETE CASCADE
 );
 
-
+-- Tabla conductores
 CREATE TABLE conductores (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL UNIQUE,
     activo BOOLEAN DEFAULT TRUE,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla camiones
 CREATE TABLE camiones (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL UNIQUE,
     activo BOOLEAN DEFAULT TRUE,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla zonas
 CREATE TABLE zonas (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL UNIQUE,
     activa BOOLEAN DEFAULT TRUE,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
