@@ -1,0 +1,21 @@
+name: Deploy a Amazon EC2
+
+on:
+  push:
+    branches: [ main ] # Se activa cuando subes algo a la rama main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Desplegar vía SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/piensos_urbano
+            git pull origin main
+            npm install
+            pm2 restart piensos-api
