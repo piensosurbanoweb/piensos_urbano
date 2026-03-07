@@ -119,27 +119,21 @@ function inicializarHojaReparto() {
 // --- Funciones de Base de Datos ---
 async function cargarClientes() {
     try {
-        const loadingEl = document.getElementById("loading");
-        const mensajeVacioEl = document.getElementById("mensajeVacio");
-        const tablaEl = document.getElementById("listaClientes");
-
-        // Asegurarse de que los elementos existen antes de interactuar con ellos
-        if (!loadingEl || !mensajeVacioEl || !tablaEl) {
-            console.error("Elementos HTML para la pestaña 'BaseDatos' no encontrados.");
-            return;
-        }
-
-        loadingEl.classList.remove("hidden");
-        mensajeVacioEl.classList.add("hidden");
+        document.getElementById("loading").classList.remove("hidden");
+        document.getElementById("mensajeVacio").classList.add("hidden");
 
         const response = await fetch('/clientes');
-        const clientesData = await response.json();
-        clientes = clientesData; // Guardar en variable global
+        // Asegúrate de que la respuesta sea OK antes de seguir
+        if (!response.ok) throw new Error("Error en la respuesta del servidor");
+        
+        const datos = await response.json(); 
+        clientes = datos; // Actualizamos la variable global
 
-        tablaEl.innerHTML = "";
+        const tabla = document.getElementById("listaClientes");
+        tabla.innerHTML = "";
 
         if (clientes.length === 0) {
-            mensajeVacioEl.classList.remove("hidden");
+            document.getElementById("mensajeVacio").classList.remove("hidden");
             return;
         }
 
@@ -158,21 +152,18 @@ async function cargarClientes() {
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
                     <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-                        onclick="eliminarCliente('${cliente.id}')">
-                        <i class="fa-solid fa-trash"></i>
+                        onclick="eliminarCliente(${cliente.id})">
+                        <i class="fa-solid fa-trash"></i> 
                     </button>
                 </td>
             `;
-            tablaEl.appendChild(fila);
+            tabla.appendChild(fila);
         });
 
     } catch (error) {
         console.error("Error cargando clientes:", error);
     } finally {
-        const loadingEl = document.getElementById("loading");
-        if (loadingEl) {
-            loadingEl.classList.add("hidden");
-        }
+        document.getElementById("loading").classList.add("hidden");
     }
 }
 
@@ -331,21 +322,26 @@ function inicializarFormularioPedidos() {
         };
 
         try {
-            const res = await fetch('https://piensos-urbano.onrender.com/pedidos', {
+            const res = await fetch('/pedidos', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(pedidoData)
             });
-
-            if (!res.ok) throw new Error('Error al registrar pedido');
-
-            const nuevoPedido = await res.json();
-            console.log('Pedido registrado:', nuevoPedido);
+        
+            const data = await res.json(); // Intentamos leer el JSON del error
+        
+            if (!res.ok) {
+                // Si el servidor mandó un detalle del error, lo lanzamos
+                throw new Error(data.details || data.error  || 'Error desconocido en el servidor');
+            }
+        
+            console.log('Pedido registrado:', data);
             mostrarMensajeExito('Pedido registrado con éxito!');
         } catch (err) {
-            console.error('Error al registrar pedido:', err);
-            alert('No se pudo registrar el pedido. Revisa la consola.');
+            console.error('ERROR DETALLADO:', err.message);
+            alert('Error: ' + err.message); // Ahora el alert te dirá el fallo real (ej: "column zona does not exist")
         }
+        
     });
 }
 
@@ -377,7 +373,7 @@ function mostrarMensajeExito(texto) {
 // --- Funciones de Pedidos Pendientes ---
 async function cargarPedidosPendientes() {
     try {
-        const res = await fetch('/pedidos/pendientes');
+        const res = await fetch('/pedidos_pendientes');
         pedidosPendientes = await res.json();
         renderizarPedidosPendientes(pedidosPendientes);
     } catch (err) {
@@ -410,7 +406,7 @@ function renderizarPedidosPendientes(pedidos) {
                 <p class="text-sm text-gray-500 mt-1">Programado para: ${pedido.fecha_programacion}</p>
                 <p class="text-sm text-gray-500 mt-1">Observaciones: ${pedido.observaciones || 'N/A'}</p>
                 <div class="flex justify-end gap-2 mt-4">
-                    <button onclick="mostrarCalendarioModal(${pedido.historial_id})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors duration-200">
+                    <button onclick="mostrarCalendarioModal(${pedido.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors duration-200">
                         📅 Programar en Calendario
                     </button>
                 </div>
@@ -769,6 +765,7 @@ async function cargarCamiones() {
         const res = await fetch('/camiones');
         const camiones = await res.json();
         const lista = document.getElementById('listaCamiones'); // Ahora 'lista' no será null
+        if (!lista) return;
         lista.innerHTML = '';
         camiones.forEach(c => {
             const li = document.createElement('li');
@@ -1078,8 +1075,8 @@ async function cargarZonasNuevoPedido() {
 let pedidoParaProgramarId = null;
 
 // Función que se llama desde el botón para abrir el modal
-function mostrarCalendarioModal(pedidoId) {
-    pedidoParaProgramarId = pedidoId;
+function mostrarCalendarioModal(id) {
+    pedidoParaProgramarId = id;
     const modal = document.getElementById('calendarModal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
@@ -1094,21 +1091,16 @@ function cerrarCalendarioModal() {
 }
 
 // NUEVA FUNCIÓN para programar el pedido con la fecha seleccionada
-async function programarPedidoConFecha() {
-    const fechaSeleccionada = document.getElementById('fechaEntregaInput').value;
+async function programarPedidoConFecha( id ) {
+    const fechaSeleccionada = document.getElementById('fechaProgramacion').value;
 
     if (!fechaSeleccionada) {
         alert("Por favor, selecciona una fecha.");
         return;
     }
 
-    if (!pedidoParaProgramarId) {
-        alert("Error: No se encontró el ID del pedido.");
-        return;
-    }
-
     try {
-        const res = await fetch(`/pedidos/programar-con-fecha/${pedidoParaProgramarId}`, {
+        const res = await fetch(`/pedidos/programar-con-fecha/${id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fecha: fechaSeleccionada })
@@ -1132,8 +1124,7 @@ async function programarPedidoConFecha() {
         }
 
     } catch (err) {
-        console.error('Error al programar el pedido:', err);
-        alert('Hubo un error al intentar programar el pedido. Revisa la consola.');
+        console.error('FALLO TÉCNICO:', err.message); // <--- ESTO ES LO IMPORTANTE
     }
 }
 
@@ -1161,6 +1152,7 @@ async function cargarConductores() {
         const res = await fetch('/conductores');
         const conductores = await res.json();
         const lista = document.getElementById('listaConductores');
+        if (!lista) return;
         lista.innerHTML = '';
         conductores.forEach(c => {
             const li = document.createElement('li');
@@ -1215,6 +1207,7 @@ async function cargarCamiones() {
         const res = await fetch('/camiones');
         const camiones = await res.json();
         const lista = document.getElementById('listaCamiones');
+        if(!lista) return;
         lista.innerHTML = '';
         camiones.forEach(c => {
             const li = document.createElement('li');
@@ -1270,6 +1263,7 @@ async function cargarZonas() {
         const res = await fetch('/zonas');
         const zonas = await res.json();
         const lista = document.getElementById('listaZonas');
+        if(!lista) return;
         lista.innerHTML = '';
         zonas.forEach(z => {
             const li = document.createElement('li');
