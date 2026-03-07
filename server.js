@@ -54,11 +54,17 @@ app.use(cors());
 app.use(express.json()); 
 
 
-// 🔑 CONFIGURACIÓN DE CONEXIÓN A POSTGRESQL
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || 'postgresql://piensosurbarno_db_user:J2Nkg3f8HodoTmnZb63POFbTW3ypshmz@dpg-d5icrver433s73c9dcog-a/piensosurbarno_db',
-    ssl: { rejectUnauthorized: false }
-});
+// 🔑 CONFIGURACIÓN DE CONEXIÓN A MYSQL
+// Usa variables de entorno o los datos que creamos antes
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'paula_dev',
+  password: process.env.DB_PASSWORD || 'TuPassword123', // Pon tu contraseña aquí
+  database: process.env.DB_NAME || 'piensos_urbano',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+}).promise(); // Permite usar async/await
 
 // Helper para obtener día de la semana (UTC)
 function getDiaRepartoUTC(fechaISO) {
@@ -165,9 +171,9 @@ app.post("/pedidos", async (req, res) => {
     }
 
     const pedidoPendiente = `${cantidad} de ${producto}`;
-    await client.query(
-      `INSERT INTO pedidos_pendientes (historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona_reparto, pedido, fecha_programacion, observaciones, dia_reparto)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    await connection.query(
+      `INSERT INTO pedidos_pendientes (historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [historialId, cliente_id, clienteData.apodo, clienteData.nombre_completo, clienteData.telefono, clienteData.localidad, clienteData.zona_reparto, pedidoPendiente, fecha_entrega, observaciones, diaRepartoCorregido]
     );
 
@@ -248,9 +254,9 @@ app.get("/pedidos/pendientes", async (req, res) => {
 app.post("/pedidos_pendientes", async (req, res) => {
   try {
     const { historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto } = req.body;
-    const result = await pool.query(
-      `INSERT INTO pedidos_pendientes (historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona_reparto, pedido, fecha_programacion, observaciones, dia_reparto)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+    const [result] = await pool.query(
+      `INSERT INTO pedidos_pendientes (historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
       [historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto]
     );
     const [newPendiente] = await pool.query("SELECT * FROM pedidos_pendientes WHERE id = ?", [result.insertId]);
@@ -443,9 +449,8 @@ app.post("/pedidos/programar-con-fecha/:id", async (req, res) => {
     const { id } = req.params;
     const { fecha } = req.body;
 
-    // Obtener los datos del pedido pendiente
-    const result = await client.query(
-      "SELECT , cliente_id, observaciones, dia_reparto, apodo, pedido FROM pedidos_pendientes WHERE historial_id = $1",
+    const [result] = await connection.query(
+      "SELECT historial_id, cliente_id, observaciones, dia_reparto, apodo, pedido FROM pedidos_pendientes WHERE historial_id = ?",
       [id]
     );
     const pedido = result[0];
