@@ -133,7 +133,7 @@ mysql -u piensos_user -p piensos_urbano
 
 ## 🔗 Endpoints de la API
 
-La API es accesible en: **`http://51.48.60.111:3000/`**
+La API es accesible en: **`http://51.48.60.111:3000/`** pero hay que revisar en EC2 si es 51.48.60.111 u otra IP pública, o si ha cambiado
 
 ### Clientes
 | Método | Ruta | Descripción |
