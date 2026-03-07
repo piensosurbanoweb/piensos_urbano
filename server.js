@@ -45,14 +45,13 @@ app.post("/login", async (req, res) => {
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
-const mysql = require('mysql2'); // CAMBIO A MYSQL
+const mysql = require('mysql2/promise');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors()); 
 app.use(express.json()); 
-
 
 // Configuración de la conexión (asegúrate de que esto reemplaza a lo que tienes en la línea 58)
 const pool = mysql.createPool({
