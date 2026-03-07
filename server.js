@@ -54,17 +54,19 @@ app.use(cors());
 app.use(express.json()); 
 
 
-// 🔑 CONFIGURACIÓN DE CONEXIÓN A MYSQL
-// Usa variables de entorno o los datos que creamos antes
+// Configuración de la conexión (asegúrate de que esto reemplaza a lo que tienes en la línea 58)
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'paula_dev',
-  password: process.env.DB_PASSWORD || 'TuPassword123', // Pon tu contraseña aquí
-  database: process.env.DB_NAME || 'piensos_urbano',
+  host: 'tu-endpoint-de-rds.amazonaws.com', // El que te dio AWS
+  user: 'admin',                           // Tu usuario
+  password: 'TuPasswordSegura',            // Tu contraseña
+  database: 'nombre_de_tu_bd',             // Tu base de datos
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
-}).promise(); // Permite usar async/await
+});
+
+// Para usar promesas (opcional pero recomendado)
+const db = pool.promise();
 
 // Helper para obtener día de la semana (UTC)
 function getDiaRepartoUTC(fechaISO) {
