@@ -680,6 +680,28 @@ app.get('/pedidos_historial/:cliente_id', async (req, res) => {
   }
 });
 
+// Historial completo (sin límite), usado por la exportación a PDF del historial de un cliente.
+app.get('/pedidos_historial/:cliente_id/completo', async (req, res) => {
+  try {
+    const { cliente_id } = req.params;
+    const { rows } = await pool.query(
+      `SELECT h.*, ${SUBQUERY_ITEMS}
+       FROM pedidos_historial h
+       WHERE h.cliente_id = $1
+       ORDER BY h.fecha_pedido DESC`,
+      [cliente_id]
+    );
+    const resultado = rows.map((r) => ({
+      ...r,
+      items: r.items && r.items.length > 0 ? r.items : [parseDescripcion(r.descripcion)],
+    }));
+    res.json(resultado);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Error al obtener historial completo' });
+  }
+});
+
 app.post('/pedidos_historial', async (req, res) => {
   try {
     const { cliente_id, descripcion, fecha_pedido, fecha_entrega, observaciones } = req.body;
@@ -793,14 +815,25 @@ app.get('/pedidos/detalles/:id', async (req, res) => {
 app.get('/pedidos_calendario', async (req, res) => {
   try {
     const offset = parseInt(req.query.offset) || 0;
+    const vista = req.query.vista === 'mensual' ? 'mensual' : 'semanal';
     const now = new Date();
     now.setUTCHours(0, 0, 0, 0);
 
-    const firstDayOfWeek = new Date(now);
-    firstDayOfWeek.setDate(now.getDate() + offset * 7 - now.getDay() + (now.getDay() === 0 ? -6 : 1));
+    let desde, hasta;
 
-    const lastDayOfWeek = new Date(firstDayOfWeek);
-    lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
+    if (vista === 'mensual') {
+      // Rango de un mes completo, desplazado 'offset' meses respecto al mes actual.
+      desde = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1));
+      hasta = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset + 1, 0));
+    } else {
+      // Rango de la semana (lunes a domingo) desplazada 'offset' semanas.
+      const firstDayOfWeek = new Date(now);
+      firstDayOfWeek.setDate(now.getDate() + offset * 7 - now.getDay() + (now.getDay() === 0 ? -6 : 1));
+      const lastDayOfWeek = new Date(firstDayOfWeek);
+      lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
+      desde = firstDayOfWeek;
+      hasta = lastDayOfWeek;
+    }
 
     const { rows } = await pool.query(
       `SELECT
@@ -814,7 +847,7 @@ app.get('/pedidos_calendario', async (req, res) => {
        JOIN clientes c ON p.cliente_id = c.id
        WHERE p.fecha_entrega BETWEEN $1 AND $2
        ORDER BY p.fecha_entrega`,
-      [firstDayOfWeek.toISOString().split('T')[0], lastDayOfWeek.toISOString().split('T')[0]]
+      [desde.toISOString().split('T')[0], hasta.toISOString().split('T')[0]]
     );
 
     res.json(rows);

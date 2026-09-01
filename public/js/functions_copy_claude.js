@@ -115,6 +115,7 @@ function escapeHTML(valor) {
 // ============================================================
 let editandoId = null;
 let semanaActualOffset = 0;
+let mesActualOffset = 0;
 let vistaCalendarioActual = 'semanal';
 let diaSeleccionadoDiario = 'lunes';
 let clienteSeleccionado = null;
@@ -337,6 +338,10 @@ async function cargarClientes() {
                     <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
                         onclick='abrirModal(${JSON.stringify(cliente).replace(/'/g, '&#39;')})'>
                         <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button class="bg-[#158765] hover:bg-[#0f6b50] text-white px-3 py-1 rounded"
+                        onclick="exportarHistorialClientePDF(${cliente.id})" title="Exportar historial a PDF">
+                        <i class="fas fa-file-pdf"></i>
                     </button>
                     <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
                         onclick="eliminarCliente(${cliente.id})">
@@ -577,7 +582,7 @@ function inicializarFormularioPedidos() {
     if (tipoPedido) {
         tipoPedido.addEventListener('change', () => {
             const container = document.getElementById('diasSemanaContainer');
-            if (container) container.classList.toggle('hidden', tipoPedido.value !== 'semanal');
+            if (container) container.classList.toggle('hidden', !['semanal', 'quincena'].includes(tipoPedido.value));
         });
     }
 
@@ -833,12 +838,20 @@ function getWeekDays(offset = 0) {
 }
 
 async function cargarPedidosCalendario() {
+    if (vistaCalendarioActual === 'mensual') {
+        await cargarPedidosMensual();
+        return;
+    }
+
     const diasSem = getWeekDays(semanaActualOffset);
 
     const titulo = document.getElementById('tituloCalendario');
     if (titulo) {
         titulo.textContent = `Semana: ${diasSem[0].toLocaleDateString('es-ES')} — ${diasSem[6].toLocaleDateString('es-ES')}`;
     }
+
+    const btnPeriodo = document.getElementById('btnPeriodoActual');
+    if (btnPeriodo) btnPeriodo.textContent = 'Semana Actual';
 
     try {
         const res = await fetch(`/pedidos_calendario?offset=${semanaActualOffset}`);
@@ -855,32 +868,126 @@ async function cargarPedidosCalendario() {
     }
 }
 
+async function cargarPedidosMensual() {
+    const btnPeriodo = document.getElementById('btnPeriodoActual');
+    if (btnPeriodo) btnPeriodo.textContent = 'Mes Actual';
+
+    const hoy = new Date();
+    const mesRef = new Date(hoy.getFullYear(), hoy.getMonth() + mesActualOffset, 1);
+
+    try {
+        const res = await fetch(`/pedidos_calendario?vista=mensual&offset=${mesActualOffset}`);
+        if (!res.ok) throw new Error('Error al cargar pedidos del calendario');
+        const pedidos = await res.json();
+        renderizarVistaMensual(pedidos, mesRef);
+    } catch (err) {
+        console.error('Error al cargar pedidos del calendario (mensual):', err);
+    }
+}
+
 function cambiarVistaCalendario(vista) {
     vistaCalendarioActual = vista;
     const btnSemanal      = document.getElementById('btnVistaSemanal');
+    const btnMensual       = document.getElementById('btnVistaMensual');
     const btnDiaria       = document.getElementById('btnVistaDiaria');
     const vistaSemanalDiv = document.getElementById('vistaSemanal');
+    const vistaMensualDiv = document.getElementById('vistaMensual');
     const vistaDiariaDiv  = document.getElementById('vistaDiaria');
     const controlesNav    = document.getElementById('controlesNavegacion');
 
     const activoClass   = 'bg-[#158765] hover:bg-[#0f6b50] text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
     const inactivoClass = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
 
+    [btnSemanal, btnMensual, btnDiaria].forEach(btn => { if (btn) btn.className = inactivoClass; });
+    vistaSemanalDiv?.classList.add('hidden');
+    vistaMensualDiv?.classList.add('hidden');
+    vistaDiariaDiv?.classList.add('hidden');
+
     if (vista === 'semanal') {
         if (btnSemanal) btnSemanal.className = activoClass;
-        if (btnDiaria)  btnDiaria.className  = inactivoClass;
         vistaSemanalDiv?.classList.remove('hidden');
-        vistaDiariaDiv?.classList.add('hidden');
+        controlesNav?.classList.remove('hidden');
+        cargarPedidosCalendario();
+    } else if (vista === 'mensual') {
+        if (btnMensual) btnMensual.className = activoClass;
+        vistaMensualDiv?.classList.remove('hidden');
         controlesNav?.classList.remove('hidden');
         cargarPedidosCalendario();
     } else {
-        if (btnDiaria)  btnDiaria.className  = activoClass;
-        if (btnSemanal) btnSemanal.className = inactivoClass;
+        if (btnDiaria) btnDiaria.className = activoClass;
         vistaDiariaDiv?.classList.remove('hidden');
-        vistaSemanalDiv?.classList.add('hidden');
         controlesNav?.classList.add('hidden');
         cambiarDiaDiario();
     }
+}
+
+function renderizarVistaMensual(pedidos, mesRef) {
+    const contenedor = document.getElementById('gridMensual');
+    const titulo = document.getElementById('tituloMesMensual');
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+
+    if (titulo) {
+        titulo.textContent = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(mesRef);
+    }
+
+    const anio = mesRef.getFullYear();
+    const mes  = mesRef.getMonth();
+    const primerDia = new Date(anio, mes, 1);
+    const ultimoDia = new Date(anio, mes + 1, 0);
+
+    // Índice de columna (0=lunes ... 6=domingo) del día 1 del mes.
+    const diaSemanaPrimero = (primerDia.getDay() + 6) % 7;
+
+    // Celdas vacías de relleno antes del día 1.
+    for (let i = 0; i < diaSemanaPrimero; i++) {
+        const vacio = document.createElement('div');
+        vacio.className = 'bg-gray-50 min-h-24';
+        contenedor.appendChild(vacio);
+    }
+
+    const hoyStr = new Date().toISOString().split('T')[0];
+
+    for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
+        const fecha = new Date(anio, mes, dia);
+        const fechaStr = fecha.toISOString().split('T')[0];
+        const pedidosDia = pedidos.filter(p => (p.fecha_reparto || '').startsWith(fechaStr));
+        const esHoy = fechaStr === hoyStr;
+
+        const celda = document.createElement('div');
+        celda.className = `bg-white min-h-24 p-1 flex flex-col ${esHoy ? 'ring-2 ring-inset ring-[#158765]' : ''}`;
+        celda.innerHTML = `
+            <p class="text-xs font-semibold text-gray-600 mb-1">${dia}</p>
+            <div class="space-y-1 overflow-y-auto max-h-20">
+                ${pedidosDia.map(p => `
+                    <div class="bg-emerald-50 border border-emerald-100 rounded px-1 py-0.5 text-[10px] leading-tight cursor-pointer hover:bg-emerald-100 truncate"
+                         title="${escapeHTML(p.apodo_cliente)}: ${escapeHTML(resumenItemsTexto(p.items))}"
+                         onclick="mostrarDetallesPedido(${p.id})">
+                        ${escapeHTML(p.apodo_cliente)}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        contenedor.appendChild(celda);
+    }
+}
+
+function periodoAnterior() {
+    if (vistaCalendarioActual === 'mensual') { mesActualOffset--; }
+    else { semanaActualOffset--; }
+    cargarPedidosCalendario();
+}
+
+function periodoSiguiente() {
+    if (vistaCalendarioActual === 'mensual') { mesActualOffset++; }
+    else { semanaActualOffset++; }
+    cargarPedidosCalendario();
+}
+
+function periodoActual() {
+    if (vistaCalendarioActual === 'mensual') { mesActualOffset = 0; }
+    else { semanaActualOffset = 0; }
+    cargarPedidosCalendario();
 }
 
 function renderizarVistaSemanal(pedidos, diasSem) {
@@ -1301,7 +1408,110 @@ function limpiarPedidosAntiguos() {
     if (confirm('¿Limpiar pedidos antiguos? Esta acción no se puede deshacer.'))
         alert('Función pendiente de implementar en el servidor.');
 }
-function exportarDatos()   { alert('Función pendiente de implementar en el servidor.'); }
+
+// --- Exportación a Excel (listados) y PDF (hoja de reparto / historial) ---
+async function exportarDatos() {
+    try {
+        const res = await fetch('/clientes');
+        if (!res.ok) throw new Error('Error al obtener clientes');
+        const datos = await res.json();
+        if (!datos || datos.length === 0) { alert('No hay clientes para exportar.'); return; }
+
+        const filas = datos.map(c => ({
+            Apodo: c.apodo || '',
+            'Nombre completo': c.nombre_completo || '',
+            Teléfono: c.telefono || '',
+            Localidad: c.localidad || '',
+            Zona: c.zona_reparto || '',
+            Observaciones: c.observaciones || '',
+        }));
+
+        const hoja = XLSX.utils.json_to_sheet(filas);
+        const libro = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(libro, hoja, 'Clientes');
+        const fecha = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(libro, `clientes_${fecha}.xlsx`);
+    } catch (err) {
+        console.error('Error al exportar clientes:', err);
+        alert('Error al exportar clientes: ' + err.message);
+    }
+}
+
+async function exportarHistorialClientePDF(clienteId) {
+    try {
+        const res = await fetch(`/pedidos_historial/${clienteId}/completo`);
+        if (!res.ok) throw new Error('Error al obtener el historial del cliente');
+        const historial = await res.json();
+        if (!historial || historial.length === 0) { alert('Este cliente no tiene historial de pedidos.'); return; }
+
+        const cliente = clientes.find(c => c.id === clienteId);
+        const apodo = cliente ? cliente.apodo : `cliente_${clienteId}`;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(14);
+        doc.text(`Historial de pedidos: ${apodo}`, 14, 15);
+
+        const filas = historial.map(h => [
+            h.fecha_pedido ? new Date(h.fecha_pedido).toLocaleDateString('es-ES') : '',
+            h.fecha_entrega ? new Date(h.fecha_entrega).toLocaleDateString('es-ES') : '',
+            resumenItemsTexto(h.items),
+            h.observaciones || '',
+        ]);
+
+        doc.autoTable({
+            startY: 22,
+            head: [['Fecha pedido', 'Fecha entrega', 'Productos', 'Observaciones']],
+            body: filas,
+            styles: { fontSize: 9 },
+            headStyles: { fillColor: [21, 135, 101] },
+        });
+
+        const fecha = new Date().toISOString().split('T')[0];
+        doc.save(`historial_${apodo}_${fecha}.pdf`);
+    } catch (err) {
+        console.error('Error al exportar historial a PDF:', err);
+        alert('Error al exportar historial a PDF: ' + err.message);
+    }
+}
+
+function exportarHojaRepartoPDF() {
+    if (!pedidosHojaReparto || pedidosHojaReparto.length === 0) {
+        alert('La hoja de reparto está vacía, no hay nada que exportar.');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape' });
+    doc.setFontSize(14);
+    doc.text('Hoja de Reparto', 14, 12);
+    doc.setFontSize(10);
+    doc.text(new Date().toLocaleDateString('es-ES'), 14, 18);
+
+    const filas = pedidosHojaReparto.map((p, i) => [
+        i + 1,
+        p.apodo_cliente || '',
+        p.telefono || '',
+        resumenItemsTexto(p.items),
+        p.dia_reparto || '',
+        p.orden_reparto ?? '',
+        p.camion || '',
+        p.zona || '',
+        p.conductor || '',
+    ]);
+
+    doc.autoTable({
+        startY: 24,
+        head: [['Nº', 'Cliente', 'Teléfono', 'Pedido', 'Día', 'Orden', 'Camión', 'Zona', 'Conductor']],
+        body: filas,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [21, 135, 101] },
+    });
+
+    const fecha = new Date().toISOString().split('T')[0];
+    doc.save(`hoja_reparto_${fecha}.pdf`);
+}
+
 function resetearSistema() {
     if (confirm('ATENCIÓN: ¿Resetear el sistema? Se eliminarán TODOS los datos. Acción irreversible.'))
         alert('Función pendiente de implementar en el servidor.');
