@@ -198,9 +198,9 @@ async function cambiarPestana(nombrePestana) {
         'HojaReparto': 'tabHojaReparto'
     };
 
-    const baseClass     = 'px-3 py-3 text-center font-medium rounded-lg text-xs sm:text-sm';
-    const inactiveClass = `${baseClass} bg-gray-200 text-gray-700 hover:bg-gray-300`;
-    const activeClass   = `${baseClass} bg-[#158765] text-white`;
+    const baseClass     = 'flex-1 px-3 py-3 text-center font-medium text-xs sm:text-sm border-b-2 transition-colors duration-200';
+    const inactiveClass = `${baseClass} border-transparent text-gray-500 hover:text-gray-700`;
+    const activeClass   = `${baseClass} border-[#158765] text-[#158765] font-semibold`;
 
     Object.entries(mapaBotones).forEach(([pestana, tabId]) => {
         const tab = document.getElementById(tabId);
