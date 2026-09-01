@@ -1,10 +1,11 @@
 {
   "name": "piensos_urbano",
-  "version": "1.0.0",
-  "description": "Servidor Node.js para gestión de clientes y pedidos de Piensos Urbano",
+  "version": "2.0.0",
+  "description": "Servidor Node.js para gestión de clientes y pedidos de Piensos Urbano (Vercel + Supabase/Postgres)",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "engines": {
     "node": "20.x"
@@ -12,6 +13,7 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "pg": "^8.16.3"
   },
@@ -20,6 +22,8 @@
     "clientes",
     "pedidos",
     "postgresql",
+    "supabase",
+    "vercel",
     "nodejs",
     "express"
   ],
