@@ -1,10 +1,9 @@
-# 🐾 Piensos Urbano
+# 🐾 Proyecto Piensos Urbano
 
 ## 🔹 Descripción
-
 Aplicación **Node.js / Express** para la gestión de pedidos y clientes de la tienda **Piensos Urbano**.
 
-Desplegada en **Vercel** (funciones serverless) con base de datos **PostgreSQL gestionada en Supabase**.
+Desplegada en **Vercel** (usando su soporte "zero-config" para Express) con base de datos **PostgreSQL gestionada en Supabase**.
 
 > ⚠️ Este proyecto migró desde AWS EC2 + MySQL. Si encuentras documentación antigua mencionando SSH, `.pem` o EC2, está obsoleta — usa esta guía.
 
@@ -14,13 +13,13 @@ Desplegada en **Vercel** (funciones serverless) con base de datos **PostgreSQL g
 
 ```
 piensos_urbano/
-├── api/
-│   └── index.js        # App Express con todas las rutas (función serverless en Vercel)
 ├── db/
 │   └── schema.sql       # Esquema de la base de datos Postgres (ejecutar una vez en Supabase)
 ├── public/               # Frontend estático (HTML/CSS/JS)
-├── server.js             # Arranque local únicamente (npm start) — no se usa en Vercel
-├── vercel.json            # Enruta todas las peticiones a api/index.js
+├── server.js              # App Express completa. Vercel la detecta automáticamente
+│                          # (zero-config Express) y también sirve para "npm start" en local
+├── api/index.js           # OBSOLETO, ya no se usa (se deja vacío para no romper enlaces)
+├── vercel.json            # Vacío intencionadamente — no hace falta configuración extra
 └── .env.example           # Plantilla de variables de entorno
 ```
 
@@ -39,35 +38,43 @@ piensos_urbano/
 
 ```bash
 npm install
-```
-
-Esto instalará todas las dependencias de Node.js definidas en el package.json.
-
-6️⃣ Configurar la base de datos
-Crea un archivo .env dentro de la raíz del proyecto si no existe:
-
-```bash
-nano .env
-
-#Añade la configuración de conexión a MySQL (Copia y pega en .env):
-DB_HOST=localhost
-DB_USER=piensos_urbano
-DB_PASSWORD=Proyecto2025-
-DB_NAME=piensos_urbano_db
-PORT=3000
-```
-
-Para guardar en nano: presiona Ctrl+O, luego Enter, y finalmente Ctrl+X para salir.
-
-7️⃣ Ejecutar la aplicación
-Para iniciar el servidor:
-
-```bash
+cp .env.example .env
+# Edita .env y pega tu DATABASE_URL de Supabase
 npm start
 ```
 
-La app debería correr en el servidor. Puedes abrirla en tu navegador (asegúrate de que el puerto 3000 esté abierto en el Security Group de AWS):
+La app corre en `http://localhost:3000`.
 
-```bash
-[http://51.92.72.240:3000](http://51.92.72.240:3000)
-```
+---
+
+## 🔹 3. Desplegar en Vercel
+
+1. Entra en [vercel.com](https://vercel.com) e inicia sesión (puedes usar tu cuenta de GitHub).
+2. **Add New → Project** y selecciona el repositorio `piensos_urbano`.
+3. Vercel detecta Node.js automáticamente. No hace falta configurar build command (no hay paso de build).
+4. En **Environment Variables**, añade:
+   - `DATABASE_URL` → la cadena de conexión de Supabase del paso 1.
+5. Despliega. A partir de aquí, cada `git push` a la rama principal despliega automáticamente (no hace falta ninguna GitHub Action ni claves SSH).
+
+El archivo `.github/workflows/deploy.yml` del despliegue antiguo a EC2 ya no se usa — puedes eliminarlo cuando quieras.
+
+---
+
+## 🔹 4. Variables de entorno
+
+| Variable       | Dónde se define                          | Descripción                                  |
+|----------------|-------------------------------------------|-----------------------------------------------|
+| `DATABASE_URL` | `.env` (local) / Vercel Environment Vars  | Cadena de conexión Postgres de Supabase       |
+| `PORT`         | `.env` (local, opcional)                  | Puerto local, por defecto 3000                |
+
+**Nunca** subas el archivo `.env` ni credenciales reales a este repositorio (`.env` ya está en `.gitignore`).
+
+---
+
+## 🔹 Notas de la migración (MySQL → Postgres)
+
+- Los placeholders de las consultas cambiaron de `?` (MySQL) a `$1, $2, ...` (Postgres).
+- `INSERT IGNORE` se sustituyó por `INSERT ... ON CONFLICT DO NOTHING`.
+- Las funciones `SUBSTRING_INDEX` de MySQL para extraer `cantidad`/`producto` del campo `descripcion` ahora se calculan en JavaScript (función `parseDescripcion` en `server.js`), no en SQL.
+- `result.insertId` se sustituyó por `RETURNING id` en los `INSERT`.
+- Es un esquema **nuevo y vacío** (no se migraron los datos históricos de la base MySQL del EC2). Si necesitas ese histórico más adelante, hay que exportarlo desde el EC2 y convertirlo al nuevo esquema.
