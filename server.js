@@ -5,6 +5,7 @@
 require('dotenv').config();
 
 const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcrypt');
@@ -52,17 +53,177 @@ function requireAuth(req, res, next) {
   }
 }
 
-// Rutas que no requieren sesión: el propio login/logout, y todo lo que sea un
-// archivo estático (HTML/CSS/JS/imágenes) para que la página de login y sus
-// recursos se puedan cargar sin estar ya autenticado. Los datos de verdad
-// siempre viajan por rutas de API (sin punto en la ruta), que sí se protegen.
-const RUTAS_PUBLICAS = new Set(['/login', '/logout']);
+// --- ROLES Y PERMISOS ---
+// Jerarquía: desarrollador (superadmin) > propietario (admin) > gestor autorizado.
+// El desarrollador puede gestionar a cualquiera (incluido el propietario).
+// El propietario puede gestionar propietarios y gestores, pero NUNCA a un desarrollador.
+// El gestor no gestiona usuarios en absoluto (tiene acceso al resto de la app igual que el propietario).
+const ROLES_VALIDOS = ['desarrollador', 'propietario', 'gestor'];
+function puedeGestionarRol(rolActor, rolObjetivo) {
+  if (rolActor === 'desarrollador') return true;
+  if (rolActor === 'propietario') return rolObjetivo !== 'desarrollador';
+  return false;
+}
+// Middleware: solo desarrollador/propietario pueden entrar a gestión de usuarios.
+function requireGestionUsuarios(req, res, next) {
+  if (req.usuario?.rol !== 'desarrollador' && req.usuario?.rol !== 'propietario') {
+    return res.status(403).json({ error: 'No tienes permiso para gestionar usuarios.' });
+  }
+  next();
+}
+
+// Rutas que no requieren sesión: login/logout, recuperación de contraseña, y
+// todo lo que sea un archivo estático (HTML/CSS/JS/imágenes) para que el login
+// y sus recursos se puedan cargar sin estar ya autenticado. Los datos de
+// verdad siempre viajan por rutas de API (sin punto en la ruta), que sí se protegen.
+const RUTAS_PUBLICAS = new Set(['/login', '/logout', '/forgot-password', '/reset-password']);
 app.use((req, res, next) => {
   if (RUTAS_PUBLICAS.has(req.path) || req.path === '/' || req.path.includes('.')) {
     return next();
   }
   return requireAuth(req, res, next);
 });
+
+// --- ENVÍO DE EMAILS (Resend) ---
+// Se usa la API HTTP de Resend directamente (fetch nativo de Node) para no
+// añadir una dependencia nueva. Hace falta la variable de entorno
+// RESEND_API_KEY (ver .env.example / README).
+// Plantilla del email de "recuperar contraseña", con el mismo diseño y
+// colores de marca que el resto de la app (ver también emails/reset-password.html,
+// que es una vista previa idéntica para abrir en el navegador).
+function plantillaEmailReset(nombre, enlace, logoUrl) {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recupera tu contraseña</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f0fdf9; font-family:Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0fdf9; padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%; background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+          <tr>
+            <td align="center" style="background-color:#158765; padding:28px 24px;">
+              <img src="${logoUrl}" width="64" height="64" alt="Piensos y Cereales Urbano, S.L."
+                   style="display:block; width:64px; height:64px; border-radius:50%; object-fit:cover; border:3px solid #ffffff;">
+              <p style="margin:12px 0 0; font-size:16px; font-weight:bold; color:#ffffff; font-family:Arial, Helvetica, sans-serif;">
+                Piensos y Cereales Urbano, S.L.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px 32px 24px; font-family:Arial, Helvetica, sans-serif; color:#212529;">
+              <h1 style="margin:0 0 16px; font-size:20px; color:#111827;">Recupera tu contraseña</h1>
+              <p style="margin:0 0 16px; font-size:15px; line-height:1.5;">
+                Hola <strong>${nombre}</strong>,
+              </p>
+              <p style="margin:0 0 24px; font-size:15px; line-height:1.5;">
+                Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en la aplicación de pedidos.
+                Pulsa el siguiente botón para crear una contraseña nueva. Este enlace caduca en <strong>1 hora</strong>.
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
+                <tr>
+                  <td align="center" style="border-radius:8px; background-color:#158765;">
+                    <a href="${enlace}"
+                       style="display:inline-block; padding:12px 28px; font-size:15px; font-weight:bold; color:#ffffff; text-decoration:none; border-radius:8px; font-family:Arial, Helvetica, sans-serif;">
+                      Crear contraseña nueva
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 8px; font-size:13px; line-height:1.5; color:#6b7280;">
+                Si el botón no funciona, copia y pega este enlace en tu navegador:
+              </p>
+              <p style="margin:0 0 24px; font-size:13px; line-height:1.5; word-break:break-all;">
+                <a href="${enlace}" style="color:#158765;">${enlace}</a>
+              </p>
+              <p style="margin:0; font-size:13px; line-height:1.5; color:#6b7280;">
+                Si no has sido tú quien lo ha pedido, puedes ignorar este correo con tranquilidad: tu contraseña actual seguirá funcionando.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:20px 24px; background-color:#f9fafb; border-top:1px solid #e5e7eb;">
+              <p style="margin:0; font-size:12px; color:#9ca3af; font-family:Arial, Helvetica, sans-serif;">
+                Piensos y Cereales Urbano, S.L. — Este es un correo automático, no respondas a esta dirección.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+async function enviarEmail(destinatario, asunto, html) {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) {
+    console.error('Falta la variable de entorno RESEND_API_KEY: no se puede enviar el email.');
+    return false;
+  }
+  try {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Piensos y Cereales Urbano <onboarding@resend.dev>',
+        to: [destinatario],
+        subject: asunto,
+        html,
+      }),
+    });
+    if (!resp.ok) {
+      console.error('Resend devolvió un error:', resp.status, await resp.text());
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Error al enviar email con Resend:', err.message);
+    return false;
+  }
+}
+
+// Envía un email usando una plantilla creada y publicada en el panel de
+// Resend (resend.com/templates), en vez de HTML escrito aquí. `variables`
+// debe tener las mismas claves que las variables definidas en esa plantilla
+// (ver emails/reset-password-resend-template.html para la de recuperar
+// contraseña: NOMBRE, ENLACE, LOGO_URL).
+async function enviarEmailConPlantilla(destinatario, templateId, variables) {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) {
+    console.error('Falta la variable de entorno RESEND_API_KEY: no se puede enviar el email.');
+    return false;
+  }
+  try {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Piensos y Cereales Urbano <onboarding@resend.dev>',
+        to: [destinatario],
+        template: { id: templateId, variables },
+      }),
+    });
+    if (!resp.ok) {
+      console.error('Resend devolvió un error (plantilla):', resp.status, await resp.text());
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Error al enviar email con plantilla de Resend:', err.message);
+    return false;
+  }
+}
 
 app.post('/login', async (req, res) => {
   try {
@@ -81,7 +242,7 @@ app.post('/login', async (req, res) => {
     if (!contrasenaOk) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
 
     const token = jwt.sign(
-      { id: usuario.id, nombre_usuario: usuario.nombre_usuario, nombre: usuario.nombre },
+      { id: usuario.id, nombre_usuario: usuario.nombre_usuario, nombre: usuario.nombre, rol: usuario.rol },
       JWT_SECRET,
       { expiresIn: '12h' }
     );
@@ -104,14 +265,131 @@ app.post('/logout', (req, res) => {
 });
 
 app.get('/me', (req, res) => {
-  res.json({ nombre: req.usuario.nombre, nombre_usuario: req.usuario.nombre_usuario });
+  res.json({
+    id: req.usuario.id,
+    nombre: req.usuario.nombre,
+    nombre_usuario: req.usuario.nombre_usuario,
+    rol: req.usuario.rol,
+  });
 });
 
-// --- GESTIÓN DE USUARIOS (solo usuarios ya autenticados) ---
-app.get('/usuarios', async (req, res) => {
+// --- CAMBIO DE CONTRASEÑA (usuario ya logueado, cambia la suya propia) ---
+app.post('/change-password', async (req, res) => {
+  try {
+    const { contrasena_actual, contrasena_nueva } = req.body;
+    if (!contrasena_actual || !contrasena_nueva) {
+      return res.status(400).json({ error: 'Escribe tu contraseña actual y la nueva.' });
+    }
+    if (contrasena_nueva.length < 8) {
+      return res.status(400).json({ error: 'La contraseña nueva debe tener al menos 8 caracteres.' });
+    }
+    const { rows } = await pool.query('SELECT password_hash FROM usuarios WHERE id = $1', [req.usuario.id]);
+    const usuario = rows[0];
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    const ok = await bcrypt.compare(contrasena_actual, usuario.password_hash);
+    if (!ok) return res.status(401).json({ error: 'La contraseña actual no es correcta.' });
+
+    const hash = await bcrypt.hash(contrasena_nueva, 10);
+    await pool.query('UPDATE usuarios SET password_hash = $1 WHERE id = $2', [hash, req.usuario.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error al cambiar la contraseña:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+});
+
+// --- RECUPERACIÓN DE CONTRASEÑA (sin sesión iniciada) ---
+app.post('/forgot-password', async (req, res) => {
+  // Siempre se responde igual, exista o no ese usuario/email, para no revelar
+  // qué cuentas existen (evita que alguien use esto para adivinar usuarios).
+  const RESPUESTA_GENERICA = { success: true, message: 'Si ese usuario o email existe y tiene un correo asociado, recibirás un enlace para recuperar la contraseña.' };
+  try {
+    const { usuario_o_email } = req.body;
+    if (!usuario_o_email) return res.json(RESPUESTA_GENERICA);
+
+    const { rows } = await pool.query(
+      'SELECT id, nombre, email FROM usuarios WHERE (nombre_usuario = $1 OR email = $1) AND activo = true',
+      [usuario_o_email]
+    );
+    const usuario = rows[0];
+    if (usuario && usuario.email) {
+      const token = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const expira = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+      await pool.query(
+        'UPDATE usuarios SET reset_token_hash = $1, reset_token_expira = $2 WHERE id = $3',
+        [tokenHash, expira, usuario.id]
+      );
+      const enlace = `${req.protocol}://${req.get('host')}/reset-password.html?token=${token}`;
+      const logoUrl = `${req.protocol}://${req.get('host')}/img/logo-empresa.jpg`;
+
+      // Si has creado y publicado la plantilla en resend.com/templates (ver
+      // emails/reset-password-resend-template.html) y has puesto su ID en
+      // la variable de entorno RESEND_TEMPLATE_ID_RESET, se usa esa
+      // plantilla. Si no, se envía el mismo diseño pero con el HTML escrito
+      // aquí mismo (emails/reset-password.html) — no hace falta elegir una
+      // de las dos formas de antemano, funciona con cualquiera.
+      const templateId = process.env.RESEND_TEMPLATE_ID_RESET;
+      if (templateId) {
+        await enviarEmailConPlantilla(usuario.email, templateId, {
+          NOMBRE: usuario.nombre,
+          ENLACE: enlace,
+          LOGO_URL: logoUrl,
+        });
+      } else {
+        await enviarEmail(
+          usuario.email,
+          'Recupera tu contraseña — Piensos y Cereales Urbano',
+          plantillaEmailReset(usuario.nombre, enlace, logoUrl)
+        );
+      }
+    }
+    res.json(RESPUESTA_GENERICA);
+  } catch (err) {
+    console.error('Error en recuperación de contraseña:', err.message);
+    res.json(RESPUESTA_GENERICA);
+  }
+});
+
+app.post('/reset-password', async (req, res) => {
+  try {
+    const { token, contrasena } = req.body;
+    if (!token || !contrasena) {
+      return res.status(400).json({ error: 'Faltan datos.' });
+    }
+    if (contrasena.length < 8) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres.' });
+    }
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const { rows } = await pool.query(
+      'SELECT id FROM usuarios WHERE reset_token_hash = $1 AND reset_token_expira > now() AND activo = true',
+      [tokenHash]
+    );
+    const usuario = rows[0];
+    if (!usuario) {
+      return res.status(400).json({ error: 'El enlace no es válido o ha caducado. Pide uno nuevo.' });
+    }
+    const hash = await bcrypt.hash(contrasena, 10);
+    await pool.query(
+      'UPDATE usuarios SET password_hash = $1, reset_token_hash = NULL, reset_token_expira = NULL WHERE id = $2',
+      [hash, usuario.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error al restablecer la contraseña:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+});
+
+// --- GESTIÓN DE USUARIOS Y ROLES ---
+// Solo desarrollador/propietario pueden entrar aquí (requireGestionUsuarios).
+// Dentro, además, se respeta la jerarquía: el propietario nunca puede crear,
+// editar ni desactivar a un desarrollador (superadmin).
+app.get('/usuarios', requireGestionUsuarios, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, nombre_usuario, nombre, activo, creado_en FROM usuarios WHERE activo = true ORDER BY nombre_usuario'
+      'SELECT id, nombre_usuario, nombre, email, rol, activo, creado_en FROM usuarios WHERE activo = true ORDER BY rol, nombre_usuario'
     );
     res.json(rows);
   } catch (err) {
@@ -120,36 +398,73 @@ app.get('/usuarios', async (req, res) => {
   }
 });
 
-app.post('/usuarios', async (req, res) => {
+app.post('/usuarios', requireGestionUsuarios, async (req, res) => {
   try {
-    const { nombre_usuario, nombre, contrasena } = req.body;
+    const { nombre_usuario, nombre, email, contrasena, rol } = req.body;
     if (!nombre_usuario || !nombre || !contrasena) {
       return res.status(400).json({ error: 'Nombre de usuario, nombre y contraseña son obligatorios.' });
     }
     if (contrasena.length < 8) {
       return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres.' });
     }
+    const rolFinal = rol || 'gestor';
+    if (!ROLES_VALIDOS.includes(rolFinal)) {
+      return res.status(400).json({ error: 'Rol no válido.' });
+    }
+    if (!puedeGestionarRol(req.usuario.rol, rolFinal)) {
+      return res.status(403).json({ error: 'No tienes permiso para crear un usuario con ese rol.' });
+    }
     const hash = await bcrypt.hash(contrasena, 10);
     const { rows } = await pool.query(
-      `INSERT INTO usuarios (nombre_usuario, nombre, password_hash)
-       VALUES ($1, $2, $3) RETURNING id, nombre_usuario, nombre, activo`,
-      [nombre_usuario, nombre, hash]
+      `INSERT INTO usuarios (nombre_usuario, nombre, email, password_hash, rol)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id, nombre_usuario, nombre, email, rol, activo`,
+      [nombre_usuario, nombre, email || null, hash, rolFinal]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(409).json({ error: 'Ese nombre de usuario ya existe.' });
+      return res.status(409).json({ error: 'Ese nombre de usuario o email ya existe.' });
     }
     console.error('Error al crear usuario:', err.message);
     res.status(500).json({ error: 'Error al crear el usuario.' });
   }
 });
 
-app.delete('/usuarios/:id', async (req, res) => {
+// Cambia el rol de un usuario (solo desarrollador/propietario, respetando la jerarquía).
+app.patch('/usuarios/:id/rol', requireGestionUsuarios, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rol } = req.body;
+    if (!ROLES_VALIDOS.includes(rol)) {
+      return res.status(400).json({ error: 'Rol no válido.' });
+    }
+    const { rows } = await pool.query('SELECT rol FROM usuarios WHERE id = $1', [id]);
+    const objetivo = rows[0];
+    if (!objetivo) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    // Hace falta poder gestionar tanto el rol actual del usuario como el rol nuevo que se le quiere dar.
+    if (!puedeGestionarRol(req.usuario.rol, objetivo.rol) || !puedeGestionarRol(req.usuario.rol, rol)) {
+      return res.status(403).json({ error: 'No tienes permiso para asignar ese rol.' });
+    }
+    await pool.query('UPDATE usuarios SET rol = $1 WHERE id = $2', [rol, id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error al cambiar el rol:', err.message);
+    res.status(500).json({ error: 'Error al cambiar el rol.' });
+  }
+});
+
+app.delete('/usuarios/:id', requireGestionUsuarios, async (req, res) => {
   try {
     const { id } = req.params;
     if (String(req.usuario.id) === String(id)) {
       return res.status(400).json({ error: 'No puedes desactivar tu propio usuario mientras tienes la sesión abierta.' });
+    }
+    const { rows } = await pool.query('SELECT rol FROM usuarios WHERE id = $1', [id]);
+    const objetivo = rows[0];
+    if (!objetivo) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    if (!puedeGestionarRol(req.usuario.rol, objetivo.rol)) {
+      return res.status(403).json({ error: 'No tienes permiso para desactivar a este usuario.' });
     }
     await pool.query('UPDATE usuarios SET activo = false WHERE id = $1', [id]);
     res.json({ success: true });

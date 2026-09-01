@@ -74,12 +74,20 @@ CREATE TABLE IF NOT EXISTS pedidos_hoja_reparto (
   observaciones TEXT
 );
 
+-- Roles: "desarrollador" (superadmin, gestiona a todos), "propietario" (admin,
+-- gestiona propietarios y gestores pero nunca a un desarrollador) y "gestor"
+-- (gestor autorizado: usa toda la app igual que el propietario, pero no
+-- gestiona usuarios ni roles).
 CREATE TABLE IF NOT EXISTS usuarios (
   id SERIAL PRIMARY KEY,
   nombre_usuario VARCHAR(80) UNIQUE NOT NULL,
   nombre VARCHAR(120) NOT NULL,
+  email VARCHAR(150) UNIQUE,
   password_hash TEXT NOT NULL,
+  rol VARCHAR(20) NOT NULL DEFAULT 'gestor' CHECK (rol IN ('desarrollador', 'propietario', 'gestor')),
   activo BOOLEAN NOT NULL DEFAULT true,
+  reset_token_hash TEXT,
+  reset_token_expira TIMESTAMPTZ,
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

@@ -3,13 +3,34 @@
 // ============================================================
 // Se comprueba nada más cargar la página: si no hay sesión válida,
 // redirige al login antes de que el resto de la app intente pedir datos.
+let rolActual = null;
+let usuarioActualId = null;
+
+const ETIQUETAS_ROL = {
+    desarrollador: 'Desarrollador (superadmin)',
+    propietario: 'Propietario',
+    gestor: 'Gestor autorizado',
+};
+
 (async function comprobarSesion() {
     try {
         const res = await fetch('/me');
         if (!res.ok) { window.location.href = 'login.html'; return; }
         const usuario = await res.json();
+        rolActual = usuario.rol;
+        usuarioActualId = usuario.id;
+
         const span = document.getElementById('usuarioActual');
         if (span) span.textContent = `${usuario.nombre} (${usuario.nombre_usuario})`;
+
+        const rolLabel = document.getElementById('usuarioRolLabel');
+        if (rolLabel) rolLabel.textContent = ETIQUETAS_ROL[usuario.rol] || usuario.rol;
+
+        const iniciales = document.getElementById('usuarioIniciales');
+        if (iniciales) {
+            const partes = (usuario.nombre || usuario.nombre_usuario || '?').trim().split(/\s+/);
+            iniciales.textContent = (partes[0]?.[0] || '').toUpperCase() + (partes[1]?.[0] || '').toUpperCase();
+        }
     } catch (err) {
         window.location.href = 'login.html';
     }
@@ -19,6 +40,57 @@ async function cerrarSesion() {
     try { await fetch('/logout', { method: 'POST' }); } catch (err) { /* ignorar */ }
     window.location.href = 'login.html';
 }
+
+function toggleMenuUsuario() {
+    document.getElementById('menuUsuario')?.classList.toggle('hidden');
+}
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('menuUsuario');
+    const boton = document.getElementById('btnMenuUsuario');
+    if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && e.target !== boton && !boton?.contains(e.target)) {
+        menu.classList.add('hidden');
+    }
+});
+
+function abrirModalCambiarPassword() {
+    document.getElementById('menuUsuario')?.classList.add('hidden');
+    document.getElementById('formCambiarPassword')?.reset();
+    document.getElementById('mensajeCambiarPassword')?.classList.add('hidden');
+    document.getElementById('modalCambiarPassword')?.classList.remove('hidden');
+}
+function cerrarModalCambiarPassword() {
+    document.getElementById('modalCambiarPassword')?.classList.add('hidden');
+}
+document.getElementById('formCambiarPassword')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const contrasena_actual = document.getElementById('passwordActual').value;
+    const nueva = document.getElementById('passwordNueva').value;
+    const confirmar = document.getElementById('passwordNuevaConfirmar').value;
+    const mensaje = document.getElementById('mensajeCambiarPassword');
+
+    const mostrarMensaje = (texto, ok) => {
+        mensaje.textContent = texto;
+        mensaje.className = `text-sm mb-3 ${ok ? 'text-green-600' : 'text-red-500'}`;
+        mensaje.classList.remove('hidden');
+    };
+
+    if (nueva !== confirmar) { mostrarMensaje('Las dos contraseñas nuevas no coinciden.', false); return; }
+    if (nueva.length < 8) { mostrarMensaje('La contraseña nueva debe tener al menos 8 caracteres.', false); return; }
+
+    try {
+        const res = await fetch('/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contrasena_actual, contrasena_nueva: nueva })
+        });
+        const data = await res.json();
+        if (!res.ok) { mostrarMensaje(data.error || 'No se pudo cambiar la contraseña.', false); return; }
+        mostrarMensaje('Contraseña actualizada.', true);
+        setTimeout(cerrarModalCambiarPassword, 1200);
+    } catch (err) {
+        mostrarMensaje('Error de conexión. Inténtalo de nuevo.', false);
+    }
+});
 
 /** Escapa HTML para no pintar sin filtrar texto que el usuario ha escrito en un formulario. */
 function escapeHTML(valor) {
@@ -178,6 +250,25 @@ function inicializarGestionBBDD() {
     cargarConductores();
     cargarCamiones();
     cargarZonas();
+
+    // El gestor autorizado usa toda la app igual que el propietario, pero no
+    // gestiona usuarios ni roles: se le oculta directamente esa tarjeta.
+    const tarjetaUsuarios = document.getElementById('tarjetaUsuarios');
+    if (rolActual === 'gestor') {
+        if (tarjetaUsuarios) tarjetaUsuarios.classList.add('hidden');
+        return;
+    }
+    if (tarjetaUsuarios) tarjetaUsuarios.classList.remove('hidden');
+
+    // Solo un desarrollador puede crear otro desarrollador; un propietario no.
+    const selectRol = document.getElementById('nuevoUsuarioRol');
+    if (selectRol && rolActual === 'desarrollador' && !selectRol.querySelector('option[value="desarrollador"]')) {
+        const opcion = document.createElement('option');
+        opcion.value = 'desarrollador';
+        opcion.textContent = 'Desarrollador (superadmin)';
+        selectRol.appendChild(opcion);
+    }
+
     cargarUsuarios();
 }
 
@@ -1003,6 +1094,16 @@ async function eliminarZona(id) {
 }
 
 // --- Usuarios con acceso a la app ---
+// Jerarquía de roles (debe reflejar la del servidor en server.js:
+// puedeGestionarRol): el desarrollador gestiona a cualquiera; el propietario
+// gestiona propietarios y gestores pero nunca a un desarrollador; el gestor
+// no gestiona usuarios (ni siquiera ve esta tarjeta, ver inicializarGestionBBDD).
+function puedeGestionarRolCliente(rolObjetivo) {
+    if (rolActual === 'desarrollador') return true;
+    if (rolActual === 'propietario') return rolObjetivo !== 'desarrollador';
+    return false;
+}
+
 async function cargarUsuarios() {
     try {
         const res = await fetch('/usuarios');
@@ -1012,11 +1113,28 @@ async function cargarUsuarios() {
         if (!lista) return;
         lista.innerHTML = '';
         data.forEach(u => {
+            const puedeGestionar = puedeGestionarRolCliente(u.rol) && u.id !== usuarioActualId;
             const li = document.createElement('li');
-            li.className = 'flex justify-between items-center p-3';
+            li.className = 'flex justify-between items-center p-3 gap-2';
+
+            const opcionesRol = ['gestor', 'propietario', 'desarrollador']
+                .filter(r => r !== 'desarrollador' || rolActual === 'desarrollador')
+                .map(r => `<option value="${r}" ${r === u.rol ? 'selected' : ''}>${escapeHTML(ETIQUETAS_ROL[r])}</option>`)
+                .join('');
+
             li.innerHTML = `
-                <span>${escapeHTML(u.nombre)} <span class="text-gray-400 text-sm">(${escapeHTML(u.nombre_usuario)})</span></span>
-                <button onclick="eliminarUsuario(${u.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                <div class="min-w-0">
+                    <span class="block truncate">${escapeHTML(u.nombre)} <span class="text-gray-400 text-sm">(${escapeHTML(u.nombre_usuario)})</span></span>
+                    ${u.email ? `<span class="block text-xs text-gray-400 truncate">${escapeHTML(u.email)}</span>` : ''}
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    ${puedeGestionar
+                        ? `<select onchange="cambiarRolUsuario(${u.id}, this.value)" class="text-xs border rounded px-1 py-1 focus:ring-2 focus:ring-[#20c997]">${opcionesRol}</select>`
+                        : `<span class="text-xs text-gray-500">${escapeHTML(ETIQUETAS_ROL[u.rol] || u.rol)}</span>`}
+                    ${puedeGestionar
+                        ? `<button onclick="eliminarUsuario(${u.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>`
+                        : ''}
+                </div>
             `;
             lista.appendChild(li);
         });
@@ -1026,9 +1144,13 @@ async function cargarUsuarios() {
 async function agregarUsuario() {
     const nombreInput = document.getElementById('nuevoUsuarioNombre');
     const loginInput = document.getElementById('nuevoUsuarioLogin');
+    const emailInput = document.getElementById('nuevoUsuarioEmail');
+    const rolInput = document.getElementById('nuevoUsuarioRol');
     const passwordInput = document.getElementById('nuevoUsuarioPassword');
     const nombre = nombreInput?.value.trim();
     const nombre_usuario = loginInput?.value.trim();
+    const email = emailInput?.value.trim();
+    const rol = rolInput?.value || 'gestor';
     const contrasena = passwordInput?.value;
 
     if (!nombre) { marcarCampoInvalido(nombreInput, 'Escribe un nombre'); return; }
@@ -1039,15 +1161,31 @@ async function agregarUsuario() {
         const res = await fetch('/usuarios', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre, nombre_usuario, contrasena })
+            body: JSON.stringify({ nombre, nombre_usuario, email: email || null, contrasena, rol })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudo crear el usuario');
-        nombreInput.value = ''; loginInput.value = ''; passwordInput.value = '';
+        nombreInput.value = ''; loginInput.value = ''; emailInput.value = ''; passwordInput.value = '';
         cargarUsuarios();
         mostrarMensajeExito(`Usuario "${nombre_usuario}" creado`);
     } catch (err) {
         alert('Error: ' + err.message);
+    }
+}
+
+async function cambiarRolUsuario(id, rol) {
+    try {
+        const res = await fetch(`/usuarios/${id}/rol`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rol })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo cambiar el rol');
+        cargarUsuarios();
+    } catch (err) {
+        alert('Error: ' + err.message);
+        cargarUsuarios();
     }
 }
 
