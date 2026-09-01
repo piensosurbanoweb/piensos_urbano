@@ -1,17 +1,17 @@
 <div id="pestanaGestionBD" class="p-6">
     <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-800">⚙️ Gestión de Base de Datos</h2>
+        <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-gear mr-1"></i> Gestión de Base de Datos</h2>
     </div>
     
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="bg-white p-6 rounded-lg border shadow-sm">
             <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                👨‍💼 Gestión de Conductores
+                <i class="fas fa-id-card"></i> Gestión de Conductores
             </h3>
             <div class="flex gap-2 mb-4">
                 <input type="text" id="nuevoConductor" placeholder="Nombre del conductor" required class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarConductor()">
                 <button onclick="agregarConductor()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
-                    ➕ Agregar
+                    <i class="fas fa-plus mr-1"></i> Agregar
                 </button>
             </div>
             <div class="bg-gray-50 rounded-lg border max-h-64 overflow-y-auto">
@@ -22,12 +22,12 @@
 
         <div class="bg-white p-6 rounded-lg border shadow-sm">
             <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                🚚 Gestión de Camiones
+                <i class="fas fa-truck"></i> Gestión de Camiones
             </h3>
             <div class="flex gap-2 mb-4">
                 <input type="text" id="nuevoCamion" placeholder="Matrícula del camión" required class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarCamion()">
                 <button onclick="agregarCamion()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
-                    ➕ Agregar
+                    <i class="fas fa-plus mr-1"></i> Agregar
                 </button>
             </div>
             <div class="bg-gray-50 rounded-lg border max-h-64 overflow-y-auto">
@@ -38,12 +38,12 @@
 
         <div class="bg-white p-6 rounded-lg border shadow-sm">
             <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                📍 Gestión de Zonas
+                <i class="fas fa-map-location-dot"></i> Gestión de Zonas
             </h3>
             <div class="flex gap-2 mb-4">
                 <input type="text" id="nuevaZona" placeholder="Nombre de la zona" required class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarZona()">
                 <button onclick="agregarZona()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
-                    ➕ Agregar
+                    <i class="fas fa-plus mr-1"></i> Agregar
                 </button>
             </div>
             <div class="bg-gray-50 rounded-lg border max-h-64 overflow-y-auto">
@@ -55,21 +55,21 @@
 
     <div class="mt-8 bg-white p-6 rounded-lg border border-yellow-200">
         <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            🔧 Herramientas de Mantenimiento
+            <i class="fas fa-screwdriver-wrench"></i> Herramientas de Mantenimiento
         </h3>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button onclick="limpiarPedidosAntiguos()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">
-                🧹 Limpiar Pedidos Antiguos
+                <i class="fas fa-broom mr-1"></i> Limpiar Pedidos Antiguos
             </button>
             <button onclick="exportarDatos()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">
-                📤 Exportar Datos
+                <i class="fas fa-file-export mr-1"></i> Exportar Datos
             </button>
             <button onclick="resetearSistema()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">
-                🔄 Resetear Sistema
+                <i class="fas fa-arrows-rotate mr-1"></i> Resetear Sistema
             </button>
         </div>
         <div class="mt-4 text-sm text-gray-600">
-            <p><strong>⚠️ Importante:</strong> Las herramientas de mantenimiento pueden afectar todos los datos del sistema.</p>
+            <p><strong><i class="fas fa-triangle-exclamation mr-1"></i> Importante:</strong> Las herramientas de mantenimiento pueden afectar todos los datos del sistema.</p>
             <p>Usa estas funciones con precaución y asegúrate de tener respaldos si es necesario.</p>
         </div>
     </div>

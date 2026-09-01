@@ -464,10 +464,10 @@ function mostrarMensajeExito(texto) {
     if (!popup) {
         popup = document.createElement('div');
         popup.id = 'mensajeExito';
-        popup.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 opacity-0 transition-opacity duration-300';
+        popup.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 opacity-0 transition-opacity duration-300 flex items-center gap-2';
         document.body.appendChild(popup);
     }
-    popup.textContent = texto;
+    popup.innerHTML = `<i class="fas fa-circle-check"></i> <span>${texto}</span>`;
     popup.classList.add('opacity-100');
     setTimeout(() => {
         popup.classList.remove('opacity-100');
@@ -525,7 +525,7 @@ function renderizarPedidosPendientes(pedidos) {
                 <div class="flex justify-end mt-4">
                     <button onclick="mostrarCalendarioModal(${pedido.historial_id})"
                         class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">
-                        📅 Programar en Calendario
+                        <i class="fas fa-calendar-days mr-1"></i> Programar en Calendario
                     </button>
                 </div>
             `;
@@ -580,7 +580,7 @@ async function programarPedidoConFecha() {
         }
         const data = await res.json();
         cerrarCalendarioModal();
-        mostrarMensajeExito(`✅ Pedido de ${data.apodo} programado para el ${data.dia_reparto}`);
+        mostrarMensajeExito(`Pedido de ${data.apodo} programado para el ${data.dia_reparto}`);
         await cargarPedidosPendientes();
     } catch (err) {
         console.error('Error al programar:', err.message);
@@ -748,7 +748,7 @@ async function enviarDiaAHojaReparto() {
             body: JSON.stringify({ ids })
         });
         if (!res2.ok) throw new Error('Error al enviar pedidos a la hoja');
-        mostrarMensajeExito(`✅ ${pedidos.length} pedido(s) enviados a la hoja de reparto`);
+        mostrarMensajeExito(`${pedidos.length} pedido(s) enviados a la hoja de reparto`);
     } catch (err) {
         alert('Error: ' + err.message);
     }
@@ -787,7 +787,7 @@ async function mostrarDetallesPedido(id) {
                     <button onclick="cerrarDetallesPedidoModal()"
                         class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg text-sm">Cerrar</button>
                     <button onclick="mostrarModalEditarFecha('${new Date(pedido.fecha_entrega).toISOString().split('T')[0]}')"
-                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">✏️ Editar Fecha</button>
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"><i class="fas fa-pen mr-1"></i> Editar Fecha</button>
                 </div>
             </div>
         `;
@@ -831,7 +831,7 @@ async function guardarNuevaFecha() {
         });
         if (!res.ok) throw new Error((await res.json()).error);
         cerrarModalEditarFecha();
-        mostrarMensajeExito('✅ Fecha actualizada correctamente');
+        mostrarMensajeExito('Fecha actualizada correctamente');
         cargarPedidosCalendario();
     } catch (err) {
         alert('Error al actualizar fecha: ' + err.message);
@@ -859,7 +859,7 @@ async function cargarConductores() {
             li.className = 'p-3 flex items-center justify-between hover:bg-gray-100';
             li.innerHTML = `
                 <span class="text-gray-800">${c.nombre}</span>
-                <button onclick="eliminarConductor(${c.id})" class="text-red-600 hover:text-red-800">🗑️</button>
+                <button onclick="eliminarConductor(${c.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
             `;
             lista.appendChild(li);
         });
@@ -899,7 +899,7 @@ async function cargarCamiones() {
             li.className = 'flex justify-between items-center p-3';
             li.innerHTML = `
                 <span>${c.nombre}</span>
-                <button onclick="eliminarCamion(${c.id})" class="text-red-600 hover:text-red-800">🗑️</button>
+                <button onclick="eliminarCamion(${c.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
             `;
             lista.appendChild(li);
         });
@@ -939,7 +939,7 @@ async function cargarZonas() {
             li.className = 'flex justify-between items-center p-3';
             li.innerHTML = `
                 <span>${z.nombre}</span>
-                <button onclick="eliminarZona(${z.id})" class="text-red-600 hover:text-red-800">🗑️</button>
+                <button onclick="eliminarZona(${z.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
             `;
             lista.appendChild(li);
         });
@@ -973,7 +973,7 @@ function limpiarPedidosAntiguos() {
 }
 function exportarDatos()   { alert('Función pendiente de implementar en el servidor.'); }
 function resetearSistema() {
-    if (confirm('⚠️ ¿RESETEAR EL SISTEMA? Se eliminarán TODOS los datos. Acción IRREVERSIBLE.'))
+    if (confirm('ATENCIÓN: ¿Resetear el sistema? Se eliminarán TODOS los datos. Acción irreversible.'))
         alert('Función pendiente de implementar en el servidor.');
 }
 
@@ -1037,7 +1037,7 @@ function renderizarHojaReparto() {
                 ${construirSelectHoja(conductoresHoja, p.conductor, `onchange="actualizarCampoHoja(${p.id}, 'conductor', this.value || null)"`)}
             </td>
             <td class="border px-2 py-2 text-center no-print">
-                <button onclick="eliminarPedidoHoja(${p.id})" class="text-red-600 hover:text-red-800" title="Quitar de la hoja">🗑️</button>
+                <button onclick="eliminarPedidoHoja(${p.id})" class="text-red-600 hover:text-red-800" title="Quitar de la hoja"><i class="fas fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(fila);

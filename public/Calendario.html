@@ -1,24 +1,24 @@
 <div id="pestanaCalendario" class="p-6">
     <div class="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
-        <h2 class="text-2xl font-bold text-gray-800">📅 Calendario de Reparto</h2>
+        <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-calendar-days mr-1"></i> Calendario de Reparto</h2>
         <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-4">
             <div class="flex flex-wrap gap-2">
                 <button onclick="cambiarVistaCalendario('semanal')" id="btnVistaSemanal" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    📅 Vista Semanal
+                    <i class="fas fa-calendar-week mr-1"></i> Vista Semanal
                 </button>
                 <button onclick="cambiarVistaCalendario('diaria')" id="btnVistaDiaria" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    📋 Vista Diaria
+                    <i class="fas fa-calendar-day mr-1"></i> Vista Diaria
                 </button>
             </div>
             <div class="flex flex-wrap gap-2" id="controlesNavegacion">
                 <button onclick="semanaAnterior()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    ← Anterior
+                    <i class="fas fa-chevron-left mr-1"></i> Anterior
                 </button>
                 <button onclick="semanaActual()" class="bg-gray-100 text-gray-800 px-4 py-2 rounded-lg font-medium flex items-center justify-center min-w-[150px]">
                    Semana Actual
                 </button>
                 <button onclick="semanaSiguiente()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    Siguiente →
+                    Siguiente <i class="fas fa-chevron-right ml-1"></i>
                 </button>
             </div>
         </div>
@@ -39,13 +39,13 @@
                 <option value="domingo">Domingo</option>
             </select>
             <button onclick="enviarDiaAHojaReparto()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                📦 Enviar a Hoja Reparto
+                <i class="fas fa-truck mr-1"></i> Enviar a Hoja Reparto
             </button>
         </div>
         <div id="pedidosDiarios" class="space-y-4">
         </div>
         <div id="mensajeVacioDiario" class="text-center py-12 text-gray-500 hidden">
-            <div class="text-4xl mb-4">📅</div>
+            <div class="text-4xl mb-4"><i class="fas fa-calendar-day"></i></div>
             <p class="text-lg">No hay pedidos programados para este día</p>
         </div>
     </div>

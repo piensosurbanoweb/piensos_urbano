@@ -1,20 +1,20 @@
 <div id="pestanaHojaReparto" class="p-6">
     <div class="no-print mb-6">
         <div class="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between">
-            <h2 class="text-2xl font-bold text-gray-800">📦 Hoja de Reparto</h2>
+            <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-truck mr-1"></i> Hoja de Reparto</h2>
             <div class="flex flex-wrap gap-2 md:gap-4">
                 <button onclick="limpiarHojaReparto()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
-                    <span>🗑️</span> Limpiar Hoja
+                    <i class="fas fa-trash"></i> Limpiar Hoja
                 </button>
                 <button onclick="imprimirHojaReparto()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
-                    <span>🖨️</span> Imprimir Hoja
+                    <i class="fas fa-print"></i> Imprimir Hoja
                 </button>
             </div>
         </div>
 
         <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 text-sm text-yellow-700" role="alert">
             <p class="font-bold">Cómo se añaden pedidos:</p>
-            <p>Desde <strong>Calendario → Vista Diaria</strong>, elige el día y pulsa "📦 Enviar a Hoja Reparto". Aquí solo se gestionan el orden, el camión y el conductor de los pedidos ya enviados.</p>
+            <p>Desde <strong>Calendario → Vista Diaria</strong>, elige el día y pulsa "<i class="fas fa-truck"></i> Enviar a Hoja Reparto". Aquí solo se gestionan el orden, el camión y el conductor de los pedidos ya enviados.</p>
         </div>
     </div>
 
@@ -50,7 +50,7 @@
         </div>
 
         <div id="mensajeVacioHoja" class="text-center py-12 text-gray-500 hidden">
-            <div class="text-4xl mb-4">📄</div>
+            <div class="text-4xl mb-4"><i class="fas fa-file-lines"></i></div>
             <p class="text-lg">La hoja de reparto está vacía</p>
             <p class="text-sm">Envía pedidos desde Calendario → Vista Diaria para empezar</p>
         </div>
