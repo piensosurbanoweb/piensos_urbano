@@ -9,7 +9,7 @@
                 <i class="fas fa-id-card"></i> Gestión de Conductores
             </h3>
             <div class="flex flex-wrap gap-2 mb-4">
-                <input type="text" id="nuevoConductor" placeholder="Nombre del conductor" required class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarConductor()">
+                <input type="text" id="nuevoConductor" placeholder="Nombre del conductor" required class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#20c997]" onkeypress="if(event.key==='Enter') agregarConductor()">
                 <button onclick="agregarConductor()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 whitespace-nowrap">
                     <i class="fas fa-plus mr-1"></i> Agregar
                 </button>
@@ -25,7 +25,7 @@
                 <i class="fas fa-truck"></i> Gestión de Camiones
             </h3>
             <div class="flex flex-wrap gap-2 mb-4">
-                <input type="text" id="nuevoCamion" placeholder="Matrícula del camión" required class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarCamion()">
+                <input type="text" id="nuevoCamion" placeholder="Matrícula del camión" required class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#20c997]" onkeypress="if(event.key==='Enter') agregarCamion()">
                 <button onclick="agregarCamion()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 whitespace-nowrap">
                     <i class="fas fa-plus mr-1"></i> Agregar
                 </button>
@@ -41,7 +41,7 @@
                 <i class="fas fa-map-location-dot"></i> Gestión de Zonas
             </h3>
             <div class="flex flex-wrap gap-2 mb-4">
-                <input type="text" id="nuevaZona" placeholder="Nombre de la zona" required class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarZona()">
+                <input type="text" id="nuevaZona" placeholder="Nombre de la zona" required class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#20c997]" onkeypress="if(event.key==='Enter') agregarZona()">
                 <button onclick="agregarZona()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 whitespace-nowrap">
                     <i class="fas fa-plus mr-1"></i> Agregar
                 </button>
@@ -58,10 +58,10 @@
             <i class="fas fa-users-gear"></i> Usuarios con Acceso
         </h3>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
-            <input type="text" id="nuevoUsuarioNombre" placeholder="Nombre (ej. Paula)" class="min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
-            <input type="text" id="nuevoUsuarioLogin" placeholder="Usuario para entrar" class="min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+            <input type="text" id="nuevoUsuarioNombre" placeholder="Nombre (ej. Paula)" class="min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#20c997]">
+            <input type="text" id="nuevoUsuarioLogin" placeholder="Usuario para entrar" class="min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#20c997]">
             <div class="flex flex-wrap gap-2">
-                <input type="password" id="nuevoUsuarioPassword" placeholder="Contraseña (mín. 8)" class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="nuevoUsuarioPassword" placeholder="Contraseña (mín. 8)" class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#20c997]">
                 <button onclick="agregarUsuario()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
                     <i class="fas fa-plus"></i>
                 </button>
@@ -81,7 +81,7 @@
             <button onclick="limpiarPedidosAntiguos()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">
                 <i class="fas fa-broom mr-1"></i> Limpiar Pedidos Antiguos
             </button>
-            <button onclick="exportarDatos()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">
+            <button onclick="exportarDatos()" class="bg-[#158765] hover:bg-[#0f6b50] text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">
                 <i class="fas fa-file-export mr-1"></i> Exportar Datos
             </button>
             <button onclick="resetearSistema()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">

@@ -121,7 +121,7 @@ async function cambiarPestana(nombrePestana) {
 
     const baseClass     = 'px-3 py-3 text-center font-medium text-xs sm:text-sm';
     const inactiveClass = `${baseClass} bg-gray-200 text-gray-700 hover:bg-gray-300`;
-    const activeClass   = `${baseClass} bg-blue-600 text-white`;
+    const activeClass   = `${baseClass} bg-[#158765] text-white`;
 
     Object.entries(mapaBotones).forEach(([pestana, tabId]) => {
         const tab = document.getElementById(tabId);
@@ -386,7 +386,7 @@ async function cargarUltimosPedidosCliente(clienteId) {
         lista.innerHTML = '';
         pedidos.forEach(p => {
             const li = document.createElement('li');
-            li.className = 'cursor-pointer text-sm bg-white hover:bg-blue-100 border border-blue-200 rounded px-2 py-1 transition-colors';
+            li.className = 'cursor-pointer text-sm bg-white hover:bg-emerald-100 border border-emerald-200 rounded px-2 py-1 transition-colors';
             const fecha = p.fecha_entrega ? new Date(p.fecha_entrega).toLocaleDateString('es-ES') : '';
             li.innerHTML = `<strong>${escapeHTML(p.cantidad)}</strong> de <strong>${escapeHTML(p.producto)}</strong> <span class="text-gray-400">— ${fecha}</span>`;
             li.addEventListener('click', () => repetirPedidoAnterior(p));
@@ -559,7 +559,7 @@ function renderizarPedidosPendientes(pedidos) {
                 <p class="text-sm text-gray-500">Obs: ${escapeHTML(pedido.observaciones) || 'N/A'}</p>
                 <div class="flex justify-end mt-4">
                     <button onclick="mostrarCalendarioModal(${pedido.historial_id})"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">
+                        class="bg-[#158765] hover:bg-[#0f6b50] text-white px-4 py-2 rounded-lg text-sm">
                         <i class="fas fa-calendar-days mr-1"></i> Programar en Calendario
                     </button>
                 </div>
@@ -676,7 +676,7 @@ function cambiarVistaCalendario(vista) {
     const vistaDiariaDiv  = document.getElementById('vistaDiaria');
     const controlesNav    = document.getElementById('controlesNavegacion');
 
-    const activoClass   = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
+    const activoClass   = 'bg-[#158765] hover:bg-[#0f6b50] text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
     const inactivoClass = 'bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200';
 
     if (vista === 'semanal') {
@@ -716,7 +716,7 @@ function renderizarVistaSemanal(pedidos, diasSem) {
                 ${pedidosDia.length === 0
                     ? '<p class="text-xs text-gray-400 text-center mt-2">Sin pedidos</p>'
                     : pedidosDia.map(p => `
-                        <div class="border border-gray-200 rounded-lg p-2 cursor-pointer hover:bg-blue-50 transition-colors"
+                        <div class="border border-gray-200 rounded-lg p-2 cursor-pointer hover:bg-emerald-50 transition-colors"
                              onclick="mostrarDetallesPedido(${p.id})">
                             <p class="text-sm font-semibold text-gray-800">${escapeHTML(p.apodo_cliente)}</p>
                             <p class="text-xs text-gray-500">${escapeHTML(p.producto)} (${escapeHTML(p.cantidad)})</p>
@@ -822,7 +822,7 @@ async function mostrarDetallesPedido(id) {
                     <button onclick="cerrarDetallesPedidoModal()"
                         class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg text-sm">Cerrar</button>
                     <button onclick="mostrarModalEditarFecha('${new Date(pedido.fecha_entrega).toISOString().split('T')[0]}')"
-                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"><i class="fas fa-pen mr-1"></i> Editar Fecha</button>
+                        class="px-4 py-2 bg-[#158765] hover:bg-[#0f6b50] text-white rounded-lg text-sm"><i class="fas fa-pen mr-1"></i> Editar Fecha</button>
                 </div>
             </div>
         `;
