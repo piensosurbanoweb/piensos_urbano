@@ -1,4 +1,38 @@
 // ============================================================
+// SESIÓN
+// ============================================================
+// Se comprueba nada más cargar la página: si no hay sesión válida,
+// redirige al login antes de que el resto de la app intente pedir datos.
+(async function comprobarSesion() {
+    try {
+        const res = await fetch('/me');
+        if (!res.ok) { window.location.href = 'login.html'; return; }
+        const usuario = await res.json();
+        const span = document.getElementById('usuarioActual');
+        if (span) span.textContent = `${usuario.nombre} (${usuario.nombre_usuario})`;
+    } catch (err) {
+        window.location.href = 'login.html';
+    }
+})();
+
+async function cerrarSesion() {
+    try { await fetch('/logout', { method: 'POST' }); } catch (err) { /* ignorar */ }
+    window.location.href = 'login.html';
+}
+
+/** Escapa HTML para no pintar sin filtrar texto que el usuario ha escrito en un formulario. */
+function escapeHTML(valor) {
+    if (valor === null || valor === undefined) return '';
+    return String(valor)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+
+// ============================================================
 // VARIABLES GLOBALES
 // ============================================================
 let editandoId = null;
@@ -144,6 +178,7 @@ function inicializarGestionBBDD() {
     cargarConductores();
     cargarCamiones();
     cargarZonas();
+    cargarUsuarios();
 }
 
 async function inicializarHojaReparto() {
@@ -179,15 +214,15 @@ async function cargarClientes() {
         clientes.forEach(cliente => {
             const fila = document.createElement('tr');
             fila.innerHTML = `
-                <td class="px-4 py-2 border">${cliente.apodo || ''}</td>
-                <td class="px-4 py-2 border">${cliente.nombre_completo || ''}</td>
-                <td class="px-4 py-2 border">${cliente.telefono || ''}</td>
-                <td class="px-4 py-2 border">${cliente.localidad || ''}</td>
-                <td class="px-4 py-2 border">${cliente.zona_reparto || ''}</td>
-                <td class="px-4 py-2 border">${cliente.observaciones || ''}</td>
+                <td class="px-4 py-2 border">${escapeHTML(cliente.apodo)}</td>
+                <td class="px-4 py-2 border">${escapeHTML(cliente.nombre_completo)}</td>
+                <td class="px-4 py-2 border">${escapeHTML(cliente.telefono)}</td>
+                <td class="px-4 py-2 border">${escapeHTML(cliente.localidad)}</td>
+                <td class="px-4 py-2 border">${escapeHTML(cliente.zona_reparto)}</td>
+                <td class="px-4 py-2 border">${escapeHTML(cliente.observaciones)}</td>
                 <td class="px-4 py-2 border flex gap-2">
                     <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
-                        onclick='abrirModal(${JSON.stringify(cliente)})'>
+                        onclick='abrirModal(${JSON.stringify(cliente).replace(/'/g, '&#39;')})'>
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
                     <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
@@ -353,7 +388,7 @@ async function cargarUltimosPedidosCliente(clienteId) {
             const li = document.createElement('li');
             li.className = 'cursor-pointer text-sm bg-white hover:bg-blue-100 border border-blue-200 rounded px-2 py-1 transition-colors';
             const fecha = p.fecha_entrega ? new Date(p.fecha_entrega).toLocaleDateString('es-ES') : '';
-            li.innerHTML = `<strong>${p.cantidad || ''}</strong> de <strong>${p.producto || ''}</strong> <span class="text-gray-400">— ${fecha}</span>`;
+            li.innerHTML = `<strong>${escapeHTML(p.cantidad)}</strong> de <strong>${escapeHTML(p.producto)}</strong> <span class="text-gray-400">— ${fecha}</span>`;
             li.addEventListener('click', () => repetirPedidoAnterior(p));
             lista.appendChild(li);
         });
@@ -508,20 +543,20 @@ function renderizarPedidosPendientes(pedidos) {
             item.innerHTML = `
                 <div class="flex flex-col gap-1 mb-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <span class="text-sm font-semibold text-gray-700">
-                        ${pedido.apodo} — ${pedido.localidad}
+                        ${escapeHTML(pedido.apodo)} — ${escapeHTML(pedido.localidad)}
                     </span>
                     <span class="text-xs text-gray-500">
-                        Zona: <strong>${pedido.zona || 'N/A'}</strong>
-                        &nbsp;|&nbsp; Día: <strong>${pedido.dia_reparto || 'N/A'}</strong>
+                        Zona: <strong>${escapeHTML(pedido.zona) || 'N/A'}</strong>
+                        &nbsp;|&nbsp; Día: <strong>${escapeHTML(pedido.dia_reparto) || 'N/A'}</strong>
                     </span>
                 </div>
-                <p class="text-gray-800 text-lg font-bold">${pedido.pedido}</p>
+                <p class="text-gray-800 text-lg font-bold">${escapeHTML(pedido.pedido)}</p>
                 <p class="text-sm text-gray-500 mt-1">
                     Fecha programada: ${pedido.fecha_programacion
                         ? new Date(pedido.fecha_programacion).toLocaleDateString('es-ES')
                         : 'Sin fecha'}
                 </p>
-                <p class="text-sm text-gray-500">Obs: ${pedido.observaciones || 'N/A'}</p>
+                <p class="text-sm text-gray-500">Obs: ${escapeHTML(pedido.observaciones) || 'N/A'}</p>
                 <div class="flex justify-end mt-4">
                     <button onclick="mostrarCalendarioModal(${pedido.historial_id})"
                         class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">
@@ -683,8 +718,8 @@ function renderizarVistaSemanal(pedidos, diasSem) {
                     : pedidosDia.map(p => `
                         <div class="border border-gray-200 rounded-lg p-2 cursor-pointer hover:bg-blue-50 transition-colors"
                              onclick="mostrarDetallesPedido(${p.id})">
-                            <p class="text-sm font-semibold text-gray-800">${p.apodo_cliente}</p>
-                            <p class="text-xs text-gray-500">${p.producto} (${p.cantidad})</p>
+                            <p class="text-sm font-semibold text-gray-800">${escapeHTML(p.apodo_cliente)}</p>
+                            <p class="text-xs text-gray-500">${escapeHTML(p.producto)} (${escapeHTML(p.cantidad)})</p>
                         </div>
                     `).join('')
                 }
@@ -716,14 +751,14 @@ async function cambiarDiaDiario() {
                 div.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div>
-                            <h3 class="font-bold text-lg">${p.apodo_cliente}</h3>
-                            <p class="text-sm text-gray-600">${p.producto} — Cantidad: ${p.cantidad}</p>
+                            <h3 class="font-bold text-lg">${escapeHTML(p.apodo_cliente)}</h3>
+                            <p class="text-sm text-gray-600">${escapeHTML(p.producto)} — Cantidad: ${escapeHTML(p.cantidad)}</p>
                         </div>
                         <span class="text-xs text-gray-400">
                             ${p.fecha_reparto ? new Date(p.fecha_reparto).toLocaleDateString('es-ES') : ''}
                         </span>
                     </div>
-                    <p class="text-sm text-gray-500 mt-1">Obs: ${p.observaciones || 'N/A'}</p>
+                    <p class="text-sm text-gray-500 mt-1">Obs: ${escapeHTML(p.observaciones) || 'N/A'}</p>
                 `;
                 lista.appendChild(div);
             });
@@ -776,12 +811,12 @@ async function mostrarDetallesPedido(id) {
                     <button onclick="cerrarDetallesPedidoModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
                 </div>
                 <div class="space-y-2 text-sm text-gray-700">
-                    <p><strong>Cliente:</strong> ${pedido.apodo_cliente || 'N/A'}</p>
-                    <p><strong>Producto:</strong> ${pedido.producto} (${pedido.cantidad} uds.)</p>
+                    <p><strong>Cliente:</strong> ${escapeHTML(pedido.apodo_cliente) || 'N/A'}</p>
+                    <p><strong>Producto:</strong> ${escapeHTML(pedido.producto)} (${escapeHTML(pedido.cantidad)} uds.)</p>
                     <p><strong>Fecha de entrega:</strong> ${new Date(pedido.fecha_entrega).toLocaleDateString('es-ES')}</p>
-                    <p><strong>Teléfono:</strong> ${pedido.telefono || 'N/A'}</p>
-                    <p><strong>Localidad:</strong> ${pedido.localidad || 'N/A'}</p>
-                    <p><strong>Observaciones:</strong> ${pedido.observaciones || 'N/A'}</p>
+                    <p><strong>Teléfono:</strong> ${escapeHTML(pedido.telefono) || 'N/A'}</p>
+                    <p><strong>Localidad:</strong> ${escapeHTML(pedido.localidad) || 'N/A'}</p>
+                    <p><strong>Observaciones:</strong> ${escapeHTML(pedido.observaciones) || 'N/A'}</p>
                 </div>
                 <div class="flex justify-end gap-2 mt-6">
                     <button onclick="cerrarDetallesPedidoModal()"
@@ -858,7 +893,7 @@ async function cargarConductores() {
             const li = document.createElement('li');
             li.className = 'p-3 flex items-center justify-between hover:bg-gray-100';
             li.innerHTML = `
-                <span class="text-gray-800">${c.nombre}</span>
+                <span class="text-gray-800">${escapeHTML(c.nombre)}</span>
                 <button onclick="eliminarConductor(${c.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
             `;
             lista.appendChild(li);
@@ -898,7 +933,7 @@ async function cargarCamiones() {
             const li = document.createElement('li');
             li.className = 'flex justify-between items-center p-3';
             li.innerHTML = `
-                <span>${c.nombre}</span>
+                <span>${escapeHTML(c.nombre)}</span>
                 <button onclick="eliminarCamion(${c.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
             `;
             lista.appendChild(li);
@@ -938,7 +973,7 @@ async function cargarZonas() {
             const li = document.createElement('li');
             li.className = 'flex justify-between items-center p-3';
             li.innerHTML = `
-                <span>${z.nombre}</span>
+                <span>${escapeHTML(z.nombre)}</span>
                 <button onclick="eliminarZona(${z.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
             `;
             lista.appendChild(li);
@@ -965,6 +1000,67 @@ async function eliminarZona(id) {
         const res = await fetch(`/zonas/${id}`, { method: 'DELETE' });
         if (res.ok) cargarZonas();
     } catch (err) { console.error(err); }
+}
+
+// --- Usuarios con acceso a la app ---
+async function cargarUsuarios() {
+    try {
+        const res = await fetch('/usuarios');
+        if (!res.ok) throw new Error('Error al obtener usuarios');
+        const data = await res.json();
+        const lista = document.getElementById('listaUsuarios');
+        if (!lista) return;
+        lista.innerHTML = '';
+        data.forEach(u => {
+            const li = document.createElement('li');
+            li.className = 'flex justify-between items-center p-3';
+            li.innerHTML = `
+                <span>${escapeHTML(u.nombre)} <span class="text-gray-400 text-sm">(${escapeHTML(u.nombre_usuario)})</span></span>
+                <button onclick="eliminarUsuario(${u.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+            `;
+            lista.appendChild(li);
+        });
+    } catch (err) { console.error('Error al cargar usuarios:', err); }
+}
+
+async function agregarUsuario() {
+    const nombreInput = document.getElementById('nuevoUsuarioNombre');
+    const loginInput = document.getElementById('nuevoUsuarioLogin');
+    const passwordInput = document.getElementById('nuevoUsuarioPassword');
+    const nombre = nombreInput?.value.trim();
+    const nombre_usuario = loginInput?.value.trim();
+    const contrasena = passwordInput?.value;
+
+    if (!nombre) { marcarCampoInvalido(nombreInput, 'Escribe un nombre'); return; }
+    if (!nombre_usuario) { marcarCampoInvalido(loginInput, 'Escribe un usuario'); return; }
+    if (!contrasena || contrasena.length < 8) { marcarCampoInvalido(passwordInput, 'Mínimo 8 caracteres'); return; }
+
+    try {
+        const res = await fetch('/usuarios', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, nombre_usuario, contrasena })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo crear el usuario');
+        nombreInput.value = ''; loginInput.value = ''; passwordInput.value = '';
+        cargarUsuarios();
+        mostrarMensajeExito(`Usuario "${nombre_usuario}" creado`);
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function eliminarUsuario(id) {
+    if (!confirm('¿Quitar el acceso a este usuario?')) return;
+    try {
+        const res = await fetch(`/usuarios/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo eliminar el usuario');
+        cargarUsuarios();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
 }
 
 function limpiarPedidosAntiguos() {
@@ -1001,7 +1097,7 @@ async function cargarListasHojaReparto() {
 
 function construirSelectHoja(valores, valorActual, onChangeAttr) {
     const opciones = ['<option value="">—</option>']
-        .concat(valores.map(v => `<option value="${v.nombre}" ${v.nombre === valorActual ? 'selected' : ''}>${v.nombre}</option>`));
+        .concat(valores.map(v => `<option value="${escapeHTML(v.nombre)}" ${v.nombre === valorActual ? 'selected' : ''}>${escapeHTML(v.nombre)}</option>`));
     return `<select class="hoja-select" ${onChangeAttr}>${opciones.join('')}</select>`;
 }
 
@@ -1021,10 +1117,10 @@ function renderizarHojaReparto() {
         const fila = document.createElement('tr');
         fila.innerHTML = `
             <td class="border px-2 py-2 text-center orden-cell">${index + 1}</td>
-            <td class="border px-2 py-2">${p.apodo_cliente || ''}</td>
-            <td class="border px-2 py-2">${p.telefono || ''}</td>
-            <td class="border px-2 py-2 observaciones-cell">${p.cantidad || ''} ${p.producto || ''}</td>
-            <td class="border px-2 py-2 capitalize">${p.dia_reparto || ''}</td>
+            <td class="border px-2 py-2">${escapeHTML(p.apodo_cliente)}</td>
+            <td class="border px-2 py-2">${escapeHTML(p.telefono)}</td>
+            <td class="border px-2 py-2 observaciones-cell">${escapeHTML(p.cantidad)} ${escapeHTML(p.producto)}</td>
+            <td class="border px-2 py-2 capitalize">${escapeHTML(p.dia_reparto)}</td>
             <td class="border px-2 py-2 orden-cell">
                 <input type="number" min="1" step="1" value="${p.orden_reparto ?? ''}" class="hoja-input"
                     onchange="actualizarCampoHoja(${p.id}, 'orden_reparto', this.value ? parseInt(this.value, 10) : null)">
@@ -1032,7 +1128,7 @@ function renderizarHojaReparto() {
             <td class="border px-2 py-2 conductor-cell">
                 ${construirSelectHoja(camionesHoja, p.camion, `onchange="actualizarCampoHoja(${p.id}, 'camion', this.value || null)"`)}
             </td>
-            <td class="border px-2 py-2">${p.zona || ''}</td>
+            <td class="border px-2 py-2">${escapeHTML(p.zona)}</td>
             <td class="border px-2 py-2 conductor-cell">
                 ${construirSelectHoja(conductoresHoja, p.conductor, `onchange="actualizarCampoHoja(${p.id}, 'conductor', this.value || null)"`)}
             </td>

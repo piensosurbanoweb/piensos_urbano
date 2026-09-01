@@ -6,13 +6,19 @@ require('dotenv').config();
 
 const path = require('path');
 const express = require('express');
-const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 
 const app = express();
 
-app.use(cors());
+// No se usa cors(): el frontend (HTML/CSS/JS) se sirve desde este mismo
+// servidor Express, así que todas las peticiones de la propia app son del
+// mismo origen y no necesitan CORS. Dejar cors() abierto solo serviría para
+// permitir que OTRAS webs llamaran a esta API, así que se ha quitado.
 app.use(express.json());
+app.use(cookieParser());
 
 // Conexión a Postgres (Supabase). La cadena de conexión se define en la
 // variable de entorno DATABASE_URL (en Vercel: Project Settings -> Environment
@@ -21,9 +27,136 @@ if (!process.env.DATABASE_URL) {
   console.error('Falta la variable de entorno DATABASE_URL. Consulta .env.example / README.md.');
 }
 
+// Clave para firmar las sesiones (JWT guardado en una cookie httpOnly).
+// Debe definirse en .env (local) y en Vercel (producción): ver .env.example.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('Falta la variable de entorno JWT_SECRET. Consulta .env.example / README.md.');
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }, // Supabase requiere SSL
+});
+
+// --- AUTENTICACIÓN ---
+// Middleware que exige una sesión válida (cookie "token" con un JWT firmado).
+function requireAuth(req, res, next) {
+  const token = req.cookies?.token;
+  if (!token) return res.status(401).json({ error: 'No has iniciado sesión.' });
+  try {
+    req.usuario = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Tu sesión ha caducado. Vuelve a iniciar sesión.' });
+  }
+}
+
+// Rutas que no requieren sesión: el propio login/logout, y todo lo que sea un
+// archivo estático (HTML/CSS/JS/imágenes) para que la página de login y sus
+// recursos se puedan cargar sin estar ya autenticado. Los datos de verdad
+// siempre viajan por rutas de API (sin punto en la ruta), que sí se protegen.
+const RUTAS_PUBLICAS = new Set(['/login', '/logout']);
+app.use((req, res, next) => {
+  if (RUTAS_PUBLICAS.has(req.path) || req.path === '/' || req.path.includes('.')) {
+    return next();
+  }
+  return requireAuth(req, res, next);
+});
+
+app.post('/login', async (req, res) => {
+  try {
+    const { nombre_usuario, contrasena } = req.body;
+    if (!nombre_usuario || !contrasena) {
+      return res.status(400).json({ error: 'Usuario y contraseña son obligatorios.' });
+    }
+    const { rows } = await pool.query(
+      'SELECT * FROM usuarios WHERE nombre_usuario = $1 AND activo = true',
+      [nombre_usuario]
+    );
+    const usuario = rows[0];
+    if (!usuario) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
+
+    const contrasenaOk = await bcrypt.compare(contrasena, usuario.password_hash);
+    if (!contrasenaOk) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
+
+    const token = jwt.sign(
+      { id: usuario.id, nombre_usuario: usuario.nombre_usuario, nombre: usuario.nombre },
+      JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 12 * 60 * 60 * 1000,
+    });
+    res.json({ success: true, nombre: usuario.nombre });
+  } catch (err) {
+    console.error('Error en login:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+});
+
+app.post('/logout', (req, res) => {
+  res.clearCookie('token');
+  res.json({ success: true });
+});
+
+app.get('/me', (req, res) => {
+  res.json({ nombre: req.usuario.nombre, nombre_usuario: req.usuario.nombre_usuario });
+});
+
+// --- GESTIÓN DE USUARIOS (solo usuarios ya autenticados) ---
+app.get('/usuarios', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, nombre_usuario, nombre, activo, creado_en FROM usuarios WHERE activo = true ORDER BY nombre_usuario'
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Error al obtener usuarios:', err.message);
+    res.status(500).json({ error: 'Error al obtener usuarios.' });
+  }
+});
+
+app.post('/usuarios', async (req, res) => {
+  try {
+    const { nombre_usuario, nombre, contrasena } = req.body;
+    if (!nombre_usuario || !nombre || !contrasena) {
+      return res.status(400).json({ error: 'Nombre de usuario, nombre y contraseña son obligatorios.' });
+    }
+    if (contrasena.length < 8) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres.' });
+    }
+    const hash = await bcrypt.hash(contrasena, 10);
+    const { rows } = await pool.query(
+      `INSERT INTO usuarios (nombre_usuario, nombre, password_hash)
+       VALUES ($1, $2, $3) RETURNING id, nombre_usuario, nombre, activo`,
+      [nombre_usuario, nombre, hash]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'Ese nombre de usuario ya existe.' });
+    }
+    console.error('Error al crear usuario:', err.message);
+    res.status(500).json({ error: 'Error al crear el usuario.' });
+  }
+});
+
+app.delete('/usuarios/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (String(req.usuario.id) === String(id)) {
+      return res.status(400).json({ error: 'No puedes desactivar tu propio usuario mientras tienes la sesión abierta.' });
+    }
+    await pool.query('UPDATE usuarios SET activo = false WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error al desactivar usuario:', err.message);
+    res.status(500).json({ error: 'Error al desactivar el usuario.' });
+  }
 });
 
 // Helper para obtener día de la semana (UTC)

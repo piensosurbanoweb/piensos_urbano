@@ -74,6 +74,15 @@ CREATE TABLE IF NOT EXISTS pedidos_hoja_reparto (
   observaciones TEXT
 );
 
+CREATE TABLE IF NOT EXISTS usuarios (
+  id SERIAL PRIMARY KEY,
+  nombre_usuario VARCHAR(80) UNIQUE NOT NULL,
+  nombre VARCHAR(120) NOT NULL,
+  password_hash TEXT NOT NULL,
+  activo BOOLEAN NOT NULL DEFAULT true,
+  creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS conductores (
   id SERIAL PRIMARY KEY,
   nombre VARCHAR(120) NOT NULL,
