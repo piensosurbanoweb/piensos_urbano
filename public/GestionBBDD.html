@@ -9,7 +9,7 @@
                 👨‍💼 Gestión de Conductores
             </h3>
             <div class="flex gap-2 mb-4">
-                <input type="text" id="nuevoConductor" placeholder="Nombre del conductor" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarConductor()">
+                <input type="text" id="nuevoConductor" placeholder="Nombre del conductor" required class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarConductor()">
                 <button onclick="agregarConductor()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
                     ➕ Agregar
                 </button>
@@ -25,7 +25,7 @@
                 🚚 Gestión de Camiones
             </h3>
             <div class="flex gap-2 mb-4">
-                <input type="text" id="nuevoCamion" placeholder="Matrícula del camión" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarCamion()">
+                <input type="text" id="nuevoCamion" placeholder="Matrícula del camión" required class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarCamion()">
                 <button onclick="agregarCamion()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
                     ➕ Agregar
                 </button>
@@ -41,7 +41,7 @@
                 📍 Gestión de Zonas
             </h3>
             <div class="flex gap-2 mb-4">
-                <input type="text" id="nuevaZona" placeholder="Nombre de la zona" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarZona()">
+                <input type="text" id="nuevaZona" placeholder="Nombre de la zona" required class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onkeypress="if(event.key==='Enter') agregarZona()">
                 <button onclick="agregarZona()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
                     ➕ Agregar
                 </button>

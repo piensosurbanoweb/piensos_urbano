@@ -120,3 +120,38 @@
         .autocomplete-item:last-child {
             border-bottom: none;
         }
+
+        /* ============================================================
+           VALIDACIÓN DE FORMULARIOS: campos obligatorios / opcionales
+           ============================================================ */
+        .campo-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+
+        .campo-obligatorio::after {
+            content: " *";
+            color: #dc2626;
+            font-weight: 700;
+        }
+
+        .campo-opcional::after {
+            content: " (opcional)";
+            color: #9ca3af;
+            font-weight: 400;
+            font-size: 0.75rem;
+        }
+
+        .campo-error {
+            color: #dc2626;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        .input-invalido {
+            border-color: #dc2626 !important;
+            background-color: #fef2f2;
+        }

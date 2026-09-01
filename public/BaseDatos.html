@@ -3,12 +3,12 @@
 <div id="pestanaBaseDatos">
     <!-- Contenedor principal -->
     <div class="p-6 bg-white rounded-xl shadow-lg">
-        <div class="flex justify-between items-center mb-6">
+        <div class="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
             <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
                 <i class="fas fa-users text-blue-500"></i>
                 Base de Datos de Clientes
             </h2>
-            <button onclick="abrirModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+            <button onclick="abrirModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 self-start sm:self-auto">
                 <i class="fas fa-plus-circle"></i> Agregar Cliente
             </button>
         </div>
@@ -48,19 +48,40 @@
 
         <div class="modal-content bg-white p-6 rounded-xl w-11/12 md:w-1/2 lg:w-1/3 shadow-2xl scale-95 opacity-0 transition-transform transition-opacity duration-300">
             <h3 id="modalTitle" class="text-xl font-bold mb-4">Agregar Cliente</h3>
-            <form id="clienteForm" class="space-y-4">
+            <form id="clienteForm" class="space-y-4" novalidate>
                 <input type="hidden" id="clienteId">
-                <input type="text" id="apodo" name="apodo" placeholder="Apodo" class="w-full border rounded-lg p-2" required>
-                <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Nombre y Apellidos" class="w-full border rounded-lg p-2" required>
-                <input type="text" id="telefono" name="telefono" placeholder="Teléfono" class="w-full border rounded-lg p-2">
-                <input type="text" id="localidad" name="localidad" placeholder="Localidad" class="w-full border rounded-lg p-2">
-                <select id="zona_reparto" name="zona_reparto" class="w-full border rounded-lg p-2">
-                    <option value="Zona A">Zona A</option>
-                    <option value="Zona B">Zona B</option>
-                    <option value="Zona C">Zona C</option>
-                    <option value="Zona D">Zona D</option>
-                </select>
-                <textarea id="observaciones" name="observaciones" placeholder="Observaciones" class="w-full border rounded-lg p-2"></textarea>
+                <div>
+                    <label for="apodo" class="campo-label campo-obligatorio">Apodo</label>
+                    <input type="text" id="apodo" name="apodo" placeholder="Apodo" class="w-full border rounded-lg p-2" required>
+                    <p class="campo-error hidden">El apodo es obligatorio.</p>
+                </div>
+                <div>
+                    <label for="nombre_completo" class="campo-label campo-obligatorio">Nombre y Apellidos</label>
+                    <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Nombre y Apellidos" class="w-full border rounded-lg p-2" required>
+                    <p class="campo-error hidden">El nombre y apellidos son obligatorios.</p>
+                </div>
+                <div>
+                    <label for="telefono" class="campo-label campo-opcional">Teléfono</label>
+                    <input type="tel" id="telefono" name="telefono" placeholder="Ej. 612345678" class="w-full border rounded-lg p-2" pattern="[0-9+\s-]{6,15}" title="Introduce un teléfono válido (6-15 dígitos).">
+                    <p class="campo-error hidden">Introduce un teléfono válido o deja el campo vacío.</p>
+                </div>
+                <div>
+                    <label for="localidad" class="campo-label campo-opcional">Localidad</label>
+                    <input type="text" id="localidad" name="localidad" placeholder="Localidad" class="w-full border rounded-lg p-2">
+                </div>
+                <div>
+                    <label for="zona_reparto" class="campo-label campo-obligatorio">Zona Reparto</label>
+                    <select id="zona_reparto" name="zona_reparto" class="w-full border rounded-lg p-2" required>
+                        <option value="Zona A">Zona A</option>
+                        <option value="Zona B">Zona B</option>
+                        <option value="Zona C">Zona C</option>
+                        <option value="Zona D">Zona D</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="observaciones" class="campo-label campo-opcional">Observaciones</label>
+                    <textarea id="observaciones" name="observaciones" placeholder="Observaciones" class="w-full border rounded-lg p-2"></textarea>
+                </div>
                 <div class="flex justify-end gap-2">
                     <button type="button" onclick="cerrarModal()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg">Cancelar</button>
                     <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Guardar</button>

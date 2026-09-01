@@ -11,30 +11,30 @@
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div class="flex border-b">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 border-b">
                 <button onclick="cambiarPestana('BaseDatos')" id="tabBaseDatos"
-                        class="flex-1 px-5 py-4 text-center font-medium bg-blue-600 text-white text-sm">
+                        class="px-3 py-3 text-center font-medium bg-blue-600 text-white text-xs sm:text-sm">
                     🗄️ Base de Datos
                 </button>
                 <button onclick="cambiarPestana('NuevoPedido')" id="tabNuevoPedido"
-                        class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
+                        class="px-3 py-3 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-xs sm:text-sm">
                     📝 Nuevo Pedido
                 </button>
                 <button onclick="cambiarPestana('Pendientes')" id="tabPendientes"
-                        class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
+                        class="px-3 py-3 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-xs sm:text-sm">
                     📋 Pendientes
                     <span id="totalPendientes" class="bg-red-500 text-white rounded-full px-2 py-1 text-xs ml-1">0</span>
                 </button>
                 <button onclick="cambiarPestana('Calendario')" id="tabCalendario"
-                        class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
+                        class="px-3 py-3 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-xs sm:text-sm">
                     📅 Calendario
                 </button>
                 <button onclick="cambiarPestana('GestionBBDD')" id="tabGestionBBDD"
-                        class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
+                        class="px-3 py-3 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-xs sm:text-sm">
                     ⚙️ Gestión BD
                 </button>
                 <button onclick="cambiarPestana('HojaReparto')" id="tabHojaReparto"
-                        class="flex-1 px-5 py-4 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm">
+                        class="px-3 py-3 text-center font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 text-xs sm:text-sm">
                     📦 Hoja Reparto
                 </button>
             </div>

@@ -1,38 +1,40 @@
 <div id="pestanaNuevoPedido" class="p-6">
     <h2 class="text-2xl font-bold text-gray-800 mb-6">Registrar Nuevo Pedido</h2>
 
-    <form id="nuevoPedidoForm" class="space-y-6">
+    <form id="nuevoPedidoForm" class="space-y-6" novalidate>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="relative">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Apodo del Cliente</label>
-                <input type="text" id="apodoAutoComplete" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" placeholder="Escribe el apodo..." autocomplete="off">
+                <label class="campo-label campo-obligatorio" for="apodoAutoComplete">Apodo del Cliente</label>
+                <input type="text" id="apodoAutoComplete" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" placeholder="Escribe el apodo..." autocomplete="off" required>
                 <ul id="autocompleteSuggestions" class="autocomplete-suggestions hidden absolute w-full bg-white border border-gray-300 rounded-lg mt-1 z-10 max-h-60 overflow-y-auto"></ul>
+                <p class="campo-error hidden">Selecciona un cliente de la lista de sugerencias.</p>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Nombre Completo</label>
+                <label class="campo-label" for="nombreCompleto">Nombre Completo <span class="text-xs text-gray-400 font-normal">(autocompletado)</span></label>
                 <input type="text" id="nombreCompleto" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-lg" readonly>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Zona de Reparto</label>
+                <label class="campo-label" for="zonaReparto">Zona de Reparto <span class="text-xs text-gray-400 font-normal">(autocompletado)</span></label>
                 <input type="text" id="zonaReparto" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-lg" readonly>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Localidad</label>
+                <label class="campo-label" for="localidad">Localidad <span class="text-xs text-gray-400 font-normal">(autocompletado)</span></label>
                 <input type="text" id="localidad" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-lg" readonly>
             </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Pedido *</label>
+                <label class="campo-label campo-obligatorio" for="tipoPedido">Tipo de Pedido</label>
                 <select id="tipoPedido" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" required>
                     <option value="">Seleccionar tipo...</option>
                     <option value="diario">Diario</option>
                     <option value="semanal">Semanal</option>
                 </select>
+                <p class="campo-error hidden">Selecciona el tipo de pedido.</p>
             </div>
             <div id="diasSemanaContainer" class="hidden">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Día(s) de la semana</label>
+                <label class="campo-label campo-opcional" for="diaSemana">Día(s) de la semana</label>
                 <select id="diaSemana" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg">
                     <option value="">Seleccionar día...</option>
                     <option value="lunes">Lunes</option>
@@ -45,21 +47,24 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad *</label>
-                <input type="number" id="cantidad" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" required>
+                <label class="campo-label campo-obligatorio" for="cantidad">Cantidad</label>
+                <input type="number" id="cantidad" min="1" step="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" required>
+                <p class="campo-error hidden">Introduce una cantidad de al menos 1.</p>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Producto *</label>
+                <label class="campo-label campo-obligatorio" for="producto">Producto</label>
                 <input type="text" id="producto" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" required>
+                <p class="campo-error hidden">Indica el producto del pedido.</p>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Entrega</label>
+                <label class="campo-label campo-obligatorio" for="fechaEntregaNuevo">Fecha de Entrega</label>
                 <input type="date" id="fechaEntregaNuevo" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" required>
+                <p class="campo-error hidden">Selecciona una fecha de entrega.</p>
             </div>
         </div>
 
         <div class="mt-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones del Pedido</label>
+            <label class="campo-label campo-opcional" for="observacionesPedido">Observaciones del Pedido</label>
             <textarea id="observacionesPedido" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" placeholder="Notas adicionales para este pedido..."></textarea>
         </div>
 

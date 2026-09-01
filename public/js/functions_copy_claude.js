@@ -19,6 +19,53 @@ const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabad
 
 
 // ============================================================
+// VALIDACIÓN DE FORMULARIOS (helper genérico)
+// ============================================================
+
+/**
+ * Valida todos los campos de un formulario usando las reglas HTML5
+ * (required, pattern, min, type, etc.), marcando visualmente los
+ * campos inválidos y mostrando su mensaje de error asociado
+ * (elemento .campo-error dentro del mismo contenedor).
+ * Devuelve true si todo el formulario es válido.
+ */
+function validarFormulario(form) {
+    let esValido = true;
+    form.querySelectorAll('input, select, textarea').forEach(campo => {
+        const contenedor = campo.closest('div');
+        const error = contenedor?.querySelector('.campo-error');
+        if (!campo.checkValidity()) {
+            esValido = false;
+            campo.classList.add('input-invalido');
+            if (error) error.classList.remove('hidden');
+        } else {
+            campo.classList.remove('input-invalido');
+            if (error) error.classList.add('hidden');
+        }
+    });
+    if (!esValido) {
+        form.querySelector('.input-invalido')?.focus();
+    }
+    return esValido;
+}
+
+/** Limpia el resaltado y los mensajes de error de un formulario. */
+function limpiarValidacionVisual(form) {
+    form.querySelectorAll('.input-invalido').forEach(el => el.classList.remove('input-invalido'));
+    form.querySelectorAll('.campo-error').forEach(el => el.classList.add('hidden'));
+}
+
+/** Marca un único campo (fuera de un <form>, ej. mini-formularios de Gestión BD) como inválido. */
+function marcarCampoInvalido(input, mensaje) {
+    if (!input) return;
+    input.classList.add('input-invalido');
+    input.placeholder = mensaje;
+    input.focus();
+    setTimeout(() => input.classList.remove('input-invalido'), 2000);
+}
+
+
+// ============================================================
 // NAVEGACIÓN POR PESTAÑAS
 // ============================================================
 
@@ -38,7 +85,7 @@ async function cambiarPestana(nombrePestana) {
         'HojaReparto': 'tabHojaReparto'
     };
 
-    const baseClass     = 'flex-1 px-5 py-4 text-center font-medium text-sm';
+    const baseClass     = 'px-3 py-3 text-center font-medium text-xs sm:text-sm';
     const inactiveClass = `${baseClass} bg-gray-200 text-gray-700 hover:bg-gray-300`;
     const activeClass   = `${baseClass} bg-blue-600 text-white`;
 
@@ -161,6 +208,9 @@ async function cargarClientes() {
 
 async function guardarCliente(event) {
     event.preventDefault();
+    const form = event.target;
+    if (!validarFormulario(form)) return;
+
     const id = document.getElementById('clienteId')?.value;
     const cliente = {
         apodo:           document.getElementById('apodo').value,
@@ -172,20 +222,24 @@ async function guardarCliente(event) {
     };
 
     try {
-        await fetch(id ? `/clientes/${id}` : '/clientes', {
+        const res = await fetch(id ? `/clientes/${id}` : '/clientes', {
             method: id ? 'PUT' : 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(cliente)
         });
+        if (!res.ok) throw new Error((await res.json())?.error || 'Error al guardar el cliente');
         cerrarModal();
         cargarClientes();
     } catch (err) {
         console.error('Error guardando cliente:', err);
+        alert('Error: ' + err.message);
     }
 }
 
 function abrirModal(cliente = null) {
-    document.getElementById('clienteForm')?.reset();
+    const form = document.getElementById('clienteForm');
+    form?.reset();
+    if (form) limpiarValidacionVisual(form);
     document.getElementById('clienteId').value = '';
 
     if (cliente) {
@@ -290,7 +344,21 @@ function inicializarFormularioPedidos() {
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!clienteSeleccionado) { alert('Selecciona un cliente válido.'); return; }
+
+        const apodoInput = document.getElementById('apodoAutoComplete');
+        const apodoError = apodoInput?.closest('div')?.querySelector('.campo-error');
+        const clienteValido = !!clienteSeleccionado && apodoInput?.value === clienteSeleccionado.apodo;
+
+        if (apodoInput) {
+            apodoInput.classList.toggle('input-invalido', !clienteValido);
+            apodoError?.classList.toggle('hidden', clienteValido);
+        }
+
+        const formValido = validarFormulario(form);
+        if (!clienteValido || !formValido) {
+            if (!clienteValido) apodoInput?.focus();
+            return;
+        }
 
         const pedidoData = {
             cliente_id:    clienteSeleccionado.id,
@@ -320,7 +388,9 @@ function inicializarFormularioPedidos() {
 }
 
 function limpiarFormularioPedido() {
-    document.getElementById('nuevoPedidoForm')?.reset();
+    const form = document.getElementById('nuevoPedidoForm');
+    form?.reset();
+    if (form) limpiarValidacionVisual(form);
     clienteSeleccionado = null;
     document.getElementById('autocompleteSuggestions')?.classList.add('hidden');
     if (document.getElementById('nombreCompleto')) document.getElementById('nombreCompleto').value = '';
@@ -390,7 +460,7 @@ function renderizarPedidosPendientes(pedidos) {
             const item = document.createElement('div');
             item.className = 'bg-white rounded-lg shadow-sm p-4 border border-gray-200';
             item.innerHTML = `
-                <div class="flex justify-between items-center mb-2">
+                <div class="flex flex-col gap-1 mb-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <span class="text-sm font-semibold text-gray-700">
                         ${pedido.apodo} — ${pedido.localidad}
                     </span>
@@ -753,7 +823,7 @@ async function cargarConductores() {
 async function agregarConductor() {
     const input = document.getElementById('nuevoConductor');
     const nombre = input?.value.trim();
-    if (!nombre) return;
+    if (!nombre) { marcarCampoInvalido(input, 'Escribe un nombre antes de agregar'); return; }
     try {
         const res = await fetch('/conductores', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -793,7 +863,7 @@ async function cargarCamiones() {
 async function agregarCamion() {
     const input = document.getElementById('nuevoCamion');
     const matricula = input?.value.trim();
-    if (!matricula) return;
+    if (!matricula) { marcarCampoInvalido(input, 'Escribe una matrícula antes de agregar'); return; }
     try {
         const res = await fetch('/camiones', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -833,7 +903,7 @@ async function cargarZonas() {
 async function agregarZona() {
     const input = document.getElementById('nuevaZona');
     const nombre = input?.value.trim();
-    if (!nombre) return;
+    if (!nombre) { marcarCampoInvalido(input, 'Escribe un nombre antes de agregar'); return; }
     try {
         const res = await fetch('/zonas', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
