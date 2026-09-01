@@ -198,7 +198,7 @@ async function cambiarPestana(nombrePestana) {
         'HojaReparto': 'tabHojaReparto'
     };
 
-    const baseClass     = 'px-3 py-3 text-center font-medium text-xs sm:text-sm';
+    const baseClass     = 'px-3 py-3 text-center font-medium rounded-lg text-xs sm:text-sm';
     const inactiveClass = `${baseClass} bg-gray-200 text-gray-700 hover:bg-gray-300`;
     const activeClass   = `${baseClass} bg-[#158765] text-white`;
 
