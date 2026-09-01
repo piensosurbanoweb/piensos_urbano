@@ -146,11 +146,11 @@ function inicializarGestionBBDD() {
     cargarZonas();
 }
 
-function inicializarHojaReparto() {
+async function inicializarHojaReparto() {
+    const fechaEl = document.getElementById('fechaImpresionHoja');
+    if (fechaEl) fechaEl.textContent = `Impreso el ${new Date().toLocaleDateString('es-ES')}`;
+    await cargarListasHojaReparto();
     cargarPedidosHoja();
-    cargarZonasHoja();
-    const filtroZona = document.getElementById('filtroZonaHoja');
-    if (filtroZona) filtroZona.addEventListener('change', cargarPedidosDisponibles);
 }
 
 
@@ -312,6 +312,7 @@ async function cargarClientesParaAutocomplete() {
                 apodoInput.value = cliente.apodo;
                 clienteSeleccionado = cliente;
                 rellenarCamposCliente(cliente);
+                cargarUltimosPedidosCliente(cliente.id);
                 suggestions.classList.add('hidden');
             });
             suggestions.appendChild(li);
@@ -328,6 +329,50 @@ function rellenarCamposCliente(cliente) {
     document.getElementById('nombreCompleto').value = cliente.nombre_completo;
     document.getElementById('zonaReparto').value    = cliente.zona_reparto;
     document.getElementById('localidad').value      = cliente.localidad;
+}
+
+/** Busca y muestra los últimos pedidos del cliente para poder repetirlos con un clic. */
+async function cargarUltimosPedidosCliente(clienteId) {
+    const contenedor = document.getElementById('ultimosPedidosCliente');
+    const lista = document.getElementById('listaUltimosPedidos');
+    if (!contenedor || !lista) return;
+
+    try {
+        const res = await fetch(`/pedidos_historial/${clienteId}`);
+        if (!res.ok) throw new Error('No se pudo cargar el historial');
+        const pedidos = await res.json();
+
+        if (!pedidos || pedidos.length === 0) {
+            contenedor.classList.add('hidden');
+            lista.innerHTML = '';
+            return;
+        }
+
+        lista.innerHTML = '';
+        pedidos.forEach(p => {
+            const li = document.createElement('li');
+            li.className = 'cursor-pointer text-sm bg-white hover:bg-blue-100 border border-blue-200 rounded px-2 py-1 transition-colors';
+            const fecha = p.fecha_entrega ? new Date(p.fecha_entrega).toLocaleDateString('es-ES') : '';
+            li.innerHTML = `<strong>${p.cantidad || ''}</strong> de <strong>${p.producto || ''}</strong> <span class="text-gray-400">— ${fecha}</span>`;
+            li.addEventListener('click', () => repetirPedidoAnterior(p));
+            lista.appendChild(li);
+        });
+        contenedor.classList.remove('hidden');
+    } catch (err) {
+        console.error('Error al cargar últimos pedidos del cliente:', err);
+        contenedor.classList.add('hidden');
+    }
+}
+
+/** Rellena cantidad y producto con los de un pedido anterior seleccionado. */
+function repetirPedidoAnterior(pedido) {
+    const cantidadInput = document.getElementById('cantidad');
+    const productoInput = document.getElementById('producto');
+    if (cantidadInput) {
+        const cantidadNum = parseInt(pedido.cantidad, 10);
+        cantidadInput.value = Number.isFinite(cantidadNum) ? cantidadNum : pedido.cantidad || '';
+    }
+    if (productoInput) productoInput.value = pedido.producto || '';
 }
 
 function inicializarFormularioPedidos() {
@@ -393,6 +438,7 @@ function limpiarFormularioPedido() {
     if (form) limpiarValidacionVisual(form);
     clienteSeleccionado = null;
     document.getElementById('autocompleteSuggestions')?.classList.add('hidden');
+    document.getElementById('ultimosPedidosCliente')?.classList.add('hidden');
     if (document.getElementById('nombreCompleto')) document.getElementById('nombreCompleto').value = '';
     if (document.getElementById('zonaReparto'))    document.getElementById('zonaReparto').value    = '';
     if (document.getElementById('localidad'))      document.getElementById('localidad').value      = '';
@@ -936,140 +982,126 @@ function resetearSistema() {
 // HOJA DE REPARTO
 // ============================================================
 
-function renderizarHojaReparto() {
-    const lista = document.getElementById('listaPedidosHoja');
-    const vacio = document.getElementById('mensajeVacioHoja');
-    if (!lista || !vacio) return;
+// Listas de camiones/conductores para construir los <select> de cada fila.
+// Se cargan una vez al entrar en la pestaña.
+let camionesHoja = [];
+let conductoresHoja = [];
 
-    lista.innerHTML = '';
+async function cargarListasHojaReparto() {
+    try {
+        const [resCamiones, resConductores] = await Promise.all([fetch('/camiones'), fetch('/conductores')]);
+        camionesHoja = resCamiones.ok ? await resCamiones.json() : [];
+        conductoresHoja = resConductores.ok ? await resConductores.json() : [];
+    } catch (err) {
+        console.error('Error al cargar camiones/conductores para la hoja de reparto:', err);
+        camionesHoja = [];
+        conductoresHoja = [];
+    }
+}
+
+function construirSelectHoja(valores, valorActual, onChangeAttr) {
+    const opciones = ['<option value="">—</option>']
+        .concat(valores.map(v => `<option value="${v.nombre}" ${v.nombre === valorActual ? 'selected' : ''}>${v.nombre}</option>`));
+    return `<select class="hoja-select" ${onChangeAttr}>${opciones.join('')}</select>`;
+}
+
+function renderizarHojaReparto() {
+    const tbody = document.getElementById('tablaPedidosHoja');
+    const vacio = document.getElementById('mensajeVacioHoja');
+    if (!tbody || !vacio) return;
+
+    tbody.innerHTML = '';
     if (pedidosHojaReparto.length === 0) {
         vacio.classList.remove('hidden');
-    } else {
-        vacio.classList.add('hidden');
-        pedidosHojaReparto.forEach(p => {
-            const li = document.createElement('li');
-            li.className = 'flex justify-between items-center p-4 bg-gray-50 rounded-lg border';
-            li.innerHTML = `
-                <div>
-                    <p class="font-bold text-lg">${p.apodo_cliente} — ${p.producto}</p>
-                    <p class="text-sm text-gray-600">${p.cantidad} unidades</p>
-                    <p class="text-xs text-gray-400">Entrega: ${new Date(p.fecha_entrega).toLocaleDateString('es-ES')}</p>
-                </div>
-                <button onclick="eliminarPedidoHoja(${p.id})" class="text-red-600 hover:text-red-800 no-print">🗑️</button>
-            `;
-            lista.appendChild(li);
-        });
+        return;
     }
+    vacio.classList.add('hidden');
+
+    pedidosHojaReparto.forEach((p, index) => {
+        const fila = document.createElement('tr');
+        fila.innerHTML = `
+            <td class="border px-2 py-2 text-center orden-cell">${index + 1}</td>
+            <td class="border px-2 py-2">${p.apodo_cliente || ''}</td>
+            <td class="border px-2 py-2">${p.telefono || ''}</td>
+            <td class="border px-2 py-2 observaciones-cell">${p.cantidad || ''} ${p.producto || ''}</td>
+            <td class="border px-2 py-2 capitalize">${p.dia_reparto || ''}</td>
+            <td class="border px-2 py-2 orden-cell">
+                <input type="number" min="1" step="1" value="${p.orden_reparto ?? ''}" class="hoja-input"
+                    onchange="actualizarCampoHoja(${p.id}, 'orden_reparto', this.value ? parseInt(this.value, 10) : null)">
+            </td>
+            <td class="border px-2 py-2 conductor-cell">
+                ${construirSelectHoja(camionesHoja, p.camion, `onchange="actualizarCampoHoja(${p.id}, 'camion', this.value || null)"`)}
+            </td>
+            <td class="border px-2 py-2">${p.zona || ''}</td>
+            <td class="border px-2 py-2 conductor-cell">
+                ${construirSelectHoja(conductoresHoja, p.conductor, `onchange="actualizarCampoHoja(${p.id}, 'conductor', this.value || null)"`)}
+            </td>
+            <td class="border px-2 py-2 text-center no-print">
+                <button onclick="eliminarPedidoHoja(${p.id})" class="text-red-600 hover:text-red-800" title="Quitar de la hoja">🗑️</button>
+            </td>
+        `;
+        tbody.appendChild(fila);
+    });
 }
 
 async function cargarPedidosHoja() {
     try {
+        document.getElementById('loadingPedidosHoja')?.classList.remove('hidden');
         const res = await fetch('/pedidos/hoja-reparto');
         if (!res.ok) throw new Error('Error al cargar hoja de reparto');
         pedidosHojaReparto = await res.json();
         renderizarHojaReparto();
     } catch (err) {
         console.error('Error al cargar hoja de reparto:', err);
+    } finally {
+        document.getElementById('loadingPedidosHoja')?.classList.add('hidden');
     }
 }
 
-async function mostrarSelectorPedidos() {
-    const modal = document.getElementById('selectorPedidosModal');
-    if (!modal) return;
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    await Promise.all([cargarZonasHoja(), cargarPedidosDisponibles()]);
-}
-
-async function cargarZonasHoja() {
+/** Actualiza en el servidor el orden/camión/conductor de un pedido de la hoja (edición en línea). */
+async function actualizarCampoHoja(id, campo, valor) {
     try {
-        const res = await fetch('/zonas');
-        const data = await res.json();
-        const select = document.getElementById('filtroZonaHoja');
-        if (!select) return;
-        select.innerHTML = '<option value="">Todas las zonas</option>';
-        data.forEach(z => {
-            const opt = document.createElement('option');
-            opt.value = z.nombre; opt.textContent = z.nombre;
-            select.appendChild(opt);
+        const res = await fetch(`/pedidos/hoja-reparto/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [campo]: valor })
         });
-    } catch (err) { console.error(err); }
-}
-
-async function cargarPedidosDisponibles() {
-    const zonaFiltro = document.getElementById('filtroZonaHoja')?.value;
-    const lista = document.getElementById('listaPedidosSelector');
-    if (!lista) return;
-
-    lista.innerHTML = '<p class="text-center text-gray-500 py-4">Cargando...</p>';
-
-    try {
-        const res = await fetch('/pedidos/pendientes');
-        let pedidos = await res.json();
-
-        // El campo de zona en pedidos_pendientes se llama "zona" (no "zona_reparto")
-        if (zonaFiltro) pedidos = pedidos.filter(p => p.zona === zonaFiltro);
-
-        lista.innerHTML = '';
-        if (pedidos.length > 0) {
-            pedidos.forEach(p => {
-                const div = document.createElement('div');
-                div.className = 'flex items-center gap-3 bg-gray-100 p-3 rounded-md';
-                div.innerHTML = `
-                    <input type="checkbox" data-pedido-id="${p.id}" class="h-5 w-5 text-blue-600">
-                    <div>
-                        <p class="font-bold">${p.apodo}</p>
-                        <p class="text-sm text-gray-600">${p.pedido}</p>
-                        <p class="text-xs text-gray-400">Zona: ${p.zona || 'N/A'} | Día: ${p.dia_reparto || 'N/A'}</p>
-                    </div>
-                `;
-                lista.appendChild(div);
-            });
-        } else {
-            lista.innerHTML = '<p class="text-center text-gray-500 py-4">No hay pedidos disponibles.</p>';
+        if (!res.ok) throw new Error('Error al guardar el cambio');
+        // Reflejamos el cambio localmente para no perder la edición al re-renderizar,
+        // y si cambió el orden, reordenamos la tabla igual que hace el servidor.
+        const pedido = pedidosHojaReparto.find(p => p.id === id);
+        if (pedido) pedido[campo] = valor;
+        if (campo === 'orden_reparto') {
+            pedidosHojaReparto.sort((a, b) => (a.orden_reparto ?? Infinity) - (b.orden_reparto ?? Infinity));
+            renderizarHojaReparto();
         }
     } catch (err) {
-        lista.innerHTML = '<p class="text-center text-red-500 py-4">Error al cargar pedidos.</p>';
+        alert('Error al guardar el cambio: ' + err.message);
+        cargarPedidosHoja();
     }
 }
 
-function cerrarSelectorPedidos() {
-    const modal = document.getElementById('selectorPedidosModal');
-    if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
-}
-
-async function agregarSeleccionadosALaHoja() {
-    const checks = document.querySelectorAll('#listaPedidosSelector input[type="checkbox"]:checked');
-    const ids = Array.from(checks).map(cb => parseInt(cb.dataset.pedidoId));
-    if (ids.length === 0) { alert('Selecciona al menos un pedido.'); return; }
-
+async function eliminarPedidoHoja(id) {
+    if (!confirm('¿Quitar este pedido de la hoja de reparto? (el pedido programado no se borra)')) return;
     try {
-        const res = await fetch('/pedidos/hoja-reparto', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids })
-        });
-        if (!res.ok) throw new Error('Error al agregar pedidos a la hoja');
-        pedidosHojaReparto = await res.json();
+        const res = await fetch(`/pedidos/hoja-reparto/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Error al quitar el pedido');
+        pedidosHojaReparto = pedidosHojaReparto.filter(p => p.id !== id);
         renderizarHojaReparto();
-        cerrarSelectorPedidos();
-        mostrarMensajeExito(`✅ ${ids.length} pedido(s) agregado(s) a la hoja`);
     } catch (err) {
         alert('Error: ' + err.message);
     }
 }
 
-function eliminarPedidoHoja(id) {
-    if (confirm('¿Quitar este pedido de la hoja?')) {
-        pedidosHojaReparto = pedidosHojaReparto.filter(p => p.id !== id);
-        renderizarHojaReparto();
-    }
-}
-
-function limpiarHojaReparto() {
-    if (confirm('¿Limpiar toda la hoja de reparto?')) {
+async function limpiarHojaReparto() {
+    if (!confirm('¿Vaciar toda la hoja de reparto? Los pedidos seguirán programados en el calendario.')) return;
+    try {
+        const res = await fetch('/pedidos/hoja-reparto', { method: 'DELETE' });
+        if (!res.ok) throw new Error('Error al limpiar la hoja');
         pedidosHojaReparto = [];
         renderizarHojaReparto();
+    } catch (err) {
+        alert('Error: ' + err.message);
     }
 }
 

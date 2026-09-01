@@ -8,6 +8,10 @@
                 <input type="text" id="apodoAutoComplete" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" placeholder="Escribe el apodo..." autocomplete="off" required>
                 <ul id="autocompleteSuggestions" class="autocomplete-suggestions hidden absolute w-full bg-white border border-gray-300 rounded-lg mt-1 z-10 max-h-60 overflow-y-auto"></ul>
                 <p class="campo-error hidden">Selecciona un cliente de la lista de sugerencias.</p>
+                <div id="ultimosPedidosCliente" class="hidden mt-2 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                    <p class="text-xs font-semibold text-gray-600 mb-1">Últimos pedidos de este cliente (toca uno para repetirlo):</p>
+                    <ul id="listaUltimosPedidos" class="space-y-1"></ul>
+                </div>
             </div>
             <div>
                 <label class="campo-label" for="nombreCompleto">Nombre Completo <span class="text-xs text-gray-400 font-normal">(autocompletado)</span></label>

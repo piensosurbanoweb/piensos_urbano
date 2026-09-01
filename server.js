@@ -161,7 +161,11 @@ app.get('/pedidos_historial/:cliente_id', async (req, res) => {
       'SELECT * FROM pedidos_historial WHERE cliente_id=$1 ORDER BY fecha_pedido DESC LIMIT 5',
       [cliente_id]
     );
-    res.json(rows);
+    // Se añaden cantidad/producto ya extraídos de "descripcion" para que el
+    // frontend pueda mostrar y reutilizar directamente los últimos pedidos
+    // del cliente (ver Nuevo Pedido).
+    const resultado = rows.map(({ descripcion, ...resto }) => ({ ...resto, descripcion, ...parseDescripcion(descripcion) }));
+    res.json(resultado);
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: 'Error al obtener historial' });
@@ -564,17 +568,29 @@ app.patch('/pedidos/editar-fecha/:id', async (req, res) => {
 });
 
 // --- FUNCIONES DE HOJA DE REPARTO ---
+// La "hoja de reparto" no es una tabla aparte: son los pedidos de
+// pedidos_calendario marcados con enviado_reparto = true. Así los datos del
+// pedido (cliente, teléfono, zona, día, producto...) siempre están
+// sincronizados con el calendario y no hay que duplicarlos. Los pedidos
+// entran a la hoja únicamente desde Calendario > Vista Diaria > "Enviar a
+// Hoja Reparto" (endpoint POST de más abajo).
 app.get('/pedidos/hoja-reparto', async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT p.id, p.cantidad, p.producto, p.fecha_entrega, c.apodo AS apodo_cliente
-      FROM pedidos_hoja_reparto p
-      JOIN clientes c ON p.cliente_id = c.id
-      ORDER BY p.fecha_entrega, c.apodo
+      SELECT
+        p.id, p.dia_reparto, p.fecha_entrega, p.orden_reparto, p.conductor, p.camion, p.observaciones,
+        c.apodo AS apodo_cliente, c.telefono, c.zona_reparto AS zona,
+        h.descripcion
+      FROM pedidos_calendario p
+      JOIN pedidos_historial h ON h.id = p.historial_id
+      LEFT JOIN clientes c ON p.cliente_id = c.id
+      WHERE p.enviado_reparto = true
+      ORDER BY p.orden_reparto NULLS LAST, p.dia_reparto, c.apodo
     `);
-    res.json(rows);
+    const resultado = rows.map(({ descripcion, ...resto }) => ({ ...resto, ...parseDescripcion(descripcion) }));
+    res.json(resultado);
   } catch (err) {
-    console.error('Error al obtener pedidos de la hoja de reparto:', err.message);
+    console.error('Error al obtener la hoja de reparto:', err.message);
     res.status(500).json({ error: 'Error interno del servidor al cargar la hoja de reparto.' });
   }
 });
@@ -585,47 +601,67 @@ app.post('/pedidos/hoja-reparto', async (req, res) => {
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'Se requiere un array de IDs de pedidos.' });
     }
-
-    const { rows: resultPedidos } = await pool.query(
-      `SELECT
-         p.id,
-         p.cliente_id,
-         h.descripcion,
-         p.fecha_entrega AS fecha_entrega,
-         p.observaciones,
-         c.apodo AS apodo_cliente
-       FROM pedidos_calendario p
-       JOIN pedidos_historial h ON h.id = p.historial_id
-       JOIN clientes c ON p.cliente_id = c.id
-       WHERE p.id = ANY($1::int[])`,
+    const { rowCount } = await pool.query(
+      `UPDATE pedidos_calendario SET enviado_reparto = true, fecha_envio_reparto = now() WHERE id = ANY($1::int[])`,
       [ids]
     );
-
-    if (resultPedidos.length === 0) {
+    if (rowCount === 0) {
       return res.status(404).json({ error: 'No se encontraron pedidos con los IDs proporcionados en el calendario.' });
     }
-
-    for (const pedido of resultPedidos) {
-      const { cantidad, producto } = parseDescripcion(pedido.descripcion);
-      await pool.query(
-        `INSERT INTO pedidos_hoja_reparto (id, cliente_id, cantidad, producto, fecha_entrega, observaciones)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (id) DO NOTHING`,
-        [pedido.id, pedido.cliente_id, cantidad, producto, pedido.fecha_entrega, pedido.observaciones]
-      );
-    }
-
-    const { rows: resultFinal } = await pool.query(`
-      SELECT p.id, p.cantidad, p.producto, p.fecha_entrega, c.apodo AS apodo_cliente
-      FROM pedidos_hoja_reparto p
-      JOIN clientes c ON p.cliente_id = c.id
-      ORDER BY p.fecha_entrega, c.apodo
-    `);
-
-    res.json(resultFinal);
+    res.json({ success: true, actualizados: rowCount });
   } catch (err) {
-    console.error('Error al agregar pedidos a la hoja de reparto:', err.message);
+    console.error('Error al enviar pedidos a la hoja de reparto:', err.message);
     res.status(500).json({ error: 'Error interno del servidor al procesar la solicitud.' });
+  }
+});
+
+// Edición en línea de un pedido de la hoja: orden de reparto, camión y/o conductor
+app.patch('/pedidos/hoja-reparto/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { orden_reparto, conductor, camion } = req.body;
+    const { rows } = await pool.query(
+      `UPDATE pedidos_calendario
+       SET orden_reparto = COALESCE($1, orden_reparto),
+           conductor     = COALESCE($2, conductor),
+           camion        = COALESCE($3, camion)
+       WHERE id = $4 AND enviado_reparto = true
+       RETURNING id, orden_reparto, conductor, camion`,
+      [orden_reparto ?? null, conductor ?? null, camion ?? null, id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Pedido no encontrado en la hoja de reparto.' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error al actualizar el pedido de la hoja de reparto:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+});
+
+// Quita un pedido de la hoja (no borra el pedido programado, solo lo saca de la hoja impresa)
+app.delete('/pedidos/hoja-reparto/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query(
+      `UPDATE pedidos_calendario SET enviado_reparto = false, fecha_envio_reparto = NULL, orden_reparto = NULL WHERE id = $1`,
+      [id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error al quitar el pedido de la hoja de reparto:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+});
+
+// Vacía toda la hoja de reparto (no borra los pedidos programados, solo los saca de la hoja)
+app.delete('/pedidos/hoja-reparto', async (req, res) => {
+  try {
+    await pool.query(
+      `UPDATE pedidos_calendario SET enviado_reparto = false, fecha_envio_reparto = NULL, orden_reparto = NULL WHERE enviado_reparto = true`
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error al limpiar la hoja de reparto:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
   }
 });
 
