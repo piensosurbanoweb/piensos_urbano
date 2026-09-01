@@ -51,20 +51,20 @@
                 </select>
             </div>
             <div>
-                <label class="campo-label campo-obligatorio" for="cantidad">Cantidad</label>
-                <input type="number" id="cantidad" min="1" step="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent text-lg" required>
-                <p class="campo-error hidden">Introduce una cantidad de al menos 1.</p>
-            </div>
-            <div>
-                <label class="campo-label campo-obligatorio" for="producto">Producto</label>
-                <input type="text" id="producto" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent text-lg" required>
-                <p class="campo-error hidden">Indica el producto del pedido.</p>
-            </div>
-            <div>
                 <label class="campo-label campo-obligatorio" for="fechaEntregaNuevo">Fecha de Entrega</label>
                 <input type="date" id="fechaEntregaNuevo" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent text-lg" required>
                 <p class="campo-error hidden">Selecciona una fecha de entrega.</p>
             </div>
+        </div>
+
+        <div>
+            <label class="campo-label campo-obligatorio">Productos del pedido</label>
+            <p class="text-xs text-gray-500 mb-2">Un cliente puede pedir varios productos a la vez (ej. pienso de gato y de perro): se entregan juntos, en una sola visita.</p>
+            <div id="itemsPedidoLista" class="space-y-2"></div>
+            <button type="button" onclick="agregarFilaItemPedido()" class="mt-2 inline-flex items-center gap-1 text-sm text-[#158765] hover:text-[#0f6b50] font-medium">
+                <i class="fas fa-circle-plus"></i> Añadir otro producto
+            </button>
+            <p id="errorItemsPedido" class="campo-error hidden mt-1">Añade al menos un producto con su cantidad.</p>
         </div>
 
         <div class="mt-4">

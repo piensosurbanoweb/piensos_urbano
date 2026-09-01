@@ -483,7 +483,10 @@ function getDiaRepartoUTC(fechaISO) {
 }
 
 // Equivalente en JS a lo que antes hacía MySQL con SUBSTRING_INDEX sobre
-// descripcion = "${cantidad} de ${producto} - ${apodo_cliente}"
+// descripcion = "${cantidad} de ${producto} - ${apodo_cliente}". Se mantiene
+// solo como respaldo para registros muy antiguos que no tengan filas en
+// pedido_items; el camino normal ahora es la columna "items" (ver
+// SUBQUERY_ITEMS más abajo).
 function parseDescripcion(descripcion) {
   const antesGuion = (descripcion || '').split(' - ')[0];
   const partes = antesGuion.split(' de ');
@@ -491,6 +494,26 @@ function parseDescripcion(descripcion) {
   const producto = partes.length > 1 ? partes[partes.length - 1] : '';
   return { cantidad, producto };
 }
+
+// Construye el texto resumen de un pedido a partir de sus líneas
+// (items), p.ej. "2 de Pienso Gato, 1 de Pienso Perro". Se usa para poder
+// seguir mostrando un pedido como una sola línea de texto en sitios que no
+// se han cambiado a leer el array "items" directamente (pedidos_pendientes,
+// impresiones, etc.), sin perder la información de que tiene varios
+// productos.
+function resumenItems(items) {
+  return items.map((it) => `${it.cantidad} de ${it.producto}`).join(', ');
+}
+
+// Fragmento SQL reutilizable: trae, para un pedido de pedidos_historial
+// (alias "h" obligatorio en la consulta que lo use), todas sus líneas de
+// pedido_items como un array JSON [{cantidad, producto}, ...]. Así una
+// única fila de pedidos_calendario/pedidos_pendientes puede representar un
+// pedido con varios productos sin duplicar filas.
+const SUBQUERY_ITEMS = `(
+  SELECT COALESCE(json_agg(json_build_object('cantidad', pi.cantidad, 'producto', pi.producto) ORDER BY pi.orden, pi.id), '[]'::json)
+  FROM pedido_items pi WHERE pi.historial_id = h.id
+) AS items`;
 
 // || RUTAS DE API ||
 
@@ -548,28 +571,57 @@ app.delete('/clientes/:id', async (req, res) => {
 });
 
 // --- PEDIDOS ---
+// Un pedido puede incluir varios productos (items) en un mismo proceso de
+// compra: el cliente recibe UNA sola parada de reparto con todo lo que ha
+// pedido, en vez de tener que crear un pedido por producto. `items` debe ser
+// un array [{ cantidad, producto }, ...] con al menos un elemento; por
+// compatibilidad, si llega el formato antiguo (cantidad/producto sueltos en
+// vez de items), se trata como un pedido de un solo producto.
 app.post('/pedidos', async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    const { cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones } = req.body;
+    const { cliente_id, apodo_cliente, tipo, dia_semana, fecha_entrega, observaciones } = req.body;
+    let items = Array.isArray(req.body.items) ? req.body.items : null;
+    if (!items && req.body.cantidad && req.body.producto) {
+      items = [{ cantidad: req.body.cantidad, producto: req.body.producto }];
+    }
+    items = (items || [])
+      .map((it) => ({ cantidad: String(it.cantidad || '').trim(), producto: String(it.producto || '').trim() }))
+      .filter((it) => it.cantidad && it.producto);
 
+    if (items.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'El pedido necesita al menos un producto con cantidad.' });
+    }
+
+    // Se guarda también un resumen de un solo producto (el primero) en la
+    // tabla "pedidos" por compatibilidad con datos/consultas antiguas; el
+    // detalle real de todos los productos vive en pedido_items.
     const pedidoResult = await client.query(
       `INSERT INTO pedidos (cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, fecha_creacion`,
-      [cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones]
+      [cliente_id, apodo_cliente, tipo, dia_semana, items[0].cantidad, items[0].producto, fecha_entrega, observaciones]
     );
     const newPedidoId = pedidoResult.rows[0].id;
     const fechaPedido = pedidoResult.rows[0].fecha_creacion;
 
-    const descripcion = `${cantidad} de ${producto} - ${apodo_cliente}`;
+    const resumen = resumenItems(items);
+    const descripcion = `${resumen} - ${apodo_cliente}`;
     const historialResult = await client.query(
       `INSERT INTO pedidos_historial (cliente_id, descripcion, fecha_pedido, fecha_entrega, observaciones)
        VALUES ($1, $2, $3, $4, $5) RETURNING id`,
       [cliente_id, descripcion, fechaPedido, fecha_entrega, observaciones]
     );
     const historialId = historialResult.rows[0].id;
+
+    for (let i = 0; i < items.length; i++) {
+      await client.query(
+        `INSERT INTO pedido_items (historial_id, producto, cantidad, orden) VALUES ($1, $2, $3, $4)`,
+        [historialId, items[i].producto, items[i].cantidad, i]
+      );
+    }
 
     const clienteResult = await client.query(
       'SELECT apodo, nombre_completo, telefono, localidad, zona_reparto FROM clientes WHERE id = $1',
@@ -583,11 +635,10 @@ app.post('/pedidos', async (req, res) => {
       diaRepartoCorregido = pedidoOriginalResult.rows[0]?.dia_semana || null;
     }
 
-    const pedidoPendiente = `${cantidad} de ${producto}`;
     await client.query(
       `INSERT INTO pedidos_pendientes (historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [historialId, cliente_id, clienteData.apodo, clienteData.nombre_completo, clienteData.telefono, clienteData.localidad, clienteData.zona_reparto, pedidoPendiente, fecha_entrega, observaciones, diaRepartoCorregido]
+      [historialId, cliente_id, clienteData.apodo, clienteData.nombre_completo, clienteData.telefono, clienteData.localidad, clienteData.zona_reparto, resumen, fecha_entrega, observaciones, diaRepartoCorregido]
     );
 
     await client.query('COMMIT');
@@ -602,17 +653,26 @@ app.post('/pedidos', async (req, res) => {
 });
 
 // --- HISTORIAL DE PEDIDOS ---
+// Se limita a los 3 pedidos más recientes del cliente (antes no había
+// límite / se usaba 5), ordenados por fecha de creación descendente.
 app.get('/pedidos_historial/:cliente_id', async (req, res) => {
   try {
     const { cliente_id } = req.params;
     const { rows } = await pool.query(
-      'SELECT * FROM pedidos_historial WHERE cliente_id=$1 ORDER BY fecha_pedido DESC LIMIT 5',
+      `SELECT h.*, ${SUBQUERY_ITEMS}
+       FROM pedidos_historial h
+       WHERE h.cliente_id = $1
+       ORDER BY h.fecha_pedido DESC
+       LIMIT 3`,
       [cliente_id]
     );
-    // Se añaden cantidad/producto ya extraídos de "descripcion" para que el
-    // frontend pueda mostrar y reutilizar directamente los últimos pedidos
-    // del cliente (ver Nuevo Pedido).
-    const resultado = rows.map(({ descripcion, ...resto }) => ({ ...resto, descripcion, ...parseDescripcion(descripcion) }));
+    // Si un registro muy antiguo no tiene filas en pedido_items (de antes de
+    // este cambio), se reconstruye un único item a partir de "descripcion"
+    // para no dejar el historial vacío.
+    const resultado = rows.map((r) => ({
+      ...r,
+      items: r.items && r.items.length > 0 ? r.items : [parseDescripcion(r.descripcion)],
+    }));
     res.json(resultado);
   } catch (err) {
     console.error(err.message);
@@ -708,9 +768,9 @@ app.get('/pedidos/detalles/:id', async (req, res) => {
       `SELECT
          p.id,
          p.fecha_entrega AS fecha_entrega,
-         h.descripcion,
          p.observaciones,
-         c.apodo AS apodo_cliente, c.telefono, c.localidad
+         c.apodo AS apodo_cliente, c.telefono, c.localidad,
+         ${SUBQUERY_ITEMS}
        FROM pedidos_calendario p
        JOIN pedidos_historial h ON h.id = p.historial_id
        LEFT JOIN clientes c ON p.cliente_id = c.id
@@ -722,9 +782,7 @@ app.get('/pedidos/detalles/:id', async (req, res) => {
       return res.status(404).json({ error: 'Pedido no encontrado.' });
     }
 
-    const { cantidad, producto } = parseDescripcion(rows[0].descripcion);
-    const { descripcion, ...resto } = rows[0];
-    res.json({ ...resto, cantidad, producto });
+    res.json(rows[0]);
   } catch (err) {
     console.error('Error al obtener detalles del pedido:', err.message);
     res.status(500).json({ error: 'Error interno del servidor.' });
@@ -750,7 +808,7 @@ app.get('/pedidos_calendario', async (req, res) => {
          p.dia_reparto,
          p.fecha_entrega AS fecha_reparto,
          c.apodo AS apodo_cliente,
-         h.descripcion
+         ${SUBQUERY_ITEMS}
        FROM pedidos_calendario p
        JOIN pedidos_historial h ON h.id = p.historial_id
        JOIN clientes c ON p.cliente_id = c.id
@@ -759,8 +817,7 @@ app.get('/pedidos_calendario', async (req, res) => {
       [firstDayOfWeek.toISOString().split('T')[0], lastDayOfWeek.toISOString().split('T')[0]]
     );
 
-    const resultado = rows.map(({ descripcion, ...resto }) => ({ ...resto, ...parseDescripcion(descripcion) }));
-    res.json(resultado);
+    res.json(rows);
   } catch (err) {
     console.error('Error al obtener pedidos del calendario:', err.message);
     res.status(500).json({ error: 'Error interno del servidor.' });
@@ -777,8 +834,8 @@ app.get('/pedidos/diarios/:dia', async (req, res) => {
          p.dia_reparto,
          p.fecha_entrega AS fecha_reparto,
          c.apodo AS apodo_cliente,
-         h.descripcion,
-         p.observaciones
+         p.observaciones,
+         ${SUBQUERY_ITEMS}
        FROM pedidos_calendario p
        JOIN pedidos_historial h ON h.id = p.historial_id
        LEFT JOIN clientes c ON p.cliente_id = c.id
@@ -786,8 +843,7 @@ app.get('/pedidos/diarios/:dia', async (req, res) => {
        ORDER BY p.fecha_entrega, c.apodo`,
       [dia]
     );
-    const resultado = rows.map(({ descripcion, ...resto }) => ({ ...resto, ...parseDescripcion(descripcion) }));
-    res.json(resultado);
+    res.json(rows);
   } catch (err) {
     console.error('Error al obtener pedidos diarios:', err.message);
     res.status(500).json({ error: 'Error interno del servidor.' });
@@ -1028,15 +1084,14 @@ app.get('/pedidos/hoja-reparto', async (req, res) => {
       SELECT
         p.id, p.dia_reparto, p.fecha_entrega, p.orden_reparto, p.conductor, p.camion, p.observaciones,
         c.apodo AS apodo_cliente, c.telefono, c.zona_reparto AS zona,
-        h.descripcion
+        ${SUBQUERY_ITEMS}
       FROM pedidos_calendario p
       JOIN pedidos_historial h ON h.id = p.historial_id
       LEFT JOIN clientes c ON p.cliente_id = c.id
       WHERE p.enviado_reparto = true
       ORDER BY p.orden_reparto NULLS LAST, p.dia_reparto, c.apodo
     `);
-    const resultado = rows.map(({ descripcion, ...resto }) => ({ ...resto, ...parseDescripcion(descripcion) }));
-    res.json(resultado);
+    res.json(rows);
   } catch (err) {
     console.error('Error al obtener la hoja de reparto:', err.message);
     res.status(500).json({ error: 'Error interno del servidor al cargar la hoja de reparto.' });

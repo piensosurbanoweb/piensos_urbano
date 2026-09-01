@@ -36,6 +36,18 @@ CREATE TABLE IF NOT EXISTS pedidos_historial (
   observaciones TEXT
 );
 
+-- Líneas de un pedido (1 pedido -> N productos). Un pedido con pienso de
+-- gato y de perro genera 2 filas aquí, ambas con el mismo historial_id, en
+-- vez de obligar a crear dos pedidos separados.
+CREATE TABLE IF NOT EXISTS pedido_items (
+  id SERIAL PRIMARY KEY,
+  historial_id INTEGER NOT NULL REFERENCES pedidos_historial(id) ON DELETE CASCADE,
+  producto VARCHAR(200) NOT NULL,
+  cantidad VARCHAR(60) NOT NULL,
+  orden INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_pedido_items_historial ON pedido_items(historial_id);
+
 CREATE TABLE IF NOT EXISTS pedidos_pendientes (
   id SERIAL PRIMARY KEY,
   historial_id INTEGER REFERENCES pedidos_historial(id) ON DELETE CASCADE,

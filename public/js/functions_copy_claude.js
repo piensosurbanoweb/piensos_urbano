@@ -92,6 +92,12 @@ document.getElementById('formCambiarPassword')?.addEventListener('submit', async
     }
 });
 
+/** Texto ya escapado de todos los productos de un pedido, p.ej. "2 de Pienso Gato, 1 de Pienso Perro". */
+function resumenItemsTexto(items) {
+    if (!items || items.length === 0) return '';
+    return items.map(it => `${escapeHTML(it.cantidad)} de ${escapeHTML(it.producto)}`).join(', ');
+}
+
 /** Escapa HTML para no pintar sin filtrar texto que el usuario ha escrito en un formulario. */
 function escapeHTML(valor) {
     if (valor === null || valor === undefined) return '';
@@ -225,8 +231,24 @@ async function cambiarPestana(nombrePestana) {
 
 function inicializarBaseDatos() {
     cargarClientes();
+    cargarZonasClienteForm();
     const form = document.getElementById('clienteForm');
     if (form) form.addEventListener('submit', guardarCliente);
+}
+
+/** Rellena el <select> de "Zona Reparto" del formulario de Clientes con las zonas dadas de alta en Gestión BD. */
+async function cargarZonasClienteForm() {
+    const select = document.getElementById('zona_reparto');
+    if (!select) return;
+    try {
+        const res = await fetch('/zonas');
+        if (!res.ok) throw new Error('No se pudieron cargar las zonas');
+        const zonas = await res.json();
+        select.innerHTML = '<option value="">Selecciona una zona...</option>'
+            + zonas.map(z => `<option value="${escapeHTML(z.nombre)}">${escapeHTML(z.nombre)}</option>`).join('');
+    } catch (err) {
+        console.error('Error al cargar zonas para el formulario de clientes:', err);
+    }
 }
 
 function inicializarNuevoPedido() {
@@ -374,7 +396,7 @@ function abrirModal(cliente = null) {
         document.getElementById('nombre_completo').value = cliente.nombre_completo || '';
         document.getElementById('telefono').value        = cliente.telefono || '';
         document.getElementById('localidad').value       = cliente.localidad || '';
-        document.getElementById('zona_reparto').value    = cliente.zona_reparto || 'Zona A';
+        document.getElementById('zona_reparto').value    = cliente.zona_reparto || '';
         document.getElementById('observaciones').value   = cliente.observaciones || '';
         document.getElementById('modalTitle').innerText  = 'Editar Cliente';
     } else {
@@ -457,7 +479,7 @@ function rellenarCamposCliente(cliente) {
     document.getElementById('localidad').value      = cliente.localidad;
 }
 
-/** Busca y muestra los últimos pedidos del cliente para poder repetirlos con un clic. */
+/** Busca y muestra los últimos 3 pedidos del cliente para poder repetirlos con un clic. */
 async function cargarUltimosPedidosCliente(clienteId) {
     const contenedor = document.getElementById('ultimosPedidosCliente');
     const lista = document.getElementById('listaUltimosPedidos');
@@ -479,7 +501,9 @@ async function cargarUltimosPedidosCliente(clienteId) {
             const li = document.createElement('li');
             li.className = 'cursor-pointer text-sm bg-white hover:bg-emerald-100 border border-emerald-200 rounded px-2 py-1 transition-colors';
             const fecha = p.fecha_entrega ? new Date(p.fecha_entrega).toLocaleDateString('es-ES') : '';
-            li.innerHTML = `<strong>${escapeHTML(p.cantidad)}</strong> de <strong>${escapeHTML(p.producto)}</strong> <span class="text-gray-400">— ${fecha}</span>`;
+            const items = p.items && p.items.length > 0 ? p.items : [];
+            const resumen = items.map(it => `<strong>${escapeHTML(it.cantidad)}</strong> de <strong>${escapeHTML(it.producto)}</strong>`).join(', ');
+            li.innerHTML = `${resumen} <span class="text-gray-400">— ${fecha}</span>`;
             li.addEventListener('click', () => repetirPedidoAnterior(p));
             lista.appendChild(li);
         });
@@ -490,15 +514,62 @@ async function cargarUltimosPedidosCliente(clienteId) {
     }
 }
 
-/** Rellena cantidad y producto con los de un pedido anterior seleccionado. */
+/** Vacía la lista de productos del formulario y añade una fila en blanco. */
+function reiniciarItemsPedido() {
+    const lista = document.getElementById('itemsPedidoLista');
+    if (!lista) return;
+    lista.innerHTML = '';
+    agregarFilaItemPedido();
+}
+
+/** Añade una fila de "cantidad + producto" al formulario de Nuevo Pedido. */
+function agregarFilaItemPedido(cantidad = '', producto = '') {
+    const lista = document.getElementById('itemsPedidoLista');
+    if (!lista) return;
+
+    const fila = document.createElement('div');
+    fila.className = 'flex gap-2 items-start item-pedido-fila';
+    fila.innerHTML = `
+        <input type="number" min="1" step="1" placeholder="Cantidad" value="${escapeHTML(cantidad)}"
+            class="w-28 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent item-cantidad">
+        <input type="text" placeholder="Producto (ej. Pienso de gato)" value="${escapeHTML(producto)}"
+            class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent item-producto">
+        <button type="button" onclick="eliminarFilaItemPedido(this)" class="text-gray-400 hover:text-red-600 px-2 py-2" title="Quitar producto">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    lista.appendChild(fila);
+}
+
+function eliminarFilaItemPedido(boton) {
+    const lista = document.getElementById('itemsPedidoLista');
+    if (!lista) return;
+    // Siempre debe quedar al menos una fila.
+    if (lista.querySelectorAll('.item-pedido-fila').length <= 1) return;
+    boton.closest('.item-pedido-fila')?.remove();
+}
+
+/** Lee todas las filas de producto/cantidad y devuelve solo las que están completas. */
+function recolectarItemsPedido() {
+    const filas = document.querySelectorAll('#itemsPedidoLista .item-pedido-fila');
+    const items = [];
+    filas.forEach(fila => {
+        const cantidad = fila.querySelector('.item-cantidad')?.value.trim();
+        const producto = fila.querySelector('.item-producto')?.value.trim();
+        if (cantidad && producto) items.push({ cantidad, producto });
+    });
+    return items;
+}
+
+/** Sustituye los productos del formulario por los de un pedido anterior seleccionado. */
 function repetirPedidoAnterior(pedido) {
-    const cantidadInput = document.getElementById('cantidad');
-    const productoInput = document.getElementById('producto');
-    if (cantidadInput) {
-        const cantidadNum = parseInt(pedido.cantidad, 10);
-        cantidadInput.value = Number.isFinite(cantidadNum) ? cantidadNum : pedido.cantidad || '';
-    }
-    if (productoInput) productoInput.value = pedido.producto || '';
+    const lista = document.getElementById('itemsPedidoLista');
+    if (!lista || !pedido.items || pedido.items.length === 0) return;
+    lista.innerHTML = '';
+    pedido.items.forEach(it => {
+        const cantidadNum = parseInt(it.cantidad, 10);
+        agregarFilaItemPedido(Number.isFinite(cantidadNum) ? cantidadNum : (it.cantidad || ''), it.producto || '');
+    });
 }
 
 function inicializarFormularioPedidos() {
@@ -509,6 +580,8 @@ function inicializarFormularioPedidos() {
             if (container) container.classList.toggle('hidden', tipoPedido.value !== 'semanal');
         });
     }
+
+    reiniciarItemsPedido();
 
     const form = document.getElementById('nuevoPedidoForm');
     if (!form) return;
@@ -525,8 +598,12 @@ function inicializarFormularioPedidos() {
             apodoError?.classList.toggle('hidden', clienteValido);
         }
 
+        const items = recolectarItemsPedido();
+        const errorItems = document.getElementById('errorItemsPedido');
+        errorItems?.classList.toggle('hidden', items.length > 0);
+
         const formValido = validarFormulario(form);
-        if (!clienteValido || !formValido) {
+        if (!clienteValido || !formValido || items.length === 0) {
             if (!clienteValido) apodoInput?.focus();
             return;
         }
@@ -536,8 +613,7 @@ function inicializarFormularioPedidos() {
             apodo_cliente: clienteSeleccionado.apodo,
             tipo:          document.getElementById('tipoPedido').value,
             dia_semana:    document.getElementById('diaSemana')?.value || null,
-            cantidad:      parseInt(document.getElementById('cantidad').value),
-            producto:      document.getElementById('producto').value,
+            items:         items,
             fecha_entrega: document.getElementById('fechaEntregaNuevo').value,
             observaciones: document.getElementById('observacionesPedido').value || null
         };
@@ -565,9 +641,11 @@ function limpiarFormularioPedido() {
     clienteSeleccionado = null;
     document.getElementById('autocompleteSuggestions')?.classList.add('hidden');
     document.getElementById('ultimosPedidosCliente')?.classList.add('hidden');
+    document.getElementById('errorItemsPedido')?.classList.add('hidden');
     if (document.getElementById('nombreCompleto')) document.getElementById('nombreCompleto').value = '';
     if (document.getElementById('zonaReparto'))    document.getElementById('zonaReparto').value    = '';
     if (document.getElementById('localidad'))      document.getElementById('localidad').value      = '';
+    reiniciarItemsPedido();
 }
 
 async function cargarZonasNuevoPedido() {
@@ -648,7 +726,11 @@ function renderizarPedidosPendientes(pedidos) {
                         : 'Sin fecha'}
                 </p>
                 <p class="text-sm text-gray-500">Obs: ${escapeHTML(pedido.observaciones) || 'N/A'}</p>
-                <div class="flex justify-end mt-4">
+                <div class="flex justify-end gap-2 mt-4">
+                    <button onclick="cancelarPedidoPendiente(${pedido.id})"
+                        class="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg text-sm border border-red-200">
+                        <i class="fas fa-ban mr-1"></i> Cancelar
+                    </button>
                     <button onclick="mostrarCalendarioModal(${pedido.historial_id})"
                         class="bg-[#158765] hover:bg-[#0f6b50] text-white px-4 py-2 rounded-lg text-sm">
                         <i class="fas fa-calendar-days mr-1"></i> Programar en Calendario
@@ -660,6 +742,20 @@ function renderizarPedidosPendientes(pedidos) {
     }
 
     if (totalSpan) totalSpan.textContent = pedidos.length;
+}
+
+/** Cancela (elimina) un pedido que aún está pendiente de programar, sin tocar el histórico del cliente. */
+async function cancelarPedidoPendiente(id) {
+    if (!confirm('¿Cancelar este pedido pendiente? No se podrá deshacer.')) return;
+    try {
+        const res = await fetch(`/pedidos_pendientes/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo cancelar el pedido');
+        await cargarPedidosPendientes();
+        mostrarMensajeExito('Pedido cancelado');
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
 }
 
 function ordenarPedidosPendientes() {
@@ -810,7 +906,7 @@ function renderizarVistaSemanal(pedidos, diasSem) {
                         <div class="border border-gray-200 rounded-lg p-2 cursor-pointer hover:bg-emerald-50 transition-colors"
                              onclick="mostrarDetallesPedido(${p.id})">
                             <p class="text-sm font-semibold text-gray-800">${escapeHTML(p.apodo_cliente)}</p>
-                            <p class="text-xs text-gray-500">${escapeHTML(p.producto)} (${escapeHTML(p.cantidad)})</p>
+                            <p class="text-xs text-gray-500">${resumenItemsTexto(p.items)}</p>
                         </div>
                     `).join('')
                 }
@@ -843,7 +939,7 @@ async function cambiarDiaDiario() {
                     <div class="flex justify-between items-start">
                         <div>
                             <h3 class="font-bold text-lg">${escapeHTML(p.apodo_cliente)}</h3>
-                            <p class="text-sm text-gray-600">${escapeHTML(p.producto)} — Cantidad: ${escapeHTML(p.cantidad)}</p>
+                            <p class="text-sm text-gray-600">${resumenItemsTexto(p.items)}</p>
                         </div>
                         <span class="text-xs text-gray-400">
                             ${p.fecha_reparto ? new Date(p.fecha_reparto).toLocaleDateString('es-ES') : ''}
@@ -903,7 +999,7 @@ async function mostrarDetallesPedido(id) {
                 </div>
                 <div class="space-y-2 text-sm text-gray-700">
                     <p><strong>Cliente:</strong> ${escapeHTML(pedido.apodo_cliente) || 'N/A'}</p>
-                    <p><strong>Producto:</strong> ${escapeHTML(pedido.producto)} (${escapeHTML(pedido.cantidad)} uds.)</p>
+                    <p><strong>Productos:</strong> ${resumenItemsTexto(pedido.items) || 'N/A'}</p>
                     <p><strong>Fecha de entrega:</strong> ${new Date(pedido.fecha_entrega).toLocaleDateString('es-ES')}</p>
                     <p><strong>Teléfono:</strong> ${escapeHTML(pedido.telefono) || 'N/A'}</p>
                     <p><strong>Localidad:</strong> ${escapeHTML(pedido.localidad) || 'N/A'}</p>
@@ -1257,7 +1353,7 @@ function renderizarHojaReparto() {
             <td class="border px-2 py-2 text-center orden-cell">${index + 1}</td>
             <td class="border px-2 py-2">${escapeHTML(p.apodo_cliente)}</td>
             <td class="border px-2 py-2">${escapeHTML(p.telefono)}</td>
-            <td class="border px-2 py-2 observaciones-cell">${escapeHTML(p.cantidad)} ${escapeHTML(p.producto)}</td>
+            <td class="border px-2 py-2 observaciones-cell">${resumenItemsTexto(p.items)}</td>
             <td class="border px-2 py-2 capitalize">${escapeHTML(p.dia_reparto)}</td>
             <td class="border px-2 py-2 orden-cell">
                 <input type="number" min="1" step="1" value="${p.orden_reparto ?? ''}" class="hoja-input"
