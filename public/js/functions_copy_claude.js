@@ -148,6 +148,46 @@ function confirmarAccion(mensaje, textoBoton = 'Eliminar') {
         modal.addEventListener('click', onFondo);
     });
 }
+// Aviso simple (éxito/error/info) con el mismo estilo que el modal de
+// confirmar borrado, para no depender del alert() nativo del navegador.
+function mostrarAviso(mensaje, tipo = 'exito') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('modalAviso');
+        const msg = document.getElementById('mensajeAviso');
+        const icono = document.getElementById('iconoAviso');
+        const btnAceptar = document.getElementById('btnAceptarAviso');
+
+        // Red de seguridad si el modal no existiera en el HTML.
+        if (!modal || !msg || !icono || !btnAceptar) { window.alert(mensaje); resolve(); return; }
+
+        const estilos = {
+            exito: { clase: 'bg-green-100 text-green-600', icono: 'fa-circle-check' },
+            error: { clase: 'bg-red-100 text-red-600', icono: 'fa-circle-exclamation' },
+            info:  { clase: 'bg-blue-100 text-blue-600', icono: 'fa-circle-info' },
+        };
+        const estilo = estilos[tipo] || estilos.info;
+
+        msg.textContent = mensaje;
+        icono.className = `w-9 h-9 rounded-full ${estilo.clase} flex items-center justify-center shrink-0`;
+        icono.innerHTML = `<i class="fas ${estilo.icono}"></i>`;
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        const limpiar = () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            btnAceptar.removeEventListener('click', onAceptar);
+            modal.removeEventListener('click', onFondo);
+        };
+        const onAceptar = () => { limpiar(); resolve(); };
+        const onFondo = (e) => { if (e.target === modal) onAceptar(); };
+
+        btnAceptar.addEventListener('click', onAceptar);
+        modal.addEventListener('click', onFondo);
+    });
+}
+
 document.getElementById('formCambiarPassword')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const contrasena_actual = document.getElementById('passwordActual').value;
@@ -1643,10 +1683,10 @@ async function enviarBackupManual() {
         }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudo enviar la copia de seguridad.');
-        alert('Copia de seguridad enviada. Revisa la bandeja de entrada (y la de spam) del email configurado.');
+        await mostrarAviso('Copia de seguridad enviada. Revisa la bandeja de entrada (y la de spam) del email configurado.', 'exito');
     } catch (err) {
         console.error('Error al enviar la copia de seguridad manual:', err);
-        alert('No se pudo enviar la copia de seguridad:\n\n' + err.message);
+        await mostrarAviso('No se pudo enviar la copia de seguridad:\n\n' + err.message, 'error');
     } finally {
         boton.disabled = false;
         boton.innerHTML = textoOriginal;
