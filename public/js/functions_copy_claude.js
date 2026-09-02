@@ -33,6 +33,10 @@ const ETIQUETAS_ROL = {
             const partes = (usuario.nombre || usuario.nombre_usuario || '?').trim().split(/\s+/);
             iniciales.textContent = (partes[0]?.[0] || '').toUpperCase() + (partes[1]?.[0] || '').toUpperCase();
         }
+
+        // El número de pedidos pendientes (arriba, en la pestaña) debe verse
+        // nada más entrar, no solo al abrir la pestaña "Pendientes".
+        cargarPedidosPendientes();
     } catch (err) {
         window.location.href = '/login';
     }
@@ -902,6 +906,12 @@ function renderizarPedidosPendientes(pedidos) {
     const lista     = document.getElementById('listaPedidosPendientes');
     const vacio     = document.getElementById('mensajeVacioPendientes');
     const totalSpan = document.getElementById('totalPendientes');
+
+    // El contador de la pestaña (arriba, en el menú) vive en index.html y
+    // existe siempre; se actualiza aunque la pestaña "Pendientes" todavía
+    // no se haya abierto ni cargado en el DOM.
+    if (totalSpan) totalSpan.textContent = pedidos.length;
+
     if (!lista || !vacio) return;
 
     lista.innerHTML = '';
