@@ -86,7 +86,7 @@ function requireGestionUsuarios(req, res, next) {
 // y se colaba sin sesión hasta una ruta que cambia el rol de un usuario. Se
 // sustituye por una lista concreta de lo que realmente es estático, para que
 // ningún id de una ruta de datos pueda colarse por aquí.
-const RUTAS_PUBLICAS = new Set(['/login', '/logout', '/forgot-password', '/reset-password', '/api/backup-cron']);
+const RUTAS_PUBLICAS = new Set(['/login', '/logout', '/forgot-password', '/reset-password', '/backup-cron']);
 const PREFIJOS_ESTATICOS = ['/css/', '/js/', '/img/'];
 // Fragmentos de pestañas (BaseDatos.html, Calendario.html...) y páginas raíz
 // (login.html, index.html...): un único segmento de letras + ".html".
@@ -345,7 +345,7 @@ async function generarYEnviarBackup() {
   );
 }
 
-app.get('/api/backup-cron', async (req, res) => {
+app.get('/backup-cron', async (req, res) => {
   try {
     const secreto = process.env.CRON_SECRET;
     if (!secreto || req.headers.authorization !== `Bearer ${secreto}`) {
@@ -366,7 +366,7 @@ app.get('/api/backup-cron', async (req, res) => {
 // configurado sin tener que esperar a la fecha programada. Devuelve el
 // motivo exacto del fallo (por ejemplo, si falta configurar Resend) para
 // poder solucionarlo.
-app.post('/api/backup-manual', async (req, res) => {
+app.post('/backup-manual', async (req, res) => {
   try {
     const resultado = await generarYEnviarBackup();
     if (!resultado.ok) return res.status(500).json({ error: resultado.error });

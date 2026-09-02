@@ -1636,7 +1636,11 @@ async function enviarBackupManual() {
     boton.disabled = true;
     boton.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Enviando...';
     try {
-        const res = await fetch('/api/backup-manual', { method: 'POST' });
+        const res = await fetch('/backup-manual', { method: 'POST' });
+        const esJSON = (res.headers.get('content-type') || '').includes('application/json');
+        if (!esJSON) {
+            throw new Error(`El servidor respondió algo inesperado (código ${res.status}). Puede que el último despliegue en Vercel aún no haya terminado o haya fallado: revisa la pestaña "Deployments" de Vercel.`);
+        }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudo enviar la copia de seguridad.');
         alert('Copia de seguridad enviada. Revisa la bandeja de entrada (y la de spam) del email configurado.');
