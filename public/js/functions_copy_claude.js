@@ -5,6 +5,7 @@
 // redirige al login antes de que el resto de la app intente pedir datos.
 let rolActual = null;
 let usuarioActualId = null;
+let perfilActual = null;
 
 const ETIQUETAS_ROL = {
     desarrollador: 'Desarrollador (superadmin)',
@@ -19,6 +20,7 @@ const ETIQUETAS_ROL = {
         const usuario = await res.json();
         rolActual = usuario.rol;
         usuarioActualId = usuario.id;
+        perfilActual = usuario;
 
         const span = document.getElementById('usuarioActual');
         if (span) span.textContent = `${usuario.nombre} (${usuario.nombre_usuario})`;
@@ -61,6 +63,55 @@ function abrirModalCambiarPassword() {
 function cerrarModalCambiarPassword() {
     document.getElementById('modalCambiarPassword')?.classList.add('hidden');
 }
+
+function abrirModalEditarPerfil() {
+    document.getElementById('menuUsuario')?.classList.add('hidden');
+    document.getElementById('mensajeEditarPerfil')?.classList.add('hidden');
+    document.getElementById('perfilNombre').value = perfilActual?.nombre || '';
+    document.getElementById('perfilEmail').value = perfilActual?.email || '';
+    document.getElementById('modalEditarPerfil')?.classList.remove('hidden');
+}
+function cerrarModalEditarPerfil() {
+    document.getElementById('modalEditarPerfil')?.classList.add('hidden');
+}
+document.getElementById('formEditarPerfil')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nombre = document.getElementById('perfilNombre').value.trim();
+    const email = document.getElementById('perfilEmail').value.trim();
+    const mensaje = document.getElementById('mensajeEditarPerfil');
+
+    const mostrarMensaje = (texto, ok) => {
+        mensaje.textContent = texto;
+        mensaje.className = `text-sm mb-3 ${ok ? 'text-green-600' : 'text-red-500'}`;
+        mensaje.classList.remove('hidden');
+    };
+
+    if (!nombre) { mostrarMensaje('El nombre no puede estar vacío.', false); return; }
+
+    try {
+        const res = await fetch('/me', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, email: email || null })
+        });
+        const data = await res.json();
+        if (!res.ok) { mostrarMensaje(data.error || 'No se pudo actualizar el perfil.', false); return; }
+
+        perfilActual = data;
+        const span = document.getElementById('usuarioActual');
+        if (span) span.textContent = `${data.nombre} (${data.nombre_usuario})`;
+        const iniciales = document.getElementById('usuarioIniciales');
+        if (iniciales) {
+            const partes = (data.nombre || data.nombre_usuario || '?').trim().split(/\s+/);
+            iniciales.textContent = (partes[0]?.[0] || '').toUpperCase() + (partes[1]?.[0] || '').toUpperCase();
+        }
+
+        mostrarMensaje('Perfil actualizado.', true);
+        setTimeout(cerrarModalEditarPerfil, 1200);
+    } catch (err) {
+        mostrarMensaje('Error de conexión. Inténtalo de nuevo.', false);
+    }
+});
 
 // Modal de confirmación de la propia app (sustituye a los confirm() nativos del
 // navegador, que no se pueden personalizar y no encajan con el diseño). Devuelve
@@ -726,12 +777,15 @@ function mostrarMensajeExito(texto) {
 // ============================================================
 
 async function cargarPedidosPendientes() {
+    document.getElementById('loadingPendientes')?.classList.remove('hidden');
     try {
         const res = await fetch('/pedidos/pendientes');
         pedidosPendientes = await res.json();
         renderizarPedidosPendientes(pedidosPendientes);
     } catch (err) {
         console.error('Error al cargar pedidos pendientes:', err);
+    } finally {
+        document.getElementById('loadingPendientes')?.classList.add('hidden');
     }
 }
 
@@ -889,6 +943,7 @@ async function cargarPedidosCalendario() {
     const btnPeriodo = document.getElementById('btnPeriodoActual');
     if (btnPeriodo) btnPeriodo.textContent = 'Semana Actual';
 
+    document.getElementById('loadingCalendarioSemanal')?.classList.remove('hidden');
     try {
         const res = await fetch(`/pedidos_calendario?offset=${semanaActualOffset}`);
         if (!res.ok) throw new Error('Error al cargar pedidos del calendario');
@@ -901,6 +956,8 @@ async function cargarPedidosCalendario() {
         }
     } catch (err) {
         console.error('Error al cargar pedidos del calendario:', err);
+    } finally {
+        document.getElementById('loadingCalendarioSemanal')?.classList.add('hidden');
     }
 }
 
@@ -911,6 +968,7 @@ async function cargarPedidosMensual() {
     const hoy = new Date();
     const mesRef = new Date(hoy.getFullYear(), hoy.getMonth() + mesActualOffset, 1);
 
+    document.getElementById('loadingCalendarioMensual')?.classList.remove('hidden');
     try {
         const res = await fetch(`/pedidos_calendario?vista=mensual&offset=${mesActualOffset}`);
         if (!res.ok) throw new Error('Error al cargar pedidos del calendario');
@@ -918,6 +976,8 @@ async function cargarPedidosMensual() {
         renderizarVistaMensual(pedidos, mesRef);
     } catch (err) {
         console.error('Error al cargar pedidos del calendario (mensual):', err);
+    } finally {
+        document.getElementById('loadingCalendarioMensual')?.classList.add('hidden');
     }
 }
 
@@ -1067,6 +1127,8 @@ async function cambiarDiaDiario() {
 
     diaSeleccionadoDiario = select.value;
     lista.innerHTML = '';
+    vacio.classList.add('hidden');
+    document.getElementById('loadingCalendarioDiario')?.classList.remove('hidden');
 
     try {
         const res = await fetch(`/pedidos/diarios/${diaSeleccionadoDiario}`);
@@ -1097,6 +1159,8 @@ async function cambiarDiaDiario() {
         }
     } catch (err) {
         console.error('Error al cargar pedidos diarios:', err);
+    } finally {
+        document.getElementById('loadingCalendarioDiario')?.classList.add('hidden');
     }
 }
 
@@ -1213,6 +1277,7 @@ function semanaSiguiente() { semanaActualOffset++;    cargarPedidosCalendario();
 // ============================================================
 
 async function cargarConductores() {
+    document.getElementById('loadingConductores')?.classList.remove('hidden');
     try {
         const res = await fetch('/conductores');
         const data = await res.json();
@@ -1228,7 +1293,11 @@ async function cargarConductores() {
             `;
             lista.appendChild(li);
         });
-    } catch (err) { console.error('Error al cargar conductores:', err); }
+    } catch (err) {
+        console.error('Error al cargar conductores:', err);
+    } finally {
+        document.getElementById('loadingConductores')?.classList.add('hidden');
+    }
 }
 
 async function agregarConductor() {
@@ -1253,6 +1322,7 @@ async function eliminarConductor(id) {
 }
 
 async function cargarCamiones() {
+    document.getElementById('loadingCamiones')?.classList.remove('hidden');
     try {
         const res = await fetch('/camiones');
         const data = await res.json();
@@ -1268,7 +1338,11 @@ async function cargarCamiones() {
             `;
             lista.appendChild(li);
         });
-    } catch (err) { console.error('Error al cargar camiones:', err); }
+    } catch (err) {
+        console.error('Error al cargar camiones:', err);
+    } finally {
+        document.getElementById('loadingCamiones')?.classList.add('hidden');
+    }
 }
 
 async function agregarCamion() {
@@ -1293,6 +1367,7 @@ async function eliminarCamion(id) {
 }
 
 async function cargarZonas() {
+    document.getElementById('loadingZonas')?.classList.remove('hidden');
     try {
         const res = await fetch('/zonas');
         const data = await res.json();
@@ -1308,7 +1383,11 @@ async function cargarZonas() {
             `;
             lista.appendChild(li);
         });
-    } catch (err) { console.error(err); }
+    } catch (err) {
+        console.error('Error al cargar zonas:', err);
+    } finally {
+        document.getElementById('loadingZonas')?.classList.add('hidden');
+    }
 }
 
 async function agregarZona() {
@@ -1344,6 +1423,7 @@ function puedeGestionarRolCliente(rolObjetivo) {
 }
 
 async function cargarUsuarios() {
+    document.getElementById('loadingUsuarios')?.classList.remove('hidden');
     try {
         const res = await fetch('/usuarios');
         if (!res.ok) throw new Error('Error al obtener usuarios');
@@ -1377,7 +1457,11 @@ async function cargarUsuarios() {
             `;
             lista.appendChild(li);
         });
-    } catch (err) { console.error('Error al cargar usuarios:', err); }
+    } catch (err) {
+        console.error('Error al cargar usuarios:', err);
+    } finally {
+        document.getElementById('loadingUsuarios')?.classList.add('hidden');
+    }
 }
 
 async function agregarUsuario() {

@@ -264,13 +264,63 @@ app.post('/logout', (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/me', (req, res) => {
-  res.json({
-    id: req.usuario.id,
-    nombre: req.usuario.nombre,
-    nombre_usuario: req.usuario.nombre_usuario,
-    rol: req.usuario.rol,
-  });
+app.get('/me', async (req, res) => {
+  try {
+    // Se consulta la base de datos (en vez de fiarse solo del JWT) para que
+    // el email y el nombre mostrados estén siempre al día, aunque el usuario
+    // los haya cambiado desde otra pestaña/dispositivo con la misma sesión.
+    const { rows } = await pool.query(
+      'SELECT id, nombre, nombre_usuario, email, rol FROM usuarios WHERE id = $1',
+      [req.usuario.id]
+    );
+    const usuario = rows[0];
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    res.json(usuario);
+  } catch (err) {
+    console.error('Error al obtener /me:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+});
+
+// --- EDITAR MI PROPIO PERFIL (nombre y email; la contraseña va por /change-password) ---
+app.patch('/me', async (req, res) => {
+  try {
+    const { nombre, email } = req.body;
+    if (!nombre || !nombre.trim()) {
+      return res.status(400).json({ error: 'El nombre no puede estar vacío.' });
+    }
+    const emailLimpio = email && email.trim() ? email.trim() : null;
+
+    const { rows } = await pool.query(
+      `UPDATE usuarios SET nombre = $1, email = $2 WHERE id = $3
+       RETURNING id, nombre, nombre_usuario, email, rol`,
+      [nombre.trim(), emailLimpio, req.usuario.id]
+    );
+    const actualizado = rows[0];
+
+    // Se reemite la cookie de sesión con el nombre actualizado para que el
+    // resto de la app (avatar, menú, etc., que leen el nombre del JWT) lo
+    // reflejen sin tener que volver a iniciar sesión.
+    const token = jwt.sign(
+      { id: actualizado.id, nombre_usuario: actualizado.nombre_usuario, nombre: actualizado.nombre, rol: actualizado.rol },
+      JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 12 * 60 * 60 * 1000,
+    });
+
+    res.json(actualizado);
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'Ese email ya está en uso por otro usuario.' });
+    }
+    console.error('Error al actualizar el perfil:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
 });
 
 // --- CAMBIO DE CONTRASEÑA (usuario ya logueado, cambia la suya propia) ---
