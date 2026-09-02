@@ -73,12 +73,32 @@ function requireGestionUsuarios(req, res, next) {
 }
 
 // Rutas que no requieren sesión: login/logout, recuperación de contraseña, y
-// todo lo que sea un archivo estático (HTML/CSS/JS/imágenes) para que el login
-// y sus recursos se puedan cargar sin estar ya autenticado. Los datos de
-// verdad siempre viajan por rutas de API (sin punto en la ruta), que sí se protegen.
+// los archivos estáticos conocidos (HTML/CSS/JS/imágenes/favicon) para que el
+// login y sus recursos se puedan cargar sin estar ya autenticado.
+//
+// IMPORTANTE: antes esto se decidía con "la ruta pedida contiene un punto",
+// pensado para dejar pasar archivos como "estilos.css". Pero varias rutas de
+// datos reales aceptan un id en la URL (p.ej. "/pedidos_historial/:cliente_id",
+// "/usuarios/:id/rol"), y por defecto ese id puede contener CUALQUIER carácter
+// menos "/" — incluido un punto. Eso significaba que una petición manipulada
+// como "/usuarios/5.a/rol" (con un punto metido en el id) "contenía un punto"
+// y se colaba sin sesión hasta una ruta que cambia el rol de un usuario. Se
+// sustituye por una lista concreta de lo que realmente es estático, para que
+// ningún id de una ruta de datos pueda colarse por aquí.
 const RUTAS_PUBLICAS = new Set(['/login', '/logout', '/forgot-password', '/reset-password']);
+const PREFIJOS_ESTATICOS = ['/css/', '/js/', '/img/'];
+// Fragmentos de pestañas (BaseDatos.html, Calendario.html...) y páginas raíz
+// (login.html, index.html...): un único segmento de letras + ".html".
+const ES_HTML_RAIZ = /^\/[A-Za-z][A-Za-z-]*\.html$/;
+
+function esRecursoEstaticoConocido(ruta) {
+  return ruta === '/favicon.ico'
+    || PREFIJOS_ESTATICOS.some((prefijo) => ruta.startsWith(prefijo))
+    || ES_HTML_RAIZ.test(ruta);
+}
+
 app.use((req, res, next) => {
-  if (RUTAS_PUBLICAS.has(req.path) || req.path === '/' || req.path.includes('.')) {
+  if (RUTAS_PUBLICAS.has(req.path) || req.path === '/' || req.path === '/inicio' || esRecursoEstaticoConocido(req.path)) {
     return next();
   }
   return requireAuth(req, res, next);
@@ -371,7 +391,7 @@ app.post('/forgot-password', async (req, res) => {
         'UPDATE usuarios SET reset_token_hash = $1, reset_token_expira = $2 WHERE id = $3',
         [tokenHash, expira, usuario.id]
       );
-      const enlace = `${req.protocol}://${req.get('host')}/reset-password.html?token=${token}`;
+      const enlace = `${req.protocol}://${req.get('host')}/reset-password?token=${token}`;
       const logoUrl = `${req.protocol}://${req.get('host')}/img/logo-empresa.jpg`;
 
       // Si has creado y publicado la plantilla en resend.com/templates (ver
@@ -1251,11 +1271,27 @@ app.delete('/pedidos/hoja-reparto', async (req, res) => {
   }
 });
 
+// Rutas "limpias": las páginas se pueden pedir sin el .html y la app
+// principal se sirve tanto en "/" como en "/inicio", para que la barra de
+// direcciones no muestre nunca "index.html", "login.html", etc.
+app.get('/inicio', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+app.get('/forgot-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'forgot-password.html'));
+});
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+});
+
 // Servir archivos estáticos desde la carpeta 'public'
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 if (require.main === module) {

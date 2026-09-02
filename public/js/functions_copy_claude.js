@@ -16,7 +16,7 @@ const ETIQUETAS_ROL = {
 (async function comprobarSesion() {
     try {
         const res = await fetch('/me');
-        if (!res.ok) { window.location.href = 'login.html'; return; }
+        if (!res.ok) { window.location.href = '/login'; return; }
         const usuario = await res.json();
         rolActual = usuario.rol;
         usuarioActualId = usuario.id;
@@ -34,13 +34,13 @@ const ETIQUETAS_ROL = {
             iniciales.textContent = (partes[0]?.[0] || '').toUpperCase() + (partes[1]?.[0] || '').toUpperCase();
         }
     } catch (err) {
-        window.location.href = 'login.html';
+        window.location.href = '/login';
     }
 })();
 
 async function cerrarSesion() {
     try { await fetch('/logout', { method: 'POST' }); } catch (err) { /* ignorar */ }
-    window.location.href = 'login.html';
+    window.location.href = '/login';
 }
 
 function toggleMenuUsuario() {
@@ -320,6 +320,7 @@ async function cambiarPestana(nombrePestana) {
 function inicializarBaseDatos() {
     cargarClientes();
     cargarZonasClienteForm();
+    inicializarLocalidadAutocomplete();
     const form = document.getElementById('clienteForm');
     if (form) form.addEventListener('submit', guardarCliente);
 }
@@ -337,6 +338,74 @@ async function cargarZonasClienteForm() {
     } catch (err) {
         console.error('Error al cargar zonas para el formulario de clientes:', err);
     }
+}
+
+/**
+ * Autocompletado de "Localidad" (solo España) en el formulario de Clientes,
+ * usando el buscador público de OpenStreetMap (Nominatim) — no hace falta
+ * ninguna clave de API. Se espera 350ms tras dejar de escribir (para no
+ * disparar una petición por cada tecla) y se piden mínimo 3 letras.
+ */
+function inicializarLocalidadAutocomplete() {
+    const input = document.getElementById('localidad');
+    const lista = document.getElementById('localidadSuggestions');
+    if (!input || !lista) return;
+
+    let temporizador = null;
+
+    input.addEventListener('input', () => {
+        const query = input.value.trim();
+        clearTimeout(temporizador);
+
+        if (query.length < 3) {
+            lista.classList.add('hidden');
+            lista.innerHTML = '';
+            return;
+        }
+
+        temporizador = setTimeout(async () => {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=es&addressdetails=1&limit=6&q=${encodeURIComponent(query)}`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('No se pudo buscar la localidad');
+                const resultados = await res.json();
+
+                // Se prefiere el nombre "limpio" de la población (ciudad/pueblo/aldea)
+                // en vez de la dirección completa que devuelve Nominatim, y se quitan duplicados.
+                const nombres = [];
+                resultados.forEach(r => {
+                    const nombre = r.address?.city || r.address?.town || r.address?.village
+                        || r.address?.municipality || r.address?.hamlet
+                        || (r.display_name ? r.display_name.split(',')[0] : null);
+                    if (nombre && !nombres.includes(nombre)) nombres.push(nombre);
+                });
+
+                lista.innerHTML = '';
+                if (nombres.length === 0) { lista.classList.add('hidden'); return; }
+
+                nombres.forEach(nombre => {
+                    const li = document.createElement('li');
+                    li.textContent = nombre;
+                    li.classList.add('cursor-pointer', 'px-4', 'py-2', 'hover:bg-gray-200');
+                    li.addEventListener('click', () => {
+                        input.value = nombre;
+                        lista.classList.add('hidden');
+                        lista.innerHTML = '';
+                    });
+                    lista.appendChild(li);
+                });
+                lista.classList.remove('hidden');
+            } catch (err) {
+                console.error('Error al buscar localidades:', err);
+            }
+        }, 350);
+    });
+
+    input.addEventListener('blur', () => {
+        // Pequeño retraso para que el clic sobre una sugerencia se registre
+        // antes de ocultar la lista.
+        setTimeout(() => lista.classList.add('hidden'), 150);
+    });
 }
 
 function inicializarNuevoPedido() {

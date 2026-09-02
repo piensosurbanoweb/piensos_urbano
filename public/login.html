@@ -40,7 +40,7 @@
             <p id="mensajeError" class="text-red-500 text-center mt-4 hidden"></p>
         </form>
         <p class="text-center mt-4">
-            <a href="forgot-password.html" class="text-sm text-gray-500 hover:text-[#158765]">¿Olvidaste tu contraseña?</a>
+            <a href="forgot-password" class="text-sm text-gray-500 hover:text-[#158765]">¿Olvidaste tu contraseña?</a>
         </p>
         <p class="text-center mt-2">
             <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=piensosurbanoweb@gmail.com&amp;su=Soporte%20-%20Piensos%20y%20Cereales%20Urbano" target="_blank" rel="noopener" class="text-xs text-gray-400 hover:text-[#158765]">
@@ -75,7 +75,7 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    window.location.href = '/index.html';
+                    window.location.href = '/';
                 } else {
                     mensajeError.textContent = data.error || 'No se pudo iniciar sesión.';
                     mensajeError.classList.remove('hidden');

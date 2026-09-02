@@ -63,12 +63,16 @@
                     </div>
                     <div>
                         <label for="telefono" class="campo-label campo-opcional">Teléfono</label>
-                        <input type="tel" id="telefono" name="telefono" placeholder="Ej. 612345678" class="w-full border rounded-lg p-2" pattern="[0-9+\s-]{6,15}" title="Introduce un teléfono válido (6-15 dígitos).">
-                        <p class="campo-error hidden">Introduce un teléfono válido o deja el campo vacío.</p>
+                        <input type="tel" id="telefono" name="telefono" placeholder="Ej. 612 345 678"
+                               class="w-full border rounded-lg p-2"
+                               pattern="^(?:\+34[ -]?|0034[ -]?)?[6789](?:[ -]?[0-9]){8}$"
+                               title="Teléfono español válido: 9 dígitos empezando por 6, 7, 8 o 9 (con o sin +34).">
+                        <p class="campo-error hidden">Introduce un teléfono español válido (9 dígitos, empieza por 6, 7, 8 o 9) o deja el campo vacío.</p>
                     </div>
-                    <div>
+                    <div class="relative">
                         <label for="localidad" class="campo-label campo-opcional">Localidad</label>
-                        <input type="text" id="localidad" name="localidad" placeholder="Localidad" class="w-full border rounded-lg p-2">
+                        <input type="text" id="localidad" name="localidad" placeholder="Empieza a escribir..." class="w-full border rounded-lg p-2" autocomplete="off">
+                        <ul id="localidadSuggestions" class="autocomplete-suggestions hidden absolute w-full bg-white border border-gray-300 rounded-lg mt-1 z-10 max-h-48 overflow-y-auto"></ul>
                     </div>
                     <div>
                         <label for="zona_reparto" class="campo-label campo-obligatorio">Zona Reparto</label>
