@@ -98,6 +98,21 @@
             </div>
         </div>
 
+        <div id="modalConfirmacion" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+            <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-5">
+                <div class="flex items-start gap-3 mb-5">
+                    <div class="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                        <i class="fas fa-triangle-exclamation"></i>
+                    </div>
+                    <p id="mensajeConfirmacion" class="text-sm text-gray-700 mt-1.5"></p>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" id="btnCancelarConfirmacion" class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100 text-sm">Cancelar</button>
+                    <button type="button" id="btnAceptarConfirmacion" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium text-sm">Eliminar</button>
+                </div>
+            </div>
+        </div>
+
         <div id="contenidoPestanas" class="mt-4">
             </div>
     </div>

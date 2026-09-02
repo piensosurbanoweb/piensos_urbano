@@ -61,6 +61,42 @@ function abrirModalCambiarPassword() {
 function cerrarModalCambiarPassword() {
     document.getElementById('modalCambiarPassword')?.classList.add('hidden');
 }
+
+// Modal de confirmación de la propia app (sustituye a los confirm() nativos del
+// navegador, que no se pueden personalizar y no encajan con el diseño). Devuelve
+// una Promise<boolean>: true si se pulsa el botón de aceptar, false si se cancela.
+function confirmarAccion(mensaje, textoBoton = 'Eliminar') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('modalConfirmacion');
+        const msg = document.getElementById('mensajeConfirmacion');
+        const btnAceptar = document.getElementById('btnAceptarConfirmacion');
+        const btnCancelar = document.getElementById('btnCancelarConfirmacion');
+
+        // Si por lo que sea el modal no existe en el HTML, no bloqueamos la acción:
+        // usamos el confirm() nativo como red de seguridad.
+        if (!modal || !msg || !btnAceptar || !btnCancelar) { resolve(window.confirm(mensaje)); return; }
+
+        msg.textContent = mensaje;
+        btnAceptar.textContent = textoBoton;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        const limpiar = () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            btnAceptar.removeEventListener('click', onAceptar);
+            btnCancelar.removeEventListener('click', onCancelar);
+            modal.removeEventListener('click', onFondo);
+        };
+        const onAceptar = () => { limpiar(); resolve(true); };
+        const onCancelar = () => { limpiar(); resolve(false); };
+        const onFondo = (e) => { if (e.target === modal) onCancelar(); };
+
+        btnAceptar.addEventListener('click', onAceptar);
+        btnCancelar.addEventListener('click', onCancelar);
+        modal.addEventListener('click', onFondo);
+    });
+}
 document.getElementById('formCambiarPassword')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const contrasena_actual = document.getElementById('passwordActual').value;
@@ -426,7 +462,7 @@ function cerrarModal() {
 }
 
 async function eliminarCliente(id) {
-    if (!id || !confirm('¿Seguro que deseas eliminar este cliente?')) return;
+    if (!id || !(await confirmarAccion('¿Seguro que deseas eliminar este cliente?'))) return;
     try {
         const res = await fetch(`/clientes/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Error al eliminar cliente');
@@ -751,7 +787,7 @@ function renderizarPedidosPendientes(pedidos) {
 
 /** Cancela (elimina) un pedido que aún está pendiente de programar, sin tocar el histórico del cliente. */
 async function cancelarPedidoPendiente(id) {
-    if (!confirm('¿Cancelar este pedido pendiente? No se podrá deshacer.')) return;
+    if (!(await confirmarAccion('¿Cancelar este pedido pendiente? No se podrá deshacer.', 'Cancelar pedido'))) return;
     try {
         const res = await fetch(`/pedidos_pendientes/${id}`, { method: 'DELETE' });
         const data = await res.json();
@@ -1209,7 +1245,7 @@ async function agregarConductor() {
 }
 
 async function eliminarConductor(id) {
-    if (!confirm('¿Eliminar este conductor?')) return;
+    if (!(await confirmarAccion('¿Eliminar este conductor?'))) return;
     try {
         const res = await fetch(`/conductores/${id}`, { method: 'DELETE' });
         if (res.ok) cargarConductores();
@@ -1249,7 +1285,7 @@ async function agregarCamion() {
 }
 
 async function eliminarCamion(id) {
-    if (!confirm('¿Eliminar este camión?')) return;
+    if (!(await confirmarAccion('¿Eliminar este camión?'))) return;
     try {
         const res = await fetch(`/camiones/${id}`, { method: 'DELETE' });
         if (res.ok) cargarCamiones();
@@ -1289,7 +1325,7 @@ async function agregarZona() {
 }
 
 async function eliminarZona(id) {
-    if (!confirm('¿Eliminar esta zona?')) return;
+    if (!(await confirmarAccion('¿Eliminar esta zona?'))) return;
     try {
         const res = await fetch(`/zonas/${id}`, { method: 'DELETE' });
         if (res.ok) cargarZonas();
@@ -1393,7 +1429,7 @@ async function cambiarRolUsuario(id, rol) {
 }
 
 async function eliminarUsuario(id) {
-    if (!confirm('¿Quitar el acceso a este usuario?')) return;
+    if (!(await confirmarAccion('¿Quitar el acceso a este usuario?', 'Quitar acceso'))) return;
     try {
         const res = await fetch(`/usuarios/${id}`, { method: 'DELETE' });
         const data = await res.json();
@@ -1404,8 +1440,8 @@ async function eliminarUsuario(id) {
     }
 }
 
-function limpiarPedidosAntiguos() {
-    if (confirm('¿Limpiar pedidos antiguos? Esta acción no se puede deshacer.'))
+async function limpiarPedidosAntiguos() {
+    if (await confirmarAccion('¿Limpiar pedidos antiguos? Esta acción no se puede deshacer.', 'Limpiar'))
         alert('Función pendiente de implementar en el servidor.');
 }
 
@@ -1512,8 +1548,8 @@ function exportarHojaRepartoPDF() {
     doc.save(`hoja_reparto_${fecha}.pdf`);
 }
 
-function resetearSistema() {
-    if (confirm('ATENCIÓN: ¿Resetear el sistema? Se eliminarán TODOS los datos. Acción irreversible.'))
+async function resetearSistema() {
+    if (await confirmarAccion('ATENCIÓN: ¿Resetear el sistema? Se eliminarán TODOS los datos. Acción irreversible.', 'Resetear'))
         alert('Función pendiente de implementar en el servidor.');
 }
 
@@ -1622,7 +1658,7 @@ async function actualizarCampoHoja(id, campo, valor) {
 }
 
 async function eliminarPedidoHoja(id) {
-    if (!confirm('¿Quitar este pedido de la hoja de reparto? (el pedido programado no se borra)')) return;
+    if (!(await confirmarAccion('¿Quitar este pedido de la hoja de reparto? (el pedido programado no se borra)', 'Quitar'))) return;
     try {
         const res = await fetch(`/pedidos/hoja-reparto/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Error al quitar el pedido');
@@ -1634,7 +1670,7 @@ async function eliminarPedidoHoja(id) {
 }
 
 async function limpiarHojaReparto() {
-    if (!confirm('¿Vaciar toda la hoja de reparto? Los pedidos seguirán programados en el calendario.')) return;
+    if (!(await confirmarAccion('¿Vaciar toda la hoja de reparto? Los pedidos seguirán programados en el calendario.', 'Vaciar hoja'))) return;
     try {
         const res = await fetch('/pedidos/hoja-reparto', { method: 'DELETE' });
         if (!res.ok) throw new Error('Error al limpiar la hoja');
