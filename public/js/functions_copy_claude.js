@@ -889,7 +889,7 @@ function renderizarPedidosPendientes(pedidos) {
                         ? new Date(pedido.fecha_programacion).toLocaleDateString('es-ES')
                         : 'Sin fecha'}
                 </p>
-                <p class="text-sm text-gray-500">Obs: ${escapeHTML(pedido.observaciones) || 'N/A'}</p>
+                <p class="text-sm text-gray-500">Obs: ${escapeHTML(pedido.observaciones) || 'Ninguna'}</p>
                 <div class="flex justify-end gap-2 mt-4">
                     <button onclick="cancelarPedidoPendiente(${pedido.id})"
                         class="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg text-sm border border-red-200">
@@ -1219,7 +1219,7 @@ async function cambiarDiaDiario() {
                             ${p.fecha_reparto ? new Date(p.fecha_reparto).toLocaleDateString('es-ES') : ''}
                         </span>
                     </div>
-                    <p class="text-sm text-gray-500 mt-1">Obs: ${escapeHTML(p.observaciones) || 'N/A'}</p>
+                    <p class="text-sm text-gray-500 mt-1">Obs: ${escapeHTML(p.observaciones) || 'Ninguna'}</p>
                 `;
                 lista.appendChild(div);
             });
