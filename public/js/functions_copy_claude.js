@@ -1626,6 +1626,288 @@ async function exportarDatos() {
     }
 }
 
+
+// Botón "Enviar Copia de Seguridad Ahora" (Gestión BD): dispara el mismo
+// envío que la tarea programada, pero al momento, para poder comprobar
+// que Resend está bien configurado sin esperar a la fecha automática.
+async function enviarBackupManual() {
+    const boton = document.getElementById('btnBackupManual');
+    const textoOriginal = boton.innerHTML;
+    boton.disabled = true;
+    boton.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Enviando...';
+    try {
+        const res = await fetch('/api/backup-manual', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo enviar la copia de seguridad.');
+        alert('Copia de seguridad enviada. Revisa la bandeja de entrada (y la de spam) del email configurado.');
+    } catch (err) {
+        console.error('Error al enviar la copia de seguridad manual:', err);
+        alert('No se pudo enviar la copia de seguridad:\n\n' + err.message);
+    } finally {
+        boton.disabled = false;
+        boton.innerHTML = textoOriginal;
+    }
+}
+
+// --- Importación masiva desde Excel (clientes y/o pedidos) ---
+// El Excel se lee y se mapea aquí mismo, en el navegador, con la misma
+// librería (SheetJS) que ya se usa para exportar; al servidor solo llegan
+// los datos ya traducidos al formato de la web, para poder mapear
+// cualquier Excel real sea cual sea el nombre de sus columnas.
+let importarWorkbook = null;
+
+function abrirModalImportarExcel() {
+    document.getElementById('modalImportarExcel')?.classList.remove('hidden');
+    resetearModalImportarExcel();
+}
+
+function cerrarModalImportarExcel() {
+    document.getElementById('modalImportarExcel')?.classList.add('hidden');
+}
+
+function resetearModalImportarExcel() {
+    importarWorkbook = null;
+    const input = document.getElementById('inputArchivoImportar');
+    if (input) input.value = '';
+    const opcionInicial = '<option value="">-- Selecciona un archivo primero --</option>';
+    document.getElementById('selectHojaClientes').innerHTML = opcionInicial;
+    document.getElementById('selectHojaPedidos').innerHTML = opcionInicial;
+    document.getElementById('panelMapeoClientes').classList.add('hidden');
+    document.getElementById('panelMapeoClientes').innerHTML = '';
+    document.getElementById('panelMapeoPedidos').classList.add('hidden');
+    document.getElementById('panelMapeoPedidos').innerHTML = '';
+    const resultado = document.getElementById('resultadoImportar');
+    resultado.classList.add('hidden');
+    resultado.innerHTML = '';
+}
+
+function manejarArchivoImportar(event) {
+    const archivo = event.target.files[0];
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onload = (e) => {
+        try {
+            const datos = new Uint8Array(e.target.result);
+            importarWorkbook = XLSX.read(datos, { type: 'array' });
+            const opciones = '<option value="">-- No importar --</option>'
+                + importarWorkbook.SheetNames.map(n => `<option value="${escapeHTML(n)}">${escapeHTML(n)}</option>`).join('');
+            document.getElementById('selectHojaClientes').innerHTML = opciones;
+            document.getElementById('selectHojaPedidos').innerHTML = opciones;
+            document.getElementById('panelMapeoClientes').classList.add('hidden');
+            document.getElementById('panelMapeoPedidos').classList.add('hidden');
+        } catch (err) {
+            console.error('Error al leer el Excel:', err);
+            alert('No se pudo leer ese archivo. Asegúrate de que es un Excel válido (.xlsx o .xls).');
+        }
+    };
+    lector.readAsArrayBuffer(archivo);
+}
+
+function obtenerFilasHojaImportar(nombreHoja) {
+    if (!importarWorkbook || !nombreHoja) return [];
+    const hoja = importarWorkbook.Sheets[nombreHoja];
+    return XLSX.utils.sheet_to_json(hoja, { defval: '' });
+}
+
+function obtenerColumnasHojaImportar(nombreHoja) {
+    const filas = obtenerFilasHojaImportar(nombreHoja);
+    const columnas = new Set();
+    filas.forEach(fila => Object.keys(fila).forEach(clave => columnas.add(clave)));
+    return Array.from(columnas);
+}
+
+// Genera un <select> con las columnas detectadas, intentando adivinar cuál
+// es la correcta según nombres habituales (para no obligar a mapear a mano
+// si el Excel ya usa nombres parecidos a los de la web).
+function selectorColumnaImportar(id, columnas, posiblesNombres) {
+    const coincidencia = columnas.find(c => posiblesNombres.includes(c.trim().toLowerCase()));
+    const opciones = ['<option value="">-- No usar --</option>']
+        .concat(columnas.map(c => `<option value="${escapeHTML(c)}" ${c === coincidencia ? 'selected' : ''}>${escapeHTML(c)}</option>`));
+    return `<select id="${id}" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm">${opciones.join('')}</select>`;
+}
+
+function cambiarHojaClientes() {
+    const nombreHoja = document.getElementById('selectHojaClientes').value;
+    const panel = document.getElementById('panelMapeoClientes');
+    if (!nombreHoja) { panel.classList.add('hidden'); panel.innerHTML = ''; return; }
+
+    const columnas = obtenerColumnasHojaImportar(nombreHoja);
+    const campos = [
+        ['mapClienteApodo', 'Apodo *', ['apodo']],
+        ['mapClienteNombre', 'Nombre y Apellidos *', ['nombre completo', 'nombre y apellidos', 'nombre']],
+        ['mapClienteTelefono', 'Teléfono', ['telefono', 'teléfono', 'movil', 'móvil']],
+        ['mapClienteLocalidad', 'Localidad', ['localidad', 'poblacion', 'población', 'ciudad']],
+        ['mapClienteZona', 'Zona Reparto *', ['zona', 'zona reparto', 'zona de reparto']],
+        ['mapClienteObservaciones', 'Observaciones', ['observaciones', 'notas']],
+    ];
+    panel.innerHTML = campos.map(([id, etiqueta, posibles]) => `
+        <div>
+            <label class="text-xs font-medium text-gray-600 block mb-1">${etiqueta}</label>
+            ${selectorColumnaImportar(id, columnas, posibles)}
+        </div>
+    `).join('');
+    panel.classList.remove('hidden');
+}
+
+function cambiarHojaPedidos() {
+    const nombreHoja = document.getElementById('selectHojaPedidos').value;
+    const panel = document.getElementById('panelMapeoPedidos');
+    if (!nombreHoja) { panel.classList.add('hidden'); panel.innerHTML = ''; return; }
+
+    const columnas = obtenerColumnasHojaImportar(nombreHoja);
+    const campos = [
+        ['mapPedidoApodo', 'Apodo del Cliente *', ['apodo']],
+        ['mapPedidoProducto', 'Producto *', ['producto', 'productos']],
+        ['mapPedidoCantidad', 'Cantidad *', ['cantidad']],
+        ['mapPedidoTipo', 'Tipo de Pedido', ['tipo', 'tipo de pedido']],
+        ['mapPedidoDia', 'Día de la Semana', ['dia', 'día', 'dia semana', 'día de la semana']],
+        ['mapPedidoFecha', 'Fecha de Entrega', ['fecha', 'fecha entrega', 'fecha de entrega']],
+        ['mapPedidoObservaciones', 'Observaciones', ['observaciones', 'notas']],
+    ];
+    panel.innerHTML = campos.map(([id, etiqueta, posibles]) => `
+        <div>
+            <label class="text-xs font-medium text-gray-600 block mb-1">${etiqueta}</label>
+            ${selectorColumnaImportar(id, columnas, posibles)}
+        </div>
+    `).join('') + `
+        <div class="md:col-span-2 flex items-start gap-2 mt-1">
+            <input type="checkbox" id="chkPedidosPendientes" class="w-4 h-4 mt-0.5">
+            <label for="chkPedidosPendientes" class="text-sm text-gray-600">
+                Marcar estos pedidos como pendientes de programar. Si lo dejas sin marcar, se guardan igualmente
+                en el historial del cliente, pero no aparecerán en la pestaña "Pedidos Pendientes".
+            </label>
+        </div>
+    `;
+    panel.classList.remove('hidden');
+}
+
+// Convierte una fecha del Excel (puede venir como número de serie de Excel,
+// como texto dd/mm/aaaa o ya en aaaa-mm-dd) al formato aaaa-mm-dd que espera la web.
+function formatearFechaImportada(valor) {
+    if (valor === '' || valor === null || valor === undefined) return '';
+    if (typeof valor === 'number') {
+        const fecha = XLSX.SSF.parse_date_code(valor);
+        if (!fecha) return '';
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${fecha.y}-${pad(fecha.m)}-${pad(fecha.d)}`;
+    }
+    const texto = String(valor).trim();
+    const coincideISO = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (coincideISO) return `${coincideISO[1]}-${coincideISO[2]}-${coincideISO[3]}`;
+    const coincideDMY = texto.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if (coincideDMY) {
+        const [, d, m, y] = coincideDMY;
+        return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+    return '';
+}
+
+function listaErroresImportar(errores) {
+    if (!errores || errores.length === 0) return '';
+    return `<ul class="text-xs text-red-600 list-disc pl-5 mt-1 max-h-32 overflow-y-auto">
+        ${errores.map(e => `<li>Fila ${e.fila}: ${escapeHTML(e.motivo)}</li>`).join('')}
+    </ul>`;
+}
+
+async function ejecutarImportacion() {
+    const resultadoDiv = document.getElementById('resultadoImportar');
+    resultadoDiv.classList.remove('hidden');
+
+    const hojaClientes = document.getElementById('selectHojaClientes').value;
+    const hojaPedidos = document.getElementById('selectHojaPedidos').value;
+
+    if (!hojaClientes && !hojaPedidos) {
+        resultadoDiv.innerHTML = '<p class="text-red-600">Selecciona al menos una hoja para importar (clientes y/o pedidos).</p>';
+        return;
+    }
+
+    resultadoDiv.innerHTML = '<p class="text-gray-500"><i class="fas fa-spinner fa-spin mr-1"></i> Importando, no cierres esta ventana...</p>';
+    let resumenHtml = '';
+
+    if (hojaClientes) {
+        const val = (id) => document.getElementById(id)?.value || '';
+        const mapeo = {
+            apodo: val('mapClienteApodo'),
+            nombre_completo: val('mapClienteNombre'),
+            telefono: val('mapClienteTelefono'),
+            localidad: val('mapClienteLocalidad'),
+            zona_reparto: val('mapClienteZona'),
+            observaciones: val('mapClienteObservaciones'),
+        };
+        if (!mapeo.apodo || !mapeo.nombre_completo || !mapeo.zona_reparto) {
+            resultadoDiv.innerHTML = '<p class="text-red-600">En Clientes, indica qué columna es el Apodo, el Nombre y la Zona Reparto (son obligatorios).</p>';
+            return;
+        }
+        const clientes = obtenerFilasHojaImportar(hojaClientes).map(f => ({
+            apodo: String(f[mapeo.apodo] ?? '').trim(),
+            nombre_completo: String(f[mapeo.nombre_completo] ?? '').trim(),
+            telefono: mapeo.telefono ? String(f[mapeo.telefono] ?? '').trim() : '',
+            localidad: mapeo.localidad ? String(f[mapeo.localidad] ?? '').trim() : '',
+            zona_reparto: String(f[mapeo.zona_reparto] ?? '').trim(),
+            observaciones: mapeo.observaciones ? String(f[mapeo.observaciones] ?? '').trim() : '',
+        }));
+
+        try {
+            const res = await fetch('/clientes/importar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientes }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Error al importar clientes');
+            resumenHtml += `<p class="text-green-700"><i class="fas fa-check-circle mr-1"></i> Clientes: ${data.creados} nuevos, ${data.actualizados} actualizados, ${data.errores.length} con error.</p>${listaErroresImportar(data.errores)}`;
+        } catch (err) {
+            console.error('Error al importar clientes:', err);
+            resumenHtml += `<p class="text-red-600">Error al importar clientes: ${escapeHTML(err.message)}</p>`;
+        }
+    }
+
+    if (hojaPedidos) {
+        const val = (id) => document.getElementById(id)?.value || '';
+        const mapeo = {
+            apodo_cliente: val('mapPedidoApodo'),
+            producto: val('mapPedidoProducto'),
+            cantidad: val('mapPedidoCantidad'),
+            tipo: val('mapPedidoTipo'),
+            dia_semana: val('mapPedidoDia'),
+            fecha_entrega: val('mapPedidoFecha'),
+            observaciones: val('mapPedidoObservaciones'),
+        };
+        if (!mapeo.apodo_cliente || !mapeo.producto || !mapeo.cantidad) {
+            resultadoDiv.innerHTML = resumenHtml + '<p class="text-red-600">En Pedidos, indica qué columna es el Apodo del Cliente, el Producto y la Cantidad (son obligatorios).</p>';
+            return;
+        }
+        const marcarPendientes = document.getElementById('chkPedidosPendientes')?.checked || false;
+        const pedidos = obtenerFilasHojaImportar(hojaPedidos).map(f => ({
+            apodo_cliente: String(f[mapeo.apodo_cliente] ?? '').trim(),
+            producto: String(f[mapeo.producto] ?? '').trim(),
+            cantidad: String(f[mapeo.cantidad] ?? '').trim(),
+            tipo: mapeo.tipo ? String(f[mapeo.tipo] ?? '').trim() : '',
+            dia_semana: mapeo.dia_semana ? String(f[mapeo.dia_semana] ?? '').trim() : '',
+            fecha_entrega: mapeo.fecha_entrega ? formatearFechaImportada(f[mapeo.fecha_entrega]) : '',
+            observaciones: mapeo.observaciones ? String(f[mapeo.observaciones] ?? '').trim() : '',
+        }));
+
+        try {
+            const res = await fetch('/pedidos/importar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pedidos, marcarPendientes }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Error al importar pedidos');
+            resumenHtml += `<p class="text-green-700 mt-2"><i class="fas fa-check-circle mr-1"></i> Pedidos: ${data.creados} importados, ${data.errores.length} con error.</p>${listaErroresImportar(data.errores)}`;
+        } catch (err) {
+            console.error('Error al importar pedidos:', err);
+            resumenHtml += `<p class="text-red-600 mt-2">Error al importar pedidos: ${escapeHTML(err.message)}</p>`;
+        }
+    }
+
+    resultadoDiv.innerHTML = resumenHtml || '<p class="text-gray-500">No había nada que importar.</p>';
+    if (hojaClientes) { cargarClientes(); cargarZonasClienteForm(); }
+    if (hojaPedidos) { cargarPedidosPendientes(); }
+}
+
 async function exportarHistorialClientePDF(clienteId) {
     try {
         const res = await fetch(`/pedidos_historial/${clienteId}/completo`);

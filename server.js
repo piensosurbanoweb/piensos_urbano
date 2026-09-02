@@ -11,6 +11,7 @@ const cookieParser = require('cookie-parser');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
+const XLSX = require('xlsx');
 
 const app = express();
 
@@ -85,7 +86,7 @@ function requireGestionUsuarios(req, res, next) {
 // y se colaba sin sesión hasta una ruta que cambia el rol de un usuario. Se
 // sustituye por una lista concreta de lo que realmente es estático, para que
 // ningún id de una ruta de datos pueda colarse por aquí.
-const RUTAS_PUBLICAS = new Set(['/login', '/logout', '/forgot-password', '/reset-password']);
+const RUTAS_PUBLICAS = new Set(['/login', '/logout', '/forgot-password', '/reset-password', '/api/backup-cron']);
 const PREFIJOS_ESTATICOS = ['/css/', '/js/', '/img/'];
 // Fragmentos de pestañas (BaseDatos.html, Calendario.html...) y páginas raíz
 // (login.html, index.html...): un único segmento de letras + ".html".
@@ -244,6 +245,137 @@ async function enviarEmailConPlantilla(destinatario, templateId, variables) {
     return false;
   }
 }
+
+// Envía un email con un archivo adjunto (usado para la copia de seguridad
+// automática). `adjunto` = { filename, contentBase64 }.
+async function enviarEmailConAdjunto(destinatario, asunto, html, adjunto) {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) {
+    console.error('Falta la variable de entorno RESEND_API_KEY: no se puede enviar el email.');
+    return { ok: false, error: 'Falta configurar RESEND_API_KEY en Vercel.' };
+  }
+  try {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Piensos y Cereales Urbano <onboarding@resend.dev>',
+        to: [destinatario],
+        subject: asunto,
+        html,
+        attachments: [
+          { filename: adjunto.filename, content: adjunto.contentBase64 },
+        ],
+      }),
+    });
+    if (!resp.ok) {
+      const detalle = await resp.text();
+      console.error('Resend devolvió un error (adjunto):', resp.status, detalle);
+      return { ok: false, error: `Resend devolvió un error (${resp.status}): ${detalle}` };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error('Error al enviar email con adjunto de Resend:', err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
+// Genera un Excel (un libro con una hoja por tabla) con todos los datos
+// actuales de la base de datos, para la copia de seguridad automática.
+// Las tablas a incluir se leen dinámicamente de information_schema para no
+// tener que mantener una lista a mano si en el futuro se añaden tablas
+// nuevas. La tabla "usuarios" se trata aparte para no incluir nunca el hash
+// de las contraseñas en la copia.
+async function generarBackupExcel() {
+  const { rows: tablas } = await pool.query(`
+    SELECT table_name FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+    ORDER BY table_name
+  `);
+
+  const libro = XLSX.utils.book_new();
+
+  const aFilasPlanas = (rows) => rows.map((fila) => {
+    const plano = {};
+    for (const [clave, valor] of Object.entries(fila)) {
+      plano[clave] = valor instanceof Date ? valor.toISOString() : valor;
+    }
+    return plano;
+  });
+
+  for (const { table_name: tabla } of tablas) {
+    if (tabla === 'usuarios') continue; // se añade aparte, sin password_hash
+    const { rows } = await pool.query(`SELECT * FROM "${tabla}"`);
+    const hoja = XLSX.utils.json_to_sheet(aFilasPlanas(rows.length ? rows : [{}]));
+    XLSX.utils.book_append_sheet(libro, hoja, tabla.substring(0, 31));
+  }
+
+  const { rows: usuarios } = await pool.query(
+    'SELECT id, nombre, nombre_usuario, email, rol, activo FROM usuarios ORDER BY id'
+  );
+  XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(aFilasPlanas(usuarios)), 'usuarios');
+
+  return XLSX.write(libro, { type: 'buffer', bookType: 'xlsx' });
+}
+
+// Ruta que dispara la copia de seguridad automática por email. La llama
+// Vercel Cron según la programación de vercel.json (ver ese archivo). Está
+// protegida con CRON_SECRET: sin esa variable de entorno definida en Vercel,
+// esta ruta rechaza cualquier petición, para que nadie pueda hacer que la
+// app envíe copias de los datos con solo visitar la URL.
+// Genera y envía la copia de seguridad; la usan tanto la ruta del cron
+// (backup-cron) como el botón manual de "Enviar copia de seguridad ahora"
+// (backup-manual), para no repetir la lógica dos veces.
+async function generarYEnviarBackup() {
+  const buffer = await generarBackupExcel();
+  const destinatario = process.env.BACKUP_EMAIL || 'piensosurbanoweb@gmail.com';
+  const fecha = new Date().toLocaleDateString('es-ES');
+  const html = `
+    <p>Copia de seguridad de <strong>Piensos y Cereales Urbano</strong> generada el ${fecha}.</p>
+    <p>Va adjunta en un Excel con todos los clientes, pedidos, conductores, camiones, zonas y usuarios tal cual están ahora mismo.</p>
+  `;
+  return enviarEmailConAdjunto(
+    destinatario,
+    `Copia de seguridad - Piensos y Cereales Urbano (${fecha})`,
+    html,
+    { filename: `backup_${fecha.replace(/\//g, '-')}.xlsx`, contentBase64: buffer.toString('base64') }
+  );
+}
+
+app.get('/api/backup-cron', async (req, res) => {
+  try {
+    const secreto = process.env.CRON_SECRET;
+    if (!secreto || req.headers.authorization !== `Bearer ${secreto}`) {
+      return res.status(401).json({ error: 'No autorizado.' });
+    }
+    const resultado = await generarYEnviarBackup();
+    if (!resultado.ok) return res.status(500).json({ error: resultado.error });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error generando la copia de seguridad programada:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+});
+
+// Botón "Enviar copia de seguridad ahora" en Gestión BD: hace exactamente lo
+// mismo que el cron, pero al momento y para cualquier usuario con sesión
+// iniciada, para poder comprobar que el envío de emails está bien
+// configurado sin tener que esperar a la fecha programada. Devuelve el
+// motivo exacto del fallo (por ejemplo, si falta configurar Resend) para
+// poder solucionarlo.
+app.post('/api/backup-manual', async (req, res) => {
+  try {
+    const resultado = await generarYEnviarBackup();
+    if (!resultado.ok) return res.status(500).json({ error: resultado.error });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error generando la copia de seguridad manual:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor: ' + err.message });
+  }
+});
 
 app.post('/login', async (req, res) => {
   try {
@@ -647,6 +779,144 @@ app.delete('/clientes/:id', async (req, res) => {
 // un array [{ cantidad, producto }, ...] con al menos un elemento; por
 // compatibilidad, si llega el formato antiguo (cantidad/producto sueltos en
 // vez de items), se trata como un pedido de un solo producto.
+// --- IMPORTACIÓN MASIVA DESDE EXCEL ---
+// El Excel se lee y se traduce a este formato en el propio navegador (ver
+// functions_copy_claude.js), porque cada Excel real usa sus propios nombres
+// de columna; aquí solo llegan los datos ya mapeados. Se procesa fila a
+// fila, sin abortar todo si una fila falla, porque es normal que un Excel
+// real traiga alguna fila incompleta o rara: mejor importar 98 de 100 filas
+// e informar de las 2 que han fallado, que no importar nada.
+app.post('/clientes/importar', async (req, res) => {
+  const filas = Array.isArray(req.body.clientes) ? req.body.clientes : [];
+  let creados = 0;
+  let actualizados = 0;
+  const errores = [];
+
+  for (let i = 0; i < filas.length; i++) {
+    const fila = filas[i] || {};
+    const numeroFila = i + 2; // +2: la fila 1 del Excel es la cabecera
+    try {
+      const apodo = String(fila.apodo || '').trim();
+      const nombre_completo = String(fila.nombre_completo || '').trim();
+      const zona_reparto = String(fila.zona_reparto || '').trim();
+      if (!apodo || !nombre_completo || !zona_reparto) {
+        errores.push({ fila: numeroFila, motivo: 'Faltan el apodo, el nombre o la zona de reparto.' });
+        continue;
+      }
+      const telefono = String(fila.telefono || '').trim() || null;
+      const localidad = String(fila.localidad || '').trim() || null;
+      const observaciones = String(fila.observaciones || '').trim() || null;
+
+      const existente = await pool.query('SELECT id FROM clientes WHERE LOWER(apodo) = LOWER($1)', [apodo]);
+
+      if (existente.rows.length > 0) {
+        await pool.query(
+          `UPDATE clientes SET nombre_completo=$1, telefono=$2, localidad=$3, zona_reparto=$4, observaciones=$5
+           WHERE id=$6`,
+          [nombre_completo, telefono, localidad, zona_reparto, observaciones, existente.rows[0].id]
+        );
+        actualizados++;
+      } else {
+        await pool.query(
+          `INSERT INTO clientes (apodo, nombre_completo, telefono, localidad, zona_reparto, observaciones)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [apodo, nombre_completo, telefono, localidad, zona_reparto, observaciones]
+        );
+        creados++;
+      }
+    } catch (err) {
+      console.error(`Error importando cliente (fila ${numeroFila}):`, err.message);
+      errores.push({ fila: numeroFila, motivo: 'Error al guardar en la base de datos.' });
+    }
+  }
+
+  res.json({ creados, actualizados, errores });
+});
+
+// Igual que POST /pedidos (crea el pedido en pedidos, pedidos_historial y
+// pedido_items), pero fila a fila desde un Excel, buscando el cliente por
+// su apodo en vez de recibir el cliente_id directamente, y con la opción de
+// no meter el pedido en "pedidos_pendientes" (por defecto no, para no
+// llenar la pestaña de Pendientes con pedidos que en realidad son
+// históricos y ya se repartieron).
+app.post('/pedidos/importar', async (req, res) => {
+  const filas = Array.isArray(req.body.pedidos) ? req.body.pedidos : [];
+  const marcarPendientes = !!req.body.marcarPendientes;
+  let creados = 0;
+  const errores = [];
+
+  for (let i = 0; i < filas.length; i++) {
+    const fila = filas[i] || {};
+    const numeroFila = i + 2;
+    const apodo = String(fila.apodo_cliente || '').trim();
+    const producto = String(fila.producto || '').trim();
+    const cantidad = String(fila.cantidad || '').trim();
+
+    if (!apodo || !producto || !cantidad) {
+      errores.push({ fila: numeroFila, motivo: 'Faltan el apodo del cliente, el producto o la cantidad.' });
+      continue;
+    }
+
+    const client = await pool.connect();
+    try {
+      const clienteRes = await client.query(
+        'SELECT id, apodo, nombre_completo, telefono, localidad, zona_reparto FROM clientes WHERE LOWER(apodo) = LOWER($1)',
+        [apodo]
+      );
+      if (clienteRes.rows.length === 0) {
+        errores.push({ fila: numeroFila, motivo: `No existe ningún cliente con el apodo "${apodo}" (impórtalo primero).` });
+        continue;
+      }
+      const cliente = clienteRes.rows[0];
+      const tipo = String(fila.tipo || '').trim() || null;
+      const dia_semana = String(fila.dia_semana || '').trim() || null;
+      const fecha_entrega = String(fila.fecha_entrega || '').trim() || null;
+      const observaciones = String(fila.observaciones || '').trim() || null;
+
+      await client.query('BEGIN');
+
+      const pedidoResult = await client.query(
+        `INSERT INTO pedidos (cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, fecha_creacion`,
+        [cliente.id, cliente.apodo, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones]
+      );
+      const fechaPedido = pedidoResult.rows[0].fecha_creacion;
+
+      const descripcion = `${cantidad} de ${producto} - ${cliente.apodo}`;
+      const historialResult = await client.query(
+        `INSERT INTO pedidos_historial (cliente_id, descripcion, fecha_pedido, fecha_entrega, observaciones)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [cliente.id, descripcion, fechaPedido, fecha_entrega, observaciones]
+      );
+      const historialId = historialResult.rows[0].id;
+
+      await client.query(
+        `INSERT INTO pedido_items (historial_id, producto, cantidad, orden) VALUES ($1, $2, $3, 0)`,
+        [historialId, producto, cantidad]
+      );
+
+      if (marcarPendientes) {
+        await client.query(
+          `INSERT INTO pedidos_pendientes (historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          [historialId, cliente.id, cliente.apodo, cliente.nombre_completo, cliente.telefono, cliente.localidad, cliente.zona_reparto, `${cantidad} de ${producto}`, fecha_entrega, observaciones, dia_semana]
+        );
+      }
+
+      await client.query('COMMIT');
+      creados++;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error(`Error importando pedido (fila ${numeroFila}):`, err.message);
+      errores.push({ fila: numeroFila, motivo: 'Error al guardar en la base de datos.' });
+    } finally {
+      client.release();
+    }
+  }
+
+  res.json({ creados, errores });
+});
+
 app.post('/pedidos', async (req, res) => {
   const client = await pool.connect();
   try {

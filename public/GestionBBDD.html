@@ -155,7 +155,7 @@
       class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
       <i class="fas fa-screwdriver-wrench"></i> Herramientas de Mantenimiento
     </h3>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       <button
         onclick="limpiarPedidosAntiguos()"
         class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">
@@ -165,6 +165,17 @@
         onclick="exportarDatos()"
         class="bg-[#158765] hover:bg-[#0f6b50] text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">
         <i class="fas fa-file-excel mr-1"></i> Exportar Clientes (Excel)
+      </button>
+      <button
+        onclick="abrirModalImportarExcel()"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">
+        <i class="fas fa-file-import mr-1"></i> Importar desde Excel
+      </button>
+      <button
+        id="btnBackupManual"
+        onclick="enviarBackupManual()"
+        class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200">
+        <i class="fas fa-envelope-circle-check mr-1"></i> Enviar Copia de Seguridad Ahora
       </button>
       <button
         onclick="resetearSistema()"
@@ -184,6 +195,56 @@
         Usa estas funciones con precaución y asegúrate de tener respaldos si es
         necesario.
       </p>
+    </div>
+  </div>
+
+  <!-- Modal para Importar datos desde Excel -->
+  <div id="modalImportarExcel" class="modal-container hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+    <div class="modal-content bg-white p-6 rounded-xl w-11/12 md:w-5/6 lg:w-3/4 xl:w-2/3 max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold text-gray-800">
+          <i class="fas fa-file-import mr-1"></i> Importar datos desde Excel
+        </h3>
+        <button onclick="cerrarModalImportarExcel()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+      </div>
+
+      <p class="text-sm text-gray-600 mb-4">
+        Sube el Excel del cliente y elige, para cada dato que quieras traer (clientes y/o pedidos),
+        qué columna del Excel corresponde a cada cosa. Puedes importar solo clientes, solo pedidos, o los dos a la vez.
+      </p>
+
+      <div class="mb-5">
+        <label class="campo-label campo-obligatorio">Archivo Excel</label>
+        <input type="file" id="inputArchivoImportar" accept=".xlsx,.xls" onchange="manejarArchivoImportar(event)"
+               class="w-full border rounded-lg p-2 text-sm">
+      </div>
+
+      <div class="mb-6 border-t pt-4">
+        <h4 class="font-semibold text-gray-800 mb-2"><i class="fas fa-users mr-1"></i> Clientes</h4>
+        <label class="campo-label campo-opcional">Hoja del Excel con los clientes</label>
+        <select id="selectHojaClientes" onchange="cambiarHojaClientes()" class="w-full border rounded-lg p-2 text-sm mb-3">
+          <option value="">-- Selecciona un archivo primero --</option>
+        </select>
+        <div id="panelMapeoClientes" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+      </div>
+
+      <div class="mb-6 border-t pt-4">
+        <h4 class="font-semibold text-gray-800 mb-2"><i class="fas fa-truck-fast mr-1"></i> Pedidos</h4>
+        <label class="campo-label campo-opcional">Hoja del Excel con los pedidos</label>
+        <select id="selectHojaPedidos" onchange="cambiarHojaPedidos()" class="w-full border rounded-lg p-2 text-sm mb-3">
+          <option value="">-- Selecciona un archivo primero --</option>
+        </select>
+        <div id="panelMapeoPedidos" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+      </div>
+
+      <div id="resultadoImportar" class="hidden mb-4 p-3 bg-gray-50 rounded-lg border text-sm"></div>
+
+      <div class="flex justify-end gap-2 border-t pt-4">
+        <button onclick="cerrarModalImportarExcel()" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium">Cerrar</button>
+        <button onclick="ejecutarImportacion()" class="px-4 py-2 bg-[#158765] hover:bg-[#0f6b50] text-white rounded-lg font-medium">
+          <i class="fas fa-upload mr-1"></i> Importar
+        </button>
+      </div>
     </div>
   </div>
 </div>
