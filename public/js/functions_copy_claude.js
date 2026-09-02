@@ -582,7 +582,7 @@ function inicializarFormularioPedidos() {
     if (tipoPedido) {
         tipoPedido.addEventListener('change', () => {
             const container = document.getElementById('diasSemanaContainer');
-            if (container) container.classList.toggle('hidden', !['semanal', 'quincena'].includes(tipoPedido.value));
+            if (container) container.classList.toggle('hidden', !['semanal', 'quincena', 'mensual'].includes(tipoPedido.value));
         });
     }
 

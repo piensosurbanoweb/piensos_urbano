@@ -1,85 +1,159 @@
 <div id="pestanaNuevoPedido" class="p-6 bg-white rounded-xl shadow-lg">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6">Registrar Nuevo Pedido</h2>
+  <h2 class="text-2xl font-bold text-gray-800 mb-6">Registrar Nuevo Pedido</h2>
 
-    <form id="nuevoPedidoForm" class="space-y-6" novalidate>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="relative">
-                <label class="campo-label campo-obligatorio" for="apodoAutoComplete">Apodo del Cliente</label>
-                <input type="text" id="apodoAutoComplete" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent text-lg" placeholder="Escribe el apodo..." autocomplete="off" required>
-                <ul id="autocompleteSuggestions" class="autocomplete-suggestions hidden absolute w-full bg-white border border-gray-300 rounded-lg mt-1 z-10 max-h-60 overflow-y-auto"></ul>
-                <p class="campo-error hidden">Selecciona un cliente de la lista de sugerencias.</p>
-                <div id="ultimosPedidosCliente" class="hidden mt-2 bg-emerald-50 border border-emerald-100 rounded-lg p-3">
-                    <p class="text-xs font-semibold text-gray-600 mb-1">Últimos pedidos de este cliente (toca uno para repetirlo):</p>
-                    <ul id="listaUltimosPedidos" class="space-y-1"></ul>
-                </div>
-            </div>
-            <div>
-                <label class="campo-label" for="nombreCompleto">Nombre Completo <span class="text-xs text-gray-400 font-normal">(autocompletado)</span></label>
-                <input type="text" id="nombreCompleto" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-lg" readonly>
-            </div>
-            <div>
-                <label class="campo-label" for="zonaReparto">Zona de Reparto <span class="text-xs text-gray-400 font-normal">(autocompletado)</span></label>
-                <input type="text" id="zonaReparto" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-lg" readonly>
-            </div>
-            <div>
-                <label class="campo-label" for="localidad">Localidad <span class="text-xs text-gray-400 font-normal">(autocompletado)</span></label>
-                <input type="text" id="localidad" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-lg" readonly>
-            </div>
+  <form id="nuevoPedidoForm" class="space-y-6" novalidate>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="relative">
+        <label class="campo-label campo-obligatorio" for="apodoAutoComplete"
+          >Apodo del Cliente</label
+        >
+        <input
+          type="text"
+          id="apodoAutoComplete"
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent text-lg"
+          placeholder="Escribe el apodo..."
+          autocomplete="off"
+          required />
+        <ul
+          id="autocompleteSuggestions"
+          class="autocomplete-suggestions hidden absolute w-full bg-white border border-gray-300 rounded-lg mt-1 z-10 max-h-60 overflow-y-auto"></ul>
+        <p class="campo-error hidden">
+          Selecciona un cliente de la lista de sugerencias.
+        </p>
+        <div
+          id="ultimosPedidosCliente"
+          class="hidden mt-2 bg-emerald-50 border border-emerald-100 rounded-lg p-3">
+          <p class="text-xs font-semibold text-gray-600 mb-1">
+            Últimos pedidos de este cliente (toca uno para repetirlo):
+          </p>
+          <ul id="listaUltimosPedidos" class="space-y-1"></ul>
         </div>
+      </div>
+      <div>
+        <label class="campo-label" for="nombreCompleto"
+          >Nombre Completo
+          <span class="text-xs text-gray-400 font-normal"
+            >(autocompletado)</span
+          ></label
+        >
+        <input
+          type="text"
+          id="nombreCompleto"
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-lg"
+          readonly />
+      </div>
+      <div>
+        <label class="campo-label" for="zonaReparto"
+          >Zona de Reparto
+          <span class="text-xs text-gray-400 font-normal"
+            >(autocompletado)</span
+          ></label
+        >
+        <input
+          type="text"
+          id="zonaReparto"
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-lg"
+          readonly />
+      </div>
+      <div>
+        <label class="campo-label" for="localidad"
+          >Localidad
+          <span class="text-xs text-gray-400 font-normal"
+            >(autocompletado)</span
+          ></label
+        >
+        <input
+          type="text"
+          id="localidad"
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-lg"
+          readonly />
+      </div>
+    </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label class="campo-label campo-obligatorio" for="tipoPedido">Tipo de Pedido</label>
-                <select id="tipoPedido" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent text-lg" required>
-                    <option value="">Seleccionar tipo...</option>
-                    <option value="diario">Diario</option>
-                    <option value="semanal">Semanal</option>
-                    <option value="quincena">Quincenal</option>
-                </select>
-                <p class="campo-error hidden">Selecciona el tipo de pedido.</p>
-            </div>
-            <div id="diasSemanaContainer" class="hidden">
-                <label class="campo-label campo-opcional" for="diaSemana">Día(s) de la semana</label>
-                <select id="diaSemana" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent text-lg">
-                    <option value="">Seleccionar día...</option>
-                    <option value="lunes">Lunes</option>
-                    <option value="martes">Martes</option>
-                    <option value="miercoles">Miércoles</option>
-                    <option value="jueves">Jueves</option>
-                    <option value="viernes">Viernes</option>
-                    <option value="sabado">Sábado</option>
-                    <option value="domingo">Domingo</option>
-                </select>
-            </div>
-            <div>
-                <label class="campo-label campo-obligatorio" for="fechaEntregaNuevo">Fecha de Entrega</label>
-                <input type="date" id="fechaEntregaNuevo" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent text-lg" required>
-                <p class="campo-error hidden">Selecciona una fecha de entrega.</p>
-            </div>
-        </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="campo-label campo-obligatorio" for="tipoPedido"
+          >Tipo de Pedido</label
+        >
+        <select
+          id="tipoPedido"
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent text-lg"
+          required>
+          <option value="">Seleccionar tipo...</option>
+          <option value="actual">Actual</option>
+          <option value="semanal">Semanal</option>
+          <option value="quincena">Quincenal</option>
+          <option value="mensual">Mensual</option>
+        </select>
+        <p class="campo-error hidden">Selecciona el tipo de pedido.</p>
+      </div>
+      <div id="diasSemanaContainer" class="hidden">
+        <label class="campo-label campo-opcional" for="diaSemana"
+          >Día(s) de la semana</label
+        >
+        <select
+          id="diaSemana"
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent text-lg">
+          <option value="">Seleccionar día...</option>
+          <option value="lunes">Lunes</option>
+          <option value="martes">Martes</option>
+          <option value="miercoles">Miércoles</option>
+          <option value="jueves">Jueves</option>
+          <option value="viernes">Viernes</option>
+          <option value="sabado">Sábado</option>
+          <option value="domingo">Domingo</option>
+        </select>
+      </div>
+      <div>
+        <label class="campo-label campo-obligatorio" for="fechaEntregaNuevo"
+          >Fecha de Entrega</label
+        >
+        <input
+          type="date"
+          id="fechaEntregaNuevo"
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent text-lg"
+          required />
+        <p class="campo-error hidden">Selecciona una fecha de entrega.</p>
+      </div>
+    </div>
 
-        <div>
-            <label class="campo-label campo-obligatorio">Productos del pedido</label>
-            <p class="text-xs text-gray-500 mb-2">Un cliente puede pedir varios productos a la vez (ej. pienso de gato y de perro): se entregan juntos, en una sola visita.</p>
-            <div id="itemsPedidoLista" class="space-y-2"></div>
-            <button type="button" onclick="agregarFilaItemPedido()" class="mt-2 inline-flex items-center gap-1 text-sm text-[#158765] hover:text-[#0f6b50] font-medium">
-                <i class="fas fa-circle-plus"></i> Añadir otro producto
-            </button>
-            <p id="errorItemsPedido" class="campo-error hidden mt-1">Añade al menos un producto con su cantidad.</p>
-        </div>
+    <div>
+      <label class="campo-label campo-obligatorio">Productos del pedido</label>
+      <div id="itemsPedidoLista" class="space-y-2"></div>
+      <button
+        type="button"
+        onclick="agregarFilaItemPedido()"
+        class="mt-2 inline-flex items-center gap-1 text-sm text-[#158765] hover:text-[#0f6b50] font-medium">
+        <i class="fas fa-circle-plus"></i> Añadir otro producto
+      </button>
+      <p id="errorItemsPedido" class="campo-error hidden mt-1">
+        Añade al menos un producto con su cantidad.
+      </p>
+    </div>
 
-        <div class="mt-4">
-            <label class="campo-label campo-opcional" for="observacionesPedido">Observaciones del Pedido</label>
-            <textarea id="observacionesPedido" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent text-lg" placeholder="Notas adicionales para este pedido..."></textarea>
-        </div>
+    <div class="mt-4">
+      <label class="campo-label campo-opcional" for="observacionesPedido"
+        >Observaciones del Pedido</label
+      >
+      <textarea
+        id="observacionesPedido"
+        rows="3"
+        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent text-lg"
+        placeholder="Notas adicionales para este pedido..."></textarea>
+    </div>
 
-        <div class="flex gap-4">
-            <button type="submit" class="bg-[#158765] hover:bg-[#0f6b50] text-white px-8 py-3 rounded-lg font-medium text-lg transition-colors duration-200">
-                <i class="fas fa-floppy-disk mr-1"></i> Registrar Pedido
-            </button>
-            <button type="button" onclick="limpiarFormularioPedido()" class="bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-lg font-medium text-lg transition-colors duration-200">
-                <i class="fas fa-trash mr-1"></i> Limpiar Formulario
-            </button>
-        </div>
-    </form>
+    <div class="flex gap-4">
+      <button
+        type="submit"
+        class="bg-[#158765] hover:bg-[#0f6b50] text-white px-8 py-3 rounded-lg font-medium text-lg transition-colors duration-200">
+        <i class="fas fa-floppy-disk mr-1"></i> Registrar Pedido
+      </button>
+      <button
+        type="button"
+        onclick="limpiarFormularioPedido()"
+        class="bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-lg font-medium text-lg transition-colors duration-200">
+        <i class="fas fa-trash mr-1"></i> Limpiar Formulario
+      </button>
+    </div>
+  </form>
 </div>
