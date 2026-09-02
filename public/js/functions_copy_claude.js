@@ -168,7 +168,7 @@ function mostrarAviso(mensaje, tipo = 'exito') {
         const estilo = estilos[tipo] || estilos.info;
 
         msg.textContent = mensaje;
-        icono.className = `w-9 h-9 rounded-full ${estilo.clase} flex items-center justify-center shrink-0`;
+        icono.className = `w-14 h-14 rounded-full ${estilo.clase} flex items-center justify-center shrink-0 text-2xl`;
         icono.innerHTML = `<i class="fas ${estilo.icono}"></i>`;
 
         modal.classList.remove('hidden');
