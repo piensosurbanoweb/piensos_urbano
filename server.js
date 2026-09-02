@@ -333,15 +333,18 @@ async function generarYEnviarBackup() {
   const buffer = await generarBackupExcel();
   const destinatario = process.env.BACKUP_EMAIL || 'piensosurbanoweb@gmail.com';
   const fecha = new Date().toLocaleDateString('es-ES');
+  const fechaArchivo = fecha.replace(/\//g, '-');
   const html = `
     <p>Copia de seguridad de <strong>Piensos y Cereales Urbano</strong> generada el ${fecha}.</p>
     <p>Va adjunta en un Excel con todos los clientes, pedidos, conductores, camiones, zonas y usuarios tal cual están ahora mismo.</p>
+    <p><strong>Importante:</strong> los datos están repartidos en varias pestañas dentro del propio Excel (una por cada tipo de dato).
+    Muchos correos solo muestran la primera pestaña en la vista previa, así que descarga el archivo y ábrelo con Excel (o similar) para ver todas.</p>
   `;
   return enviarEmailConAdjunto(
     destinatario,
     `Copia de seguridad - Piensos y Cereales Urbano (${fecha})`,
     html,
-    { filename: `backup_${fecha.replace(/\//g, '-')}.xlsx`, contentBase64: buffer.toString('base64') }
+    { filename: `copia_de_seguridad_piensos_urbano_${fechaArchivo}.xlsx`, contentBase64: buffer.toString('base64') }
   );
 }
 
