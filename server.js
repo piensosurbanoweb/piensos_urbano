@@ -105,10 +105,15 @@ app.use((req, res, next) => {
   return requireAuth(req, res, next);
 });
 
-// --- ENVÍO DE EMAILS (Resend) ---
-// Se usa la API HTTP de Resend directamente (fetch nativo de Node) para no
-// añadir una dependencia nueva. Hace falta la variable de entorno
-// RESEND_API_KEY (ver .env.example / README).
+// --- ENVÍO DE EMAILS (Brevo) ---
+// Se usa la API HTTP de Brevo directamente (fetch nativo de Node) para no
+// añadir una dependencia nueva. Se eligió Brevo (en vez de Resend) porque
+// permite enviar a CUALQUIER destinatario verificando solo una dirección de
+// email remitente (sin necesitar un dominio propio ni configurar nada de
+// DNS) — la web solo tiene el subdominio gratuito de Vercel, sin dominio
+// propio. Hace falta la variable de entorno BREVO_API_KEY, y que
+// BREVO_SENDER_EMAIL esté verificado como remitente en el panel de Brevo
+// (ver .env.example).
 // Plantilla del email de "recuperar contraseña", con el mismo diseño y
 // colores de marca que el resto de la app (ver también emails/reset-password.html,
 // que es una vista previa idéntica para abrir en el navegador).
@@ -180,107 +185,65 @@ function plantillaEmailReset(nombre, enlace, logoUrl) {
 </html>`;
 }
 
-async function enviarEmail(destinatario, asunto, html) {
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  if (!RESEND_API_KEY) {
-    console.error('Falta la variable de entorno RESEND_API_KEY: no se puede enviar el email.');
-    return false;
+// Remitente verificado en el panel de Brevo (Settings -> Senders). Tiene
+// que ser un email real que se haya verificado ahí (no hace falta que sea
+// de un dominio propio, puede ser un Gmail/Hotmail normal); si no se
+// configura BREVO_SENDER_EMAIL, se usa este por defecto.
+const BREVO_SENDER_EMAIL_POR_DEFECTO = 'piensosurbanoweb@gmail.com';
+
+// Función interna compartida por las tres formas de enviar email de más
+// abajo: hace la petición HTTP a la API de Brevo. `adjunto` es opcional:
+// { filename, contentBase64 }.
+async function enviarConBrevo(destinatario, asunto, html, adjunto) {
+  const BREVO_API_KEY = process.env.BREVO_API_KEY;
+  if (!BREVO_API_KEY) {
+    const msg = 'Falta la variable de entorno BREVO_API_KEY: no se puede enviar el email.';
+    console.error(msg);
+    return { ok: false, error: 'Falta configurar BREVO_API_KEY en Vercel.' };
   }
   try {
-    const resp = await fetch('https://api.resend.com/emails', {
+    const cuerpo = {
+      sender: {
+        name: 'Piensos y Cereales Urbano',
+        email: process.env.BREVO_SENDER_EMAIL || BREVO_SENDER_EMAIL_POR_DEFECTO,
+      },
+      to: [{ email: destinatario }],
+      subject: asunto,
+      htmlContent: html,
+    };
+    if (adjunto) {
+      cuerpo.attachment = [{ content: adjunto.contentBase64, name: adjunto.filename }];
+    }
+    const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'api-key': BREVO_API_KEY,
         'Content-Type': 'application/json',
+        Accept: 'application/json',
       },
-      body: JSON.stringify({
-        from: 'Piensos y Cereales Urbano <onboarding@resend.dev>',
-        to: [destinatario],
-        subject: asunto,
-        html,
-      }),
+      body: JSON.stringify(cuerpo),
     });
     if (!resp.ok) {
-      console.error('Resend devolvió un error:', resp.status, await resp.text());
-      return false;
+      const detalle = await resp.text();
+      console.error('Brevo devolvió un error:', resp.status, detalle);
+      return { ok: false, error: `Brevo devolvió un error (${resp.status}): ${detalle}` };
     }
-    return true;
+    return { ok: true };
   } catch (err) {
-    console.error('Error al enviar email con Resend:', err.message);
-    return false;
+    console.error('Error al enviar email con Brevo:', err.message);
+    return { ok: false, error: err.message };
   }
 }
 
-// Envía un email usando una plantilla creada y publicada en el panel de
-// Resend (resend.com/templates), en vez de HTML escrito aquí. `variables`
-// debe tener las mismas claves que las variables definidas en esa plantilla
-// (ver emails/reset-password-resend-template.html para la de recuperar
-// contraseña: NOMBRE, ENLACE, LOGO_URL).
-async function enviarEmailConPlantilla(destinatario, templateId, variables) {
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  if (!RESEND_API_KEY) {
-    console.error('Falta la variable de entorno RESEND_API_KEY: no se puede enviar el email.');
-    return false;
-  }
-  try {
-    const resp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Piensos y Cereales Urbano <onboarding@resend.dev>',
-        to: [destinatario],
-        template: { id: templateId, variables },
-      }),
-    });
-    if (!resp.ok) {
-      console.error('Resend devolvió un error (plantilla):', resp.status, await resp.text());
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error('Error al enviar email con plantilla de Resend:', err.message);
-    return false;
-  }
+async function enviarEmail(destinatario, asunto, html) {
+  const resultado = await enviarConBrevo(destinatario, asunto, html);
+  return resultado.ok;
 }
 
 // Envía un email con un archivo adjunto (usado para la copia de seguridad
 // automática). `adjunto` = { filename, contentBase64 }.
 async function enviarEmailConAdjunto(destinatario, asunto, html, adjunto) {
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  if (!RESEND_API_KEY) {
-    console.error('Falta la variable de entorno RESEND_API_KEY: no se puede enviar el email.');
-    return { ok: false, error: 'Falta configurar RESEND_API_KEY en Vercel.' };
-  }
-  try {
-    const resp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Piensos y Cereales Urbano <onboarding@resend.dev>',
-        to: [destinatario],
-        subject: asunto,
-        html,
-        attachments: [
-          { filename: adjunto.filename, content: adjunto.contentBase64 },
-        ],
-      }),
-    });
-    if (!resp.ok) {
-      const detalle = await resp.text();
-      console.error('Resend devolvió un error (adjunto):', resp.status, detalle);
-      return { ok: false, error: `Resend devolvió un error (${resp.status}): ${detalle}` };
-    }
-    return { ok: true };
-  } catch (err) {
-    console.error('Error al enviar email con adjunto de Resend:', err.message);
-    return { ok: false, error: err.message };
-  }
+  return enviarConBrevo(destinatario, asunto, html, adjunto);
 }
 
 // Genera un Excel (un libro con una hoja por tabla) con todos los datos
@@ -331,13 +294,12 @@ async function generarBackupExcel() {
 // (backup-manual), para no repetir la lógica dos veces.
 async function generarYEnviarBackup() {
   const buffer = await generarBackupExcel();
-  // Se envía a varios destinatarios a la vez: el de siempre (BACKUP_EMAIL,
-  // o el correo por defecto si no está configurado) y el del cliente. Se
-  // manda un email por destinatario (en vez de uno solo con varios "to")
-  // para que, si uno falla, el resto no se vea afectado.
+  // Solo se envía a BACKUP_EMAIL (o al correo por defecto si no está
+  // configurado) mientras se prueba Brevo. Cuando se confirme que llega
+  // bien, se puede añadir aquí también 'piensosurbano@hotmail.com' para
+  // que le llegue al cliente.
   const destinatarios = [...new Set([
     process.env.BACKUP_EMAIL || 'piensosurbanoweb@gmail.com',
-    'piensosurbano@hotmail.com',
   ])];
   const fecha = new Date().toLocaleDateString('es-ES');
   const fechaArchivo = fecha.replace(/\//g, '-');
@@ -554,26 +516,11 @@ app.post('/forgot-password', async (req, res) => {
       const enlace = `${req.protocol}://${req.get('host')}/reset-password?token=${token}`;
       const logoUrl = `${req.protocol}://${req.get('host')}/img/logo-empresa.jpg`;
 
-      // Si has creado y publicado la plantilla en resend.com/templates (ver
-      // emails/reset-password-resend-template.html) y has puesto su ID en
-      // la variable de entorno RESEND_TEMPLATE_ID_RESET, se usa esa
-      // plantilla. Si no, se envía el mismo diseño pero con el HTML escrito
-      // aquí mismo (emails/reset-password.html) — no hace falta elegir una
-      // de las dos formas de antemano, funciona con cualquiera.
-      const templateId = process.env.RESEND_TEMPLATE_ID_RESET;
-      if (templateId) {
-        await enviarEmailConPlantilla(usuario.email, templateId, {
-          NOMBRE: usuario.nombre,
-          ENLACE: enlace,
-          LOGO_URL: logoUrl,
-        });
-      } else {
-        await enviarEmail(
-          usuario.email,
-          'Recupera tu contraseña — Piensos y Cereales Urbano',
-          plantillaEmailReset(usuario.nombre, enlace, logoUrl)
-        );
-      }
+      await enviarEmail(
+        usuario.email,
+        'Recupera tu contraseña — Piensos y Cereales Urbano',
+        plantillaEmailReset(usuario.nombre, enlace, logoUrl)
+      );
     }
     res.json(RESPUESTA_GENERICA);
   } catch (err) {

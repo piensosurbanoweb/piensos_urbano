@@ -125,15 +125,16 @@ No hay ningún usuario "desarrollador" por defecto: si en algún momento quien m
 - **Cambiar tu propia contraseña estando ya dentro:** icono redondo arriba a la derecha → "Cambiar contraseña".
 - **Olvidaste la contraseña:** en el login, enlace "¿Olvidaste tu contraseña?" → escribe tu usuario o email → te llega un correo con un enlace válido durante 1 hora. Para que esto funcione hace falta configurar el envío de emails (siguiente apartado); si no está configurado, un propietario o desarrollador puede simplemente crearte una contraseña nueva desde Gestión BD → Usuarios con Acceso.
 
-### Configurar el envío de emails (Resend)
+### Configurar el envío de emails (Brevo)
 
-El correo de "recuperar contraseña" se envía con [Resend](https://resend.com), un servicio de email con plan gratuito de sobra para esta app:
+El correo de "recuperar contraseña" y las copias de seguridad se envían con [Brevo](https://brevo.com) (antes Sendinblue), un servicio de email con plan gratuito (300 emails/día) que no necesita dominio propio, solo verificar una dirección de email como remitente:
 
-1. Crea una cuenta gratuita en [resend.com](https://resend.com).
-2. En su panel, ve a **API Keys** y crea una nueva clave.
-3. Añádela como variable de entorno `RESEND_API_KEY` tanto en tu `.env` local como en Vercel (Project Settings → Environment Variables), y vuelve a desplegar.
+1. Crea una cuenta gratuita en [brevo.com](https://brevo.com).
+2. En **Settings → Senders**, verifica como remitente un email que ya tengas (por ejemplo `piensosurbanoweb@gmail.com`): Brevo manda un correo de confirmación a esa dirección, solo hay que abrirlo y confirmar. No hace falta dominio propio ni tocar el DNS.
+3. En **SMTP & API → API Keys**, genera una API key y añádela como variable de entorno `BREVO_API_KEY` tanto en tu `.env` local como en Vercel (Project Settings → Environment Variables), y vuelve a desplegar.
+4. Si el remitente verificado en el paso 2 no es `piensosurbanoweb@gmail.com`, añade también la variable `BREVO_SENDER_EMAIL` con esa dirección.
 
-Sin dominio propio verificado en Resend, los correos se envían desde una dirección genérica (`onboarding@resend.dev`) — funciona igual, pero si más adelante quieres que lleguen como `algo@piensosycerealesurbano.com`, hay que verificar ese dominio en Resend (añadiendo unos registros DNS) y decírmelo para actualizar el remitente en el código.
+Con el plan gratuito, los correos se envían desde la dirección que hayas verificado, y pueden llegar a cualquier destinatario (a diferencia de Resend sin dominio propio, que solo dejaba enviar a la propia cuenta).
 
 ---
 
