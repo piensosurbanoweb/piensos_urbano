@@ -1943,7 +1943,11 @@ async function enviarBackupManual() {
         }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudo enviar la copia de seguridad.');
-        await mostrarAviso('Copia de seguridad enviada. Revisa la bandeja de entrada (y la de spam) del email configurado.', 'exito');
+        let mensaje = 'Copia de seguridad enviada. Revisa la bandeja de entrada (y la de spam) del email configurado.';
+        if (data.avisos && data.avisos.length) {
+            mensaje += '\n\nAviso: ' + data.avisos.join('\n');
+        }
+        await mostrarAviso(mensaje, data.avisos && data.avisos.length ? 'info' : 'exito');
     } catch (err) {
         console.error('Error al enviar la copia de seguridad manual:', err);
         await mostrarAviso('No se pudo enviar la copia de seguridad:\n\n' + err.message, 'error');
@@ -2501,6 +2505,15 @@ async function limpiarHojaReparto() {
 }
 
 function imprimirHojaReparto() { window.print(); }
+
+/** Despliega/oculta el cuadro de ayuda "Cómo funciona la hoja de reparto". */
+function toggleInfoHojaReparto() {
+    const caja = document.getElementById('infoHojaReparto');
+    const icono = document.getElementById('iconoInfoHojaReparto');
+    if (!caja) return;
+    caja.classList.toggle('hidden');
+    if (icono) icono.classList.toggle('rotate-180');
+}
 
 
 // ============================================================

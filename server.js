@@ -331,7 +331,14 @@ async function generarBackupExcel() {
 // (backup-manual), para no repetir la lógica dos veces.
 async function generarYEnviarBackup() {
   const buffer = await generarBackupExcel();
-  const destinatario = process.env.BACKUP_EMAIL || 'piensosurbanoweb@gmail.com';
+  // Se envía a varios destinatarios a la vez: el de siempre (BACKUP_EMAIL,
+  // o el correo por defecto si no está configurado) y el del cliente. Se
+  // manda un email por destinatario (en vez de uno solo con varios "to")
+  // para que, si uno falla, el resto no se vea afectado.
+  const destinatarios = [...new Set([
+    process.env.BACKUP_EMAIL || 'piensosurbanoweb@gmail.com',
+    'piensosurbano@hotmail.com',
+  ])];
   const fecha = new Date().toLocaleDateString('es-ES');
   const fechaArchivo = fecha.replace(/\//g, '-');
   const html = `
@@ -340,12 +347,29 @@ async function generarYEnviarBackup() {
     <p><strong>Importante:</strong> los datos están repartidos en varias pestañas dentro del propio Excel (una por cada tipo de dato).
     Muchos correos solo muestran la primera pestaña en la vista previa, así que descarga el archivo y ábrelo con Excel (o similar) para ver todas.</p>
   `;
-  return enviarEmailConAdjunto(
-    destinatario,
-    `Copia de seguridad - Piensos y Cereales Urbano (${fecha})`,
-    html,
-    { filename: `copia_de_seguridad_piensos_urbano_${fechaArchivo}.xlsx`, contentBase64: buffer.toString('base64') }
+  const adjunto = { filename: `copia_de_seguridad_piensos_urbano_${fechaArchivo}.xlsx`, contentBase64: buffer.toString('base64') };
+  const asunto = `Copia de seguridad - Piensos y Cereales Urbano (${fecha})`;
+
+  const resultados = await Promise.all(
+    destinatarios.map(async (destinatario) => ({
+      destinatario,
+      resultado: await enviarEmailConAdjunto(destinatario, asunto, html, adjunto),
+    }))
   );
+
+  const fallos = resultados.filter(r => !r.resultado.ok);
+  const exitos = resultados.filter(r => r.resultado.ok);
+
+  if (exitos.length === 0) {
+    // No ha llegado a nadie: es un fallo real.
+    return { ok: false, error: fallos.map(f => `${f.destinatario}: ${f.resultado.error}`).join(' | ') };
+  }
+  if (fallos.length > 0) {
+    // Ha llegado al menos a uno, pero no a todos: se avisa sin marcarlo como fallo total
+    // (por ejemplo, Resend sin dominio verificado solo deja enviar a la cuenta registrada).
+    return { ok: true, avisos: fallos.map(f => `No llegó a ${f.destinatario}: ${f.resultado.error}`) };
+  }
+  return { ok: true };
 }
 
 app.get('/backup-cron', async (req, res) => {
@@ -356,7 +380,8 @@ app.get('/backup-cron', async (req, res) => {
     }
     const resultado = await generarYEnviarBackup();
     if (!resultado.ok) return res.status(500).json({ error: resultado.error });
-    res.json({ ok: true });
+    if (resultado.avisos) console.warn('Copia de seguridad (cron) con avisos:', resultado.avisos.join(' | '));
+    res.json({ ok: true, avisos: resultado.avisos });
   } catch (err) {
     console.error('Error generando la copia de seguridad programada:', err.message);
     res.status(500).json({ error: 'Error interno del servidor.' });
@@ -373,7 +398,7 @@ app.post('/backup-manual', async (req, res) => {
   try {
     const resultado = await generarYEnviarBackup();
     if (!resultado.ok) return res.status(500).json({ error: resultado.error });
-    res.json({ ok: true });
+    res.json({ ok: true, avisos: resultado.avisos });
   } catch (err) {
     console.error('Error generando la copia de seguridad manual:', err.message);
     res.status(500).json({ error: 'Error interno del servidor: ' + err.message });
