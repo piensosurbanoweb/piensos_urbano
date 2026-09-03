@@ -2353,7 +2353,7 @@ function renderizarHojaReparto() {
             <td class="border px-2 py-2 capitalize">${escapeHTML(p.dia_reparto)}</td>
             <td class="border px-2 py-2 text-center no-print">
                 <div class="flex items-center justify-center gap-3">
-                    <button onclick="eliminarPedidoHoja(${p.id})" class="text-gray-500 hover:text-red-600" title="Quitar de esta hoja (sigue programado en el calendario)"><i class="fas fa-trash"></i></button>
+                    <button onclick="eliminarPedidoHoja(${p.id})" class="text-gray-500 hover:text-red-600" title="Volver a Calendario (quita de esta hoja, sigue programado)"><i class="fas fa-calendar-days"></i></button>
                     <button onclick="volverAPendientesDesdeHoja(${p.id})" class="text-red-600 hover:text-red-800" title="Volver a Pedidos Pendientes (deja de estar programado)"><i class="fas fa-rotate-left"></i></button>
                 </div>
             </td>
