@@ -1450,6 +1450,7 @@ function renderizarVistaSemanal(pedidos, diasSem) {
             <div class="sm:w-36 sm:shrink-0 flex sm:flex-col items-baseline sm:items-start gap-2 sm:gap-0 sm:border-r sm:pr-3 border-gray-100">
                 <p class="font-bold text-sm text-gray-800 capitalize">${nombreDia}</p>
                 <p class="text-xs text-gray-400">${dia.toLocaleDateString('es-ES')}</p>
+                <p class="text-xs text-gray-400">${pedidosDia.length} pedido${pedidosDia.length === 1 ? '' : 's'}</p>
             </div>
             <div class="flex-1 min-w-0 overflow-x-auto">
                 ${pedidosDia.length === 0
