@@ -1429,6 +1429,10 @@ function periodoActual() {
     cargarPedidosCalendario();
 }
 
+// Cada día de la semana es una fila (antes eran columnas, y con pedidos
+// largos las tarjetas quedaban altísimas y descuadradas). Dentro de cada
+// fila, los pedidos de ese día van en una tira horizontal con su propio
+// scroll, para que la fila no crezca sin límite si un día tiene muchos.
 function renderizarVistaSemanal(pedidos, diasSem) {
     const contenedor = document.getElementById('vistaSemanal');
     if (!contenedor) return;
@@ -1440,25 +1444,29 @@ function renderizarVistaSemanal(pedidos, diasSem) {
         // Filtramos por fecha_reparto que devuelve el servidor
         const pedidosDia = pedidos.filter(p => (p.fecha_reparto || '').startsWith(fechaStr));
 
-        const col = document.createElement('div');
-        col.className = 'bg-white p-4 rounded-lg shadow-md min-h-48 flex flex-col';
-        col.innerHTML = `
-            <p class="font-bold text-sm text-center text-gray-800 capitalize">${nombreDia}</p>
-            <p class="text-xs text-gray-400 text-center mb-3">${dia.toLocaleDateString('es-ES')}</p>
-            <div class="space-y-2 flex-grow">
+        const fila = document.createElement('div');
+        fila.className = 'bg-white p-4 rounded-lg shadow-md flex flex-col sm:flex-row sm:items-stretch gap-3';
+        fila.innerHTML = `
+            <div class="sm:w-36 sm:shrink-0 flex sm:flex-col items-baseline sm:items-start gap-2 sm:gap-0 sm:border-r sm:pr-3 border-gray-100">
+                <p class="font-bold text-sm text-gray-800 capitalize">${nombreDia}</p>
+                <p class="text-xs text-gray-400">${dia.toLocaleDateString('es-ES')}</p>
+            </div>
+            <div class="flex-1 min-w-0 overflow-x-auto">
                 ${pedidosDia.length === 0
-                    ? '<p class="text-xs text-gray-400 text-center mt-2">Sin pedidos</p>'
-                    : pedidosDia.map(p => `
-                        <div class="border border-gray-200 rounded-lg p-2 cursor-pointer hover:bg-emerald-50 transition-colors"
-                             onclick="mostrarDetallesPedido(${p.id})">
-                            <p class="text-sm font-semibold text-gray-800">${escapeHTML(p.apodo_cliente)}</p>
-                            <p class="text-xs text-gray-500">${resumenItemsTexto(p.items)}</p>
-                        </div>
-                    `).join('')
+                    ? '<p class="text-xs text-gray-400 py-2">Sin pedidos</p>'
+                    : `<div class="flex gap-2 pb-1" style="width: max-content;">
+                        ${pedidosDia.map(p => `
+                            <div class="border border-gray-200 rounded-lg p-2 w-56 shrink-0 cursor-pointer hover:bg-emerald-50 transition-colors"
+                                 onclick="mostrarDetallesPedido(${p.id})">
+                                <p class="text-sm font-semibold text-gray-800 truncate" title="${escapeHTML(p.apodo_cliente)}">${escapeHTML(p.apodo_cliente)}</p>
+                                <p class="text-xs text-gray-500">${resumenItemsTexto(p.items)}</p>
+                            </div>
+                        `).join('')}
+                       </div>`
                 }
             </div>
         `;
-        contenedor.appendChild(col);
+        contenedor.appendChild(fila);
     });
 }
 
