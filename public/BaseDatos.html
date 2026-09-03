@@ -62,12 +62,11 @@
                         <p class="campo-error hidden">El nombre y apellidos son obligatorios.</p>
                     </div>
                     <div>
-                        <label for="telefono" class="campo-label campo-opcional">Teléfono</label>
-                        <input type="tel" id="telefono" name="telefono" placeholder="Ej. 612 345 678"
-                               class="w-full border rounded-lg p-2"
-                               pattern="^(?:\+34[ \-]?|0034[ \-]?)?[6789](?:[ \-]?[0-9]){8}$"
-                               title="Teléfono español válido: 9 dígitos empezando por 6, 7, 8 o 9 (con o sin +34).">
-                        <p class="campo-error hidden">Introduce un teléfono español válido (9 dígitos, empieza por 6, 7, 8 o 9) o deja el campo vacío.</p>
+                        <label class="campo-label campo-opcional">Teléfono</label>
+                        <div id="telefonosLista" class="space-y-2"></div>
+                        <button type="button" onclick="agregarFilaTelefono()" class="mt-1 inline-flex items-center gap-1 text-sm text-[#158765] hover:text-[#0f6b50] font-medium">
+                            <i class="fas fa-circle-plus"></i> Añadir otro teléfono
+                        </button>
                     </div>
                     <div class="relative">
                         <label for="localidad" class="campo-label campo-opcional">Localidad</label>

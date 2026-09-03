@@ -142,6 +142,40 @@
             </div>
         </div>
 
+        <!-- Modal compartido para editar un pedido (desde Pendientes o desde Calendario) -->
+        <div id="modalEditarPedido" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800">Editar Pedido</h3>
+                    <button type="button" onclick="cerrarModalEditarPedido()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+                </div>
+
+                <div class="mb-4">
+                    <label class="campo-label campo-obligatorio">Productos del pedido</label>
+                    <div id="editarItemsPedidoLista" class="space-y-2"></div>
+                    <button type="button" onclick="agregarFilaItemEditar()" class="mt-2 inline-flex items-center gap-1 text-sm text-[#158765] hover:text-[#0f6b50] font-medium">
+                        <i class="fas fa-circle-plus"></i> Añadir otro producto
+                    </button>
+                    <p id="errorItemsEditar" class="campo-error hidden mt-1">Añade al menos un producto con su cantidad.</p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="campo-label campo-opcional" for="editarFechaPedido">Fecha</label>
+                    <input type="date" id="editarFechaPedido" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#20c997]">
+                </div>
+
+                <div class="mb-2">
+                    <label class="campo-label campo-opcional" for="editarObservacionesPedido">Observaciones</label>
+                    <textarea id="editarObservacionesPedido" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#20c997]"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-6">
+                    <button type="button" onclick="cerrarModalEditarPedido()" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium text-sm">Cancelar</button>
+                    <button type="button" onclick="guardarEdicionPedido()" class="px-4 py-2 bg-[#158765] hover:bg-[#0f6b50] text-white rounded-lg font-medium text-sm">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+
         <div id="modalAviso" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
             <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-6">
                 <div class="flex flex-col items-center text-center gap-3 mb-6">

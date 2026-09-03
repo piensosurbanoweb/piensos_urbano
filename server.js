@@ -1102,6 +1102,80 @@ app.post('/pedidos_pendientes', async (req, res) => {
   }
 });
 
+
+// Detalle completo de un pedido pendiente (para el modal de "Editar"): sus
+// productos/cantidades (pedido_items) y sus observaciones.
+app.get('/pedidos_pendientes/:id/detalle', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await pool.query(
+      `SELECT p.id, p.historial_id, p.observaciones, p.fecha_programacion, ${SUBQUERY_ITEMS}
+       FROM pedidos_pendientes p
+       JOIN pedidos_historial h ON h.id = p.historial_id
+       WHERE p.id = $1`,
+      [id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Pedido no encontrado.' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error al obtener el detalle del pedido pendiente:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+});
+
+// Edita un pedido pendiente: productos/cantidades, observaciones y fecha
+// programada. Actualiza a la vez pedidos_pendientes, pedidos_historial (que
+// es el registro permanente) y pedido_items (se borran y se vuelven a
+// crear con la lista nueva, más simple que calcular altas/bajas/cambios).
+app.put('/pedidos_pendientes/:id/editar', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const { fecha_programacion, observaciones } = req.body;
+    const items = (Array.isArray(req.body.items) ? req.body.items : [])
+      .map((it) => ({ cantidad: String(it.cantidad || '').trim(), producto: String(it.producto || '').trim() }))
+      .filter((it) => it.cantidad && it.producto);
+
+    if (items.length === 0) {
+      return res.status(400).json({ error: 'El pedido necesita al menos un producto con cantidad.' });
+    }
+
+    await client.query('BEGIN');
+    const actual = await client.query('SELECT historial_id FROM pedidos_pendientes WHERE id = $1', [id]);
+    if (actual.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Pedido no encontrado.' });
+    }
+    const historialId = actual.rows[0].historial_id;
+    const resumen = resumenItems(items);
+    const diaReparto = fecha_programacion ? getDiaRepartoUTC(fecha_programacion) : null;
+
+    await client.query(
+      `UPDATE pedidos_pendientes SET fecha_programacion=$1, dia_reparto=$2, observaciones=$3, pedido=$4 WHERE id=$5`,
+      [fecha_programacion || null, diaReparto, observaciones || null, resumen, id]
+    );
+    await client.query(
+      `UPDATE pedidos_historial SET observaciones=$1, fecha_entrega=$2 WHERE id=$3`,
+      [observaciones || null, fecha_programacion || null, historialId]
+    );
+    await client.query('DELETE FROM pedido_items WHERE historial_id = $1', [historialId]);
+    for (let i = 0; i < items.length; i++) {
+      await client.query(
+        `INSERT INTO pedido_items (historial_id, producto, cantidad, orden) VALUES ($1, $2, $3, $4)`,
+        [historialId, items[i].producto, items[i].cantidad, i]
+      );
+    }
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error al editar el pedido pendiente:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  } finally {
+    client.release();
+  }
+});
+
 app.delete('/pedidos_pendientes/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1133,6 +1207,7 @@ app.get('/pedidos/detalles/:id', async (req, res) => {
       `SELECT
          p.id,
          p.fecha_entrega AS fecha_entrega,
+         p.dia_reparto,
          p.observaciones,
          c.apodo AS apodo_cliente, c.telefono, c.localidad,
          ${SUBQUERY_ITEMS}
@@ -1254,6 +1329,60 @@ app.put('/pedidos_calendario/:id', async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: 'Error al actualizar pedido calendario' });
+  }
+});
+
+
+// Edita el contenido de un pedido ya programado en el calendario:
+// productos/cantidades, observaciones y fecha de entrega (el día de la
+// semana se recalcula solo a partir de la fecha, igual que en
+// /pedidos/editar-fecha). Distinta de PUT /pedidos_calendario/:id de
+// arriba, que es la que usa la Hoja de Reparto para orden/conductor/camión.
+app.put('/pedidos_calendario/:id/editar', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const { fecha_entrega, observaciones } = req.body;
+    const items = (Array.isArray(req.body.items) ? req.body.items : [])
+      .map((it) => ({ cantidad: String(it.cantidad || '').trim(), producto: String(it.producto || '').trim() }))
+      .filter((it) => it.cantidad && it.producto);
+
+    if (items.length === 0) {
+      return res.status(400).json({ error: 'El pedido necesita al menos un producto con cantidad.' });
+    }
+
+    await client.query('BEGIN');
+    const actual = await client.query('SELECT historial_id FROM pedidos_calendario WHERE id = $1', [id]);
+    if (actual.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Pedido no encontrado.' });
+    }
+    const historialId = actual.rows[0].historial_id;
+    const diaReparto = fecha_entrega ? getDiaRepartoUTC(fecha_entrega) : null;
+
+    await client.query(
+      `UPDATE pedidos_calendario SET fecha_entrega=$1, dia_reparto=$2, observaciones=$3 WHERE id=$4`,
+      [fecha_entrega || null, diaReparto, observaciones || null, id]
+    );
+    await client.query(
+      `UPDATE pedidos_historial SET observaciones=$1, fecha_entrega=$2 WHERE id=$3`,
+      [observaciones || null, fecha_entrega || null, historialId]
+    );
+    await client.query('DELETE FROM pedido_items WHERE historial_id = $1', [historialId]);
+    for (let i = 0; i < items.length; i++) {
+      await client.query(
+        `INSERT INTO pedido_items (historial_id, producto, cantidad, orden) VALUES ($1, $2, $3, $4)`,
+        [historialId, items[i].producto, items[i].cantidad, i]
+      );
+    }
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error al editar el pedido del calendario:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  } finally {
+    client.release();
   }
 });
 
@@ -1516,18 +1645,50 @@ app.patch('/pedidos/hoja-reparto/:id', async (req, res) => {
   }
 });
 
-// Quita un pedido de la hoja (no borra el pedido programado, solo lo saca de la hoja impresa)
+// Quita un pedido de la hoja de reparto y lo devuelve por completo a
+// "Pedidos Pendientes de Programar" (no se queda a medias en el
+// calendario): se recrea la fila en pedidos_pendientes con los datos
+// actuales del cliente y del pedido, y se borra de pedidos_calendario.
 app.delete('/pedidos/hoja-reparto/:id', async (req, res) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
-    await pool.query(
-      `UPDATE pedidos_calendario SET enviado_reparto = false, fecha_envio_reparto = NULL, orden_reparto = NULL WHERE id = $1`,
+    await client.query('BEGIN');
+
+    const { rows } = await client.query(
+      `SELECT p.historial_id, p.cliente_id, p.dia_reparto, p.fecha_entrega, p.observaciones,
+              c.apodo, c.nombre_completo, c.telefono, c.localidad, c.zona_reparto,
+              ${SUBQUERY_ITEMS}
+       FROM pedidos_calendario p
+       JOIN pedidos_historial h ON h.id = p.historial_id
+       LEFT JOIN clientes c ON p.cliente_id = c.id
+       WHERE p.id = $1 AND p.enviado_reparto = true`,
       [id]
     );
+    const pedido = rows[0];
+    if (!pedido) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Pedido no encontrado en la hoja de reparto.' });
+    }
+
+    const resumen = resumenItems(pedido.items && pedido.items.length ? pedido.items : []);
+
+    await client.query(
+      `INSERT INTO pedidos_pendientes (historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [pedido.historial_id, pedido.cliente_id, pedido.apodo, pedido.nombre_completo, pedido.telefono, pedido.localidad, pedido.zona_reparto, resumen, pedido.fecha_entrega, pedido.observaciones, pedido.dia_reparto]
+    );
+
+    await client.query('DELETE FROM pedidos_calendario WHERE id = $1', [id]);
+
+    await client.query('COMMIT');
     res.json({ success: true });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error al quitar el pedido de la hoja de reparto:', err.message);
     res.status(500).json({ error: 'Error interno del servidor.' });
+  } finally {
+    client.release();
   }
 });
 

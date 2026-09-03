@@ -559,6 +559,63 @@ async function cargarClientes() {
     }
 }
 
+
+// --- Varios teléfonos por cliente ---
+// Se guardan todos juntos, separados por coma, en la misma columna
+// "telefono" que ya existía (sin tocar la base de datos): en el
+// formulario se editan como una lista de campos, igual que los productos
+// de un pedido.
+const PATRON_TELEFONO_ES = '^(?:\+34[ \-]?|0034[ \-]?)?[6789](?:[ \-]?[0-9]){8}$';
+const TITULO_TELEFONO_ES = 'Teléfono español válido: 9 dígitos empezando por 6, 7, 8 o 9 (con o sin +34).';
+
+function agregarFilaTelefono(valor = '') {
+    const lista = document.getElementById('telefonosLista');
+    if (!lista) return;
+
+    const fila = document.createElement('div');
+    fila.className = 'flex gap-2 items-start telefono-fila';
+    fila.innerHTML = `
+        <div class="flex-1">
+            <input type="tel" placeholder="Ej. 612 345 678" value="${escapeHTML(valor)}"
+                class="w-full border rounded-lg p-2 item-telefono"
+                pattern="${PATRON_TELEFONO_ES}"
+                title="${TITULO_TELEFONO_ES}">
+            <p class="campo-error hidden text-xs mt-1">Introduce un teléfono español válido (9 dígitos, empieza por 6, 7, 8 o 9) o deja el campo vacío.</p>
+        </div>
+        <button type="button" onclick="eliminarFilaTelefono(this)" class="text-gray-400 hover:text-red-600 px-2 py-2" title="Quitar teléfono">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    lista.appendChild(fila);
+}
+
+function eliminarFilaTelefono(boton) {
+    const lista = document.getElementById('telefonosLista');
+    if (!lista) return;
+    if (lista.querySelectorAll('.telefono-fila').length <= 1) {
+        // Si es la última fila, se vacía en vez de quitarla (siempre hay que dejar al menos una).
+        const input = boton.closest('.telefono-fila')?.querySelector('.item-telefono');
+        if (input) input.value = '';
+        return;
+    }
+    boton.closest('.telefono-fila')?.remove();
+}
+
+function reiniciarTelefonos(valores = ['']) {
+    const lista = document.getElementById('telefonosLista');
+    if (!lista) return;
+    lista.innerHTML = '';
+    (valores.length ? valores : ['']).forEach((v) => agregarFilaTelefono(v));
+}
+
+/** Lee todos los teléfonos no vacíos del formulario y los une en un solo texto separado por comas. */
+function recolectarTelefonos() {
+    return Array.from(document.querySelectorAll('#telefonosLista .item-telefono'))
+        .map((input) => input.value.trim())
+        .filter((v) => v)
+        .join(', ');
+}
+
 async function guardarCliente(event) {
     event.preventDefault();
     const form = event.target;
@@ -568,7 +625,7 @@ async function guardarCliente(event) {
     const cliente = {
         apodo:           document.getElementById('apodo').value,
         nombre_completo: document.getElementById('nombre_completo').value,
-        telefono:        document.getElementById('telefono').value,
+        telefono:        recolectarTelefonos(),
         localidad:       document.getElementById('localidad').value,
         zona_reparto:    document.getElementById('zona_reparto').value,
         observaciones:   document.getElementById('observaciones').value
@@ -596,15 +653,17 @@ function abrirModal(cliente = null) {
     document.getElementById('clienteId').value = '';
 
     if (cliente) {
+        const telefonos = (cliente.telefono || '').split(',').map((t) => t.trim()).filter((t) => t);
+        reiniciarTelefonos(telefonos.length ? telefonos : ['']);
         document.getElementById('clienteId').value      = cliente.id || '';
         document.getElementById('apodo').value           = cliente.apodo || '';
         document.getElementById('nombre_completo').value = cliente.nombre_completo || '';
-        document.getElementById('telefono').value        = cliente.telefono || '';
         document.getElementById('localidad').value       = cliente.localidad || '';
         document.getElementById('zona_reparto').value    = cliente.zona_reparto || '';
         document.getElementById('observaciones').value   = cliente.observaciones || '';
         document.getElementById('modalTitle').innerText  = 'Editar Cliente';
     } else {
+        reiniciarTelefonos();
         document.getElementById('modalTitle').innerText  = 'Agregar Cliente';
     }
 
@@ -736,14 +795,35 @@ function agregarFilaItemPedido(cantidad = '', producto = '') {
     fila.className = 'flex gap-2 items-start item-pedido-fila';
     fila.innerHTML = `
         <input type="number" min="1" step="1" placeholder="Cantidad" value="${escapeHTML(cantidad)}"
-            class="w-28 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent item-cantidad">
+            class="w-28 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent item-cantidad"
+            onkeydown="onEnterFilaItemPedido(event, this)">
         <input type="text" placeholder="Producto (ej. Pienso de gato)" value="${escapeHTML(producto)}"
-            class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent item-producto">
+            class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#20c997] focus:border-transparent item-producto"
+            onkeydown="onEnterFilaItemPedido(event, this)">
         <button type="button" onclick="eliminarFilaItemPedido(this)" class="text-gray-400 hover:text-red-600 px-2 py-2" title="Quitar producto">
             <i class="fas fa-trash"></i>
         </button>
     `;
     lista.appendChild(fila);
+}
+
+// Al pulsar Enter en Cantidad o Producto: en vez de enviar el formulario (o
+// activar el primer botón de la fila, que es el de la papelera), añade una
+// fila nueva y pone el foco en su campo de Cantidad, para poder ir
+// metiendo varios productos seguidos sin tocar el ratón.
+function onEnterFilaItemPedido(event, campo) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const filaActual = campo.closest('.item-pedido-fila');
+    const esUltimaFila = filaActual === document.querySelectorAll('#itemsPedidoLista .item-pedido-fila')[document.querySelectorAll('#itemsPedidoLista .item-pedido-fila').length - 1];
+    if (esUltimaFila) {
+        agregarFilaItemPedido();
+        const lista = document.getElementById('itemsPedidoLista');
+        lista.querySelector('.item-pedido-fila:last-child .item-cantidad')?.focus();
+    } else {
+        // Si no es la última fila, se salta a la cantidad de la siguiente en vez de crear una de más.
+        filaActual.nextElementSibling?.querySelector('.item-cantidad')?.focus();
+    }
 }
 
 function eliminarFilaItemPedido(boton) {
@@ -945,6 +1025,10 @@ function renderizarPedidosPendientes(pedidos) {
                         class="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg text-sm border border-red-200">
                         <i class="fas fa-ban mr-1"></i> Cancelar
                     </button>
+                    <button onclick="abrirModalEditarPedido('pendiente', ${pedido.id})"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm border border-gray-300">
+                        <i class="fas fa-pen mr-1"></i> Editar
+                    </button>
                     <button onclick="mostrarCalendarioModal(${pedido.historial_id})"
                         class="bg-[#158765] hover:bg-[#0f6b50] text-white px-4 py-2 rounded-lg text-sm">
                         <i class="fas fa-calendar-days mr-1"></i> Programar en Calendario
@@ -969,6 +1053,146 @@ async function cancelarPedidoPendiente(id) {
         mostrarMensajeExito('Pedido cancelado');
     } catch (err) {
         alert('Error: ' + err.message);
+    }
+}
+
+
+// ============================================================
+// EDITAR PEDIDO (modal compartido entre Pendientes y Calendario)
+// ============================================================
+let edicionPedidoOrigen = null; // 'pendiente' | 'calendario'
+let edicionPedidoId = null;
+
+function agregarFilaItemEditar(cantidad = '', producto = '') {
+    const lista = document.getElementById('editarItemsPedidoLista');
+    if (!lista) return;
+    const fila = document.createElement('div');
+    fila.className = 'flex gap-2 items-start item-pedido-fila';
+    fila.innerHTML = `
+        <input type="number" min="1" step="1" placeholder="Cantidad" value="${escapeHTML(cantidad)}"
+            class="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#20c997] item-cantidad"
+            onkeydown="onEnterFilaItemEditar(event, this)">
+        <input type="text" placeholder="Producto" value="${escapeHTML(producto)}"
+            class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#20c997] item-producto"
+            onkeydown="onEnterFilaItemEditar(event, this)">
+        <button type="button" onclick="eliminarFilaItemEditar(this)" class="text-gray-400 hover:text-red-600 px-2 py-2" title="Quitar producto">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    lista.appendChild(fila);
+}
+
+function eliminarFilaItemEditar(boton) {
+    const lista = document.getElementById('editarItemsPedidoLista');
+    if (!lista) return;
+    if (lista.querySelectorAll('.item-pedido-fila').length <= 1) return;
+    boton.closest('.item-pedido-fila')?.remove();
+}
+
+function onEnterFilaItemEditar(event, campo) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const filas = document.querySelectorAll('#editarItemsPedidoLista .item-pedido-fila');
+    const filaActual = campo.closest('.item-pedido-fila');
+    if (filaActual === filas[filas.length - 1]) {
+        agregarFilaItemEditar();
+        document.querySelector('#editarItemsPedidoLista .item-pedido-fila:last-child .item-cantidad')?.focus();
+    } else {
+        filaActual.nextElementSibling?.querySelector('.item-cantidad')?.focus();
+    }
+}
+
+function recolectarItemsEditar() {
+    const filas = document.querySelectorAll('#editarItemsPedidoLista .item-pedido-fila');
+    const items = [];
+    filas.forEach((fila) => {
+        const cantidad = fila.querySelector('.item-cantidad')?.value.trim();
+        const producto = fila.querySelector('.item-producto')?.value.trim();
+        if (cantidad && producto) items.push({ cantidad, producto });
+    });
+    return items;
+}
+
+/** Abre el modal de edición para un pedido pendiente o uno ya en el calendario. */
+async function abrirModalEditarPedido(origen, id) {
+    edicionPedidoOrigen = origen;
+    edicionPedidoId = id;
+
+    const url = origen === 'pendiente' ? `/pedidos_pendientes/${id}/detalle` : `/pedidos/detalles/${id}`;
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error((await res.json())?.error || 'No se pudo cargar el pedido.');
+        const pedido = await res.json();
+
+        const lista = document.getElementById('editarItemsPedidoLista');
+        lista.innerHTML = '';
+        if (pedido.items && pedido.items.length > 0) {
+            pedido.items.forEach((it) => agregarFilaItemEditar(it.cantidad, it.producto));
+        } else {
+            agregarFilaItemEditar();
+        }
+
+        const fecha = origen === 'pendiente' ? pedido.fecha_programacion : pedido.fecha_entrega;
+        document.getElementById('editarFechaPedido').value = fecha ? new Date(fecha).toISOString().split('T')[0] : '';
+        document.getElementById('editarObservacionesPedido').value = pedido.observaciones || '';
+        document.getElementById('errorItemsEditar')?.classList.add('hidden');
+
+        const modal = document.getElementById('modalEditarPedido');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    } catch (err) {
+        console.error('Error al abrir la edición del pedido:', err);
+        await mostrarAviso('No se pudo abrir el pedido para editar: ' + err.message, 'error');
+    }
+}
+
+function cerrarModalEditarPedido() {
+    const modal = document.getElementById('modalEditarPedido');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    edicionPedidoOrigen = null;
+    edicionPedidoId = null;
+}
+
+async function guardarEdicionPedido() {
+    const items = recolectarItemsEditar();
+    const errorItems = document.getElementById('errorItemsEditar');
+    if (items.length === 0) {
+        errorItems?.classList.remove('hidden');
+        return;
+    }
+    errorItems?.classList.add('hidden');
+
+    const fecha = document.getElementById('editarFechaPedido').value || null;
+    const observaciones = document.getElementById('editarObservacionesPedido').value || null;
+
+    const url = edicionPedidoOrigen === 'pendiente'
+        ? `/pedidos_pendientes/${edicionPedidoId}/editar`
+        : `/pedidos_calendario/${edicionPedidoId}/editar`;
+    const body = edicionPedidoOrigen === 'pendiente'
+        ? { fecha_programacion: fecha, observaciones, items }
+        : { fecha_entrega: fecha, observaciones, items };
+
+    try {
+        const res = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo guardar el pedido.');
+
+        cerrarModalEditarPedido();
+        await mostrarAviso('Pedido actualizado correctamente.', 'exito');
+
+        if (edicionPedidoOrigen === 'pendiente') {
+            cargarPedidosPendientes();
+        } else {
+            cargarPedidosCalendario();
+        }
+    } catch (err) {
+        console.error('Error al guardar la edición del pedido:', err);
+        await mostrarAviso('No se pudo guardar el pedido: ' + err.message, 'error');
     }
 }
 
@@ -1334,8 +1558,8 @@ async function mostrarDetallesPedido(id) {
                 <div class="flex justify-end gap-2 mt-6">
                     <button onclick="cerrarDetallesPedidoModal()"
                         class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg text-sm">Cerrar</button>
-                    <button onclick="mostrarModalEditarFecha('${new Date(pedido.fecha_entrega).toISOString().split('T')[0]}')"
-                        class="px-4 py-2 bg-[#158765] hover:bg-[#0f6b50] text-white rounded-lg text-sm"><i class="fas fa-pen mr-1"></i> Editar Fecha</button>
+                    <button onclick="cerrarDetallesPedidoModal(); abrirModalEditarPedido('calendario', ${id})"
+                        class="px-4 py-2 bg-[#158765] hover:bg-[#0f6b50] text-white rounded-lg text-sm"><i class="fas fa-pen mr-1"></i> Editar Pedido</button>
                 </div>
             </div>
         `;
@@ -2089,20 +2313,20 @@ function renderizarHojaReparto() {
             <td class="border px-2 py-2">${escapeHTML(p.apodo_cliente)}</td>
             <td class="border px-2 py-2">${escapeHTML(p.telefono)}</td>
             <td class="border px-2 py-2 observaciones-cell">${resumenItemsTexto(p.items)}</td>
-            <td class="border px-2 py-2 capitalize">${escapeHTML(p.dia_reparto)}</td>
             <td class="border px-2 py-2 orden-cell">
                 <input type="number" min="1" step="1" value="${p.orden_reparto ?? ''}" class="hoja-input"
                     onchange="actualizarCampoHoja(${p.id}, 'orden_reparto', this.value ? parseInt(this.value, 10) : null)">
             </td>
             <td class="border px-2 py-2 conductor-cell">
+                ${construirSelectHoja(conductoresHoja, p.conductor, `onchange="actualizarCampoHoja(${p.id}, 'conductor', this.value || null)"`)}
+            </td>
+            <td class="border px-2 py-2 conductor-cell">
                 ${construirSelectHoja(camionesHoja, p.camion, `onchange="actualizarCampoHoja(${p.id}, 'camion', this.value || null)"`)}
             </td>
             <td class="border px-2 py-2">${escapeHTML(p.zona)}</td>
-            <td class="border px-2 py-2 conductor-cell">
-                ${construirSelectHoja(conductoresHoja, p.conductor, `onchange="actualizarCampoHoja(${p.id}, 'conductor', this.value || null)"`)}
-            </td>
+            <td class="border px-2 py-2 capitalize">${escapeHTML(p.dia_reparto)}</td>
             <td class="border px-2 py-2 text-center no-print">
-                <button onclick="eliminarPedidoHoja(${p.id})" class="text-red-600 hover:text-red-800" title="Quitar de la hoja"><i class="fas fa-trash"></i></button>
+                <button onclick="eliminarPedidoHoja(${p.id})" class="text-red-600 hover:text-red-800" title="Quitar de la hoja y volver a pendientes"><i class="fas fa-rotate-left"></i></button>
             </td>
         `;
         tbody.appendChild(fila);
@@ -2147,14 +2371,16 @@ async function actualizarCampoHoja(id, campo, valor) {
 }
 
 async function eliminarPedidoHoja(id) {
-    if (!(await confirmarAccion('¿Quitar este pedido de la hoja de reparto? (el pedido programado no se borra)', 'Quitar'))) return;
+    if (!(await confirmarAccion('¿Quitar este pedido de la hoja de reparto? Volverá a "Pedidos Pendientes de Programar" para poder reprogramarlo.', 'Quitar'))) return;
     try {
         const res = await fetch(`/pedidos/hoja-reparto/${id}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('Error al quitar el pedido');
+        if (!res.ok) throw new Error((await res.json())?.error || 'Error al quitar el pedido');
         pedidosHojaReparto = pedidosHojaReparto.filter(p => p.id !== id);
         renderizarHojaReparto();
+        cargarPedidosPendientes();
+        await mostrarAviso('El pedido ha vuelto a Pedidos Pendientes de Programar.', 'exito');
     } catch (err) {
-        alert('Error: ' + err.message);
+        await mostrarAviso('No se pudo quitar el pedido: ' + err.message, 'error');
     }
 }
 
