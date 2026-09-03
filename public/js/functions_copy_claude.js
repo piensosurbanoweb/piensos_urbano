@@ -1949,8 +1949,10 @@ async function enviarBackupManual() {
         }
         await mostrarAviso(mensaje, data.avisos && data.avisos.length ? 'info' : 'exito');
     } catch (err) {
+        // El detalle técnico (Brevo, IPs, etc.) se queda en la consola para quien
+        // desarrolla la app; a quien use el botón solo le interesa que ha fallado.
         console.error('Error al enviar la copia de seguridad manual:', err);
-        await mostrarAviso('No se pudo enviar la copia de seguridad:\n\n' + err.message, 'error');
+        await mostrarAviso('No se ha podido enviar la copia de seguridad. Contacta con soporte.', 'error');
     } finally {
         boton.disabled = false;
         boton.innerHTML = textoOriginal;

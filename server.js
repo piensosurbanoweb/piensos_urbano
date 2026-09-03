@@ -294,12 +294,13 @@ async function generarBackupExcel() {
 // (backup-manual), para no repetir la lógica dos veces.
 async function generarYEnviarBackup() {
   const buffer = await generarBackupExcel();
-  // Solo se envía a BACKUP_EMAIL (o al correo por defecto si no está
-  // configurado) mientras se prueba Brevo. Cuando se confirme que llega
-  // bien, se puede añadir aquí también 'piensosurbano@hotmail.com' para
-  // que le llegue al cliente.
+  // Se envía a varios destinatarios a la vez: el de siempre (BACKUP_EMAIL,
+  // o el correo por defecto si no está configurado) y el del cliente. Se
+  // manda un email por destinatario (en vez de uno solo con varios "to")
+  // para que, si uno falla, el resto no se vea afectado.
   const destinatarios = [...new Set([
     process.env.BACKUP_EMAIL || 'piensosurbanoweb@gmail.com',
+    'piensosurbano@hotmail.com',
   ])];
   const fecha = new Date().toLocaleDateString('es-ES');
   const fechaArchivo = fecha.replace(/\//g, '-');
