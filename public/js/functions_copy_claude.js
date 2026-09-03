@@ -1564,7 +1564,9 @@ async function mostrarDetallesPedido(id) {
                     <p><strong>Localidad:</strong> ${escapeHTML(pedido.localidad) || 'N/A'}</p>
                     <p><strong>Observaciones:</strong> ${escapeHTML(pedido.observaciones) || 'N/A'}</p>
                 </div>
-                <div class="flex justify-end gap-2 mt-6">
+                <div class="flex flex-wrap justify-end gap-2 mt-6">
+                    <button onclick="volverAPendientesDesdeCalendario(${id})"
+                        class="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm"><i class="fas fa-rotate-left mr-1"></i> Volver a Pendientes</button>
                     <button onclick="cerrarDetallesPedidoModal()"
                         class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg text-sm">Cerrar</button>
                     <button onclick="cerrarDetallesPedidoModal(); abrirModalEditarPedido('calendario', ${id})"
@@ -1581,6 +1583,21 @@ async function mostrarDetallesPedido(id) {
 function cerrarDetallesPedidoModal() {
     const modal = document.getElementById('detallesPedidoModal');
     if (modal) modal.classList.add('hidden');
+}
+
+/** Desde el Calendario: desprograma del todo el pedido y lo devuelve a Pedidos Pendientes, como si no tuviera fecha. */
+async function volverAPendientesDesdeCalendario(id) {
+    if (!(await confirmarAccion('¿Devolver este pedido a "Pedidos Pendientes de Programar"? Dejará de estar programado en el calendario, como si no tuviera fecha.', 'Volver a Pendientes'))) return;
+    try {
+        const res = await fetch(`/pedidos_calendario/${id}/volver-a-pendientes`, { method: 'POST' });
+        if (!res.ok) throw new Error((await res.json())?.error || 'Error al volver el pedido a pendientes');
+        cerrarDetallesPedidoModal();
+        cargarPedidosCalendario();
+        cargarPedidosPendientes();
+        await mostrarAviso('El pedido ha vuelto a Pedidos Pendientes de Programar.', 'exito');
+    } catch (err) {
+        await mostrarAviso('No se pudo volver el pedido a pendientes: ' + err.message, 'error');
+    }
 }
 
 function mostrarModalEditarFecha(fechaActual) {
@@ -2335,7 +2352,10 @@ function renderizarHojaReparto() {
             <td class="border px-2 py-2">${escapeHTML(p.zona)}</td>
             <td class="border px-2 py-2 capitalize">${escapeHTML(p.dia_reparto)}</td>
             <td class="border px-2 py-2 text-center no-print">
-                <button onclick="eliminarPedidoHoja(${p.id})" class="text-red-600 hover:text-red-800" title="Quitar de la hoja y volver a pendientes"><i class="fas fa-rotate-left"></i></button>
+                <div class="flex items-center justify-center gap-3">
+                    <button onclick="eliminarPedidoHoja(${p.id})" class="text-gray-500 hover:text-red-600" title="Quitar de esta hoja (sigue programado en el calendario)"><i class="fas fa-trash"></i></button>
+                    <button onclick="volverAPendientesDesdeHoja(${p.id})" class="text-red-600 hover:text-red-800" title="Volver a Pedidos Pendientes (deja de estar programado)"><i class="fas fa-rotate-left"></i></button>
+                </div>
             </td>
         `;
         tbody.appendChild(fila);
@@ -2435,18 +2455,34 @@ async function actualizarCampoHoja(id, campo, valor) {
     }
 }
 
+/** Quita el pedido de esta hoja/impreso, pero sigue programado en el calendario tal cual. */
 async function eliminarPedidoHoja(id) {
-    if (!(await confirmarAccion('¿Quitar este pedido de la hoja de reparto? Volverá a "Pedidos Pendientes de Programar" para poder reprogramarlo.', 'Quitar'))) return;
+    if (!(await confirmarAccion('¿Quitar este pedido de la hoja de reparto? Seguirá programado en el calendario con su fecha y su día, solo desaparece de esta hoja.', 'Quitar de la hoja'))) return;
     try {
         const res = await fetch(`/pedidos/hoja-reparto/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error((await res.json())?.error || 'Error al quitar el pedido');
+        pedidosHojaReparto = pedidosHojaReparto.filter(p => p.id !== id);
+        renderizarHojaReparto();
+        cargarFechasHoja();
+        await mostrarAviso('El pedido se ha quitado de la hoja. Sigue programado en el calendario.', 'exito');
+    } catch (err) {
+        await mostrarAviso('No se pudo quitar el pedido: ' + err.message, 'error');
+    }
+}
+
+/** Desprograma del todo el pedido y lo devuelve a Pedidos Pendientes, como si no tuviera fecha. */
+async function volverAPendientesDesdeHoja(id) {
+    if (!(await confirmarAccion('¿Devolver este pedido a "Pedidos Pendientes de Programar"? Dejará de estar programado en el calendario, como si no tuviera fecha.', 'Volver a Pendientes'))) return;
+    try {
+        const res = await fetch(`/pedidos_calendario/${id}/volver-a-pendientes`, { method: 'POST' });
+        if (!res.ok) throw new Error((await res.json())?.error || 'Error al volver el pedido a pendientes');
         pedidosHojaReparto = pedidosHojaReparto.filter(p => p.id !== id);
         renderizarHojaReparto();
         cargarPedidosPendientes();
         cargarFechasHoja();
         await mostrarAviso('El pedido ha vuelto a Pedidos Pendientes de Programar.', 'exito');
     } catch (err) {
-        await mostrarAviso('No se pudo quitar el pedido: ' + err.message, 'error');
+        await mostrarAviso('No se pudo volver el pedido a pendientes: ' + err.message, 'error');
     }
 }
 

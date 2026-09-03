@@ -1672,11 +1672,34 @@ app.patch('/pedidos/hoja-reparto/:id', async (req, res) => {
   }
 });
 
-// Quita un pedido de la hoja de reparto y lo devuelve por completo a
-// "Pedidos Pendientes de Programar" (no se queda a medias en el
-// calendario): se recrea la fila en pedidos_pendientes con los datos
-// actuales del cliente y del pedido, y se borra de pedidos_calendario.
+// Quita un pedido de la hoja de reparto (deja de estar marcado como
+// "enviado" y sale de la hoja/impreso), pero SIGUE programado tal cual en
+// el calendario, con su fecha y su día. Es distinto de "Volver a
+// Pendientes" (más abajo), que sí lo desprograma del todo.
 app.delete('/pedidos/hoja-reparto/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rowCount } = await pool.query(
+      `UPDATE pedidos_calendario
+       SET enviado_reparto = false, fecha_envio_reparto = NULL, orden_reparto = NULL
+       WHERE id = $1 AND enviado_reparto = true`,
+      [id]
+    );
+    if (rowCount === 0) return res.status(404).json({ error: 'Pedido no encontrado en la hoja de reparto.' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error al quitar el pedido de la hoja de reparto:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+});
+
+// Devuelve por completo un pedido programado a "Pedidos Pendientes de
+// Programar", como si nunca se le hubiera puesto fecha (no se queda a
+// medias en el calendario): se recrea la fila en pedidos_pendientes con
+// los datos actuales del cliente y del pedido, y se borra de
+// pedidos_calendario. Funciona esté o no enviado a la hoja de reparto, así
+// que sirve tanto desde el Calendario como desde la propia Hoja de Reparto.
+app.post('/pedidos_calendario/:id/volver-a-pendientes', async (req, res) => {
   const client = await pool.connect();
   try {
     const { id } = req.params;
@@ -1689,13 +1712,13 @@ app.delete('/pedidos/hoja-reparto/:id', async (req, res) => {
        FROM pedidos_calendario p
        JOIN pedidos_historial h ON h.id = p.historial_id
        LEFT JOIN clientes c ON p.cliente_id = c.id
-       WHERE p.id = $1 AND p.enviado_reparto = true`,
+       WHERE p.id = $1`,
       [id]
     );
     const pedido = rows[0];
     if (!pedido) {
       await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'Pedido no encontrado en la hoja de reparto.' });
+      return res.status(404).json({ error: 'Pedido no encontrado en el calendario.' });
     }
 
     const resumen = resumenItems(pedido.items && pedido.items.length ? pedido.items : []);
@@ -1712,7 +1735,7 @@ app.delete('/pedidos/hoja-reparto/:id', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error al quitar el pedido de la hoja de reparto:', err.message);
+    console.error('Error al volver el pedido a pendientes:', err.message);
     res.status(500).json({ error: 'Error interno del servidor.' });
   } finally {
     client.release();
