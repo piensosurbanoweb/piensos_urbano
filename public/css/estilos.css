@@ -4,16 +4,23 @@
         @media print {
             @page {
                 size: landscape;
-                margin: 1cm;
+                margin: 0.6cm;
             }
 
             html, body {
                 width: 100% !important;
                 font-family: Arial, sans-serif;
-                font-size: 14px;
+                font-size: 12px;
                 margin: 0;
                 padding: 0;
                 background: white !important;
+            }
+
+            /* Que la hoja de reparto quepa en una sola página: evitamos que
+               una fila se parta entre dos hojas y quitamos todo lo que no
+               sea la propia tabla (avisos, cabecera de la app, etc.). */
+            #tablaPedidosHoja tr {
+                page-break-inside: avoid;
             }
 
             .no-print { display: none !important; }
@@ -41,16 +48,17 @@
             .print-table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-top: 20px;
+                margin-top: 8px;
                 table-layout: fixed;
             }
 
             .print-table th,
             .print-table td {
                 border: 1px solid #000;
-                padding: 10px;
+                padding: 4px 6px;
                 text-align: left;
-                font-size: 13px;
+                font-size: 11px;
+                line-height: 1.25;
                 word-wrap: break-word;
             }
 
@@ -61,18 +69,18 @@
 
             .print-header {
                 text-align: center;
-                margin-bottom: 20px;
+                margin-bottom: 8px;
             }
 
             .print-title {
-                font-size: 22px;
+                font-size: 18px;
                 font-weight: bold;
-                margin-bottom: 10px;
+                margin-bottom: 4px;
             }
 
             .print-date {
-                font-size: 16px;
-                margin-bottom: 5px;
+                font-size: 13px;
+                margin-bottom: 2px;
             }
 
             .orden-cell {

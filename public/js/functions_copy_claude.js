@@ -499,7 +499,7 @@ async function inicializarHojaReparto() {
     const fechaEl = document.getElementById('fechaImpresionHoja');
     if (fechaEl) fechaEl.textContent = `Impreso el ${new Date().toLocaleDateString('es-ES')}`;
     await cargarListasHojaReparto();
-    cargarPedidosHoja();
+    await cargarFechasHoja();
 }
 
 
@@ -2342,13 +2342,69 @@ function renderizarHojaReparto() {
     });
 }
 
+// Día actualmente elegido en el selector (fecha en formato YYYY-MM-DD, o
+// '' si no hay ningún día enviado a la hoja). La hoja de reparto guarda
+// cada día por separado; ver o vaciar uno no afecta a los demás.
+let fechaHojaSeleccionada = '';
+
+/** Carga la lista de días con pedidos enviados a la hoja y rellena el desplegable. */
+async function cargarFechasHoja() {
+    const selector = document.getElementById('selectorFechaHoja');
+    try {
+        const res = await fetch('/pedidos/hoja-reparto/fechas');
+        if (!res.ok) throw new Error('Error al cargar los días de la hoja de reparto');
+        const dias = await res.json();
+
+        if (!dias.length) {
+            fechaHojaSeleccionada = '';
+            if (selector) selector.innerHTML = '<option value="">Sin días enviados</option>';
+            pedidosHojaReparto = [];
+            renderizarHojaReparto();
+            return;
+        }
+
+        // Si el día que teníamos seleccionado ya no existe (se vació), elegimos el primero disponible.
+        if (!dias.some(d => d.fecha === fechaHojaSeleccionada)) {
+            fechaHojaSeleccionada = dias[0].fecha;
+        }
+
+        if (selector) {
+            selector.innerHTML = dias.map(d => {
+                const fechaBonita = new Date(d.fecha + 'T00:00:00').toLocaleDateString('es-ES');
+                const dia = d.dia_reparto ? (d.dia_reparto.charAt(0).toUpperCase() + d.dia_reparto.slice(1)) : '';
+                return `<option value="${d.fecha}" ${d.fecha === fechaHojaSeleccionada ? 'selected' : ''}>${dia} ${fechaBonita}</option>`;
+            }).join('');
+        }
+
+        await cargarPedidosHoja();
+    } catch (err) {
+        console.error('Error al cargar los días de la hoja de reparto:', err);
+    }
+}
+
+function cambiarFechaHoja(fecha) {
+    fechaHojaSeleccionada = fecha;
+    cargarPedidosHoja();
+}
+
 async function cargarPedidosHoja() {
     try {
         document.getElementById('loadingPedidosHoja')?.classList.remove('hidden');
-        const res = await fetch('/pedidos/hoja-reparto');
+        if (!fechaHojaSeleccionada) {
+            pedidosHojaReparto = [];
+            renderizarHojaReparto();
+            return;
+        }
+        const res = await fetch(`/pedidos/hoja-reparto?fecha=${encodeURIComponent(fechaHojaSeleccionada)}`);
         if (!res.ok) throw new Error('Error al cargar hoja de reparto');
         pedidosHojaReparto = await res.json();
         renderizarHojaReparto();
+
+        const fechaEl = document.getElementById('fechaImpresionHoja');
+        if (fechaEl) {
+            const fechaBonita = new Date(fechaHojaSeleccionada + 'T00:00:00').toLocaleDateString('es-ES');
+            fechaEl.textContent = `Reparto del ${fechaBonita}`;
+        }
     } catch (err) {
         console.error('Error al cargar hoja de reparto:', err);
     } finally {
@@ -2387,6 +2443,7 @@ async function eliminarPedidoHoja(id) {
         pedidosHojaReparto = pedidosHojaReparto.filter(p => p.id !== id);
         renderizarHojaReparto();
         cargarPedidosPendientes();
+        cargarFechasHoja();
         await mostrarAviso('El pedido ha vuelto a Pedidos Pendientes de Programar.', 'exito');
     } catch (err) {
         await mostrarAviso('No se pudo quitar el pedido: ' + err.message, 'error');
@@ -2394,14 +2451,16 @@ async function eliminarPedidoHoja(id) {
 }
 
 async function limpiarHojaReparto() {
-    if (!(await confirmarAccion('¿Vaciar toda la hoja de reparto? Los pedidos seguirán programados en el calendario.', 'Vaciar hoja'))) return;
+    if (!fechaHojaSeleccionada) return;
+    const fechaBonita = new Date(fechaHojaSeleccionada + 'T00:00:00').toLocaleDateString('es-ES');
+    if (!(await confirmarAccion(`¿Vaciar la hoja de reparto del ${fechaBonita}? Los pedidos seguirán programados en el calendario, solo se quitan de esta hoja.`, 'Vaciar día'))) return;
     try {
-        const res = await fetch('/pedidos/hoja-reparto', { method: 'DELETE' });
+        const res = await fetch(`/pedidos/hoja-reparto?fecha=${encodeURIComponent(fechaHojaSeleccionada)}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Error al limpiar la hoja');
-        pedidosHojaReparto = [];
-        renderizarHojaReparto();
+        await cargarFechasHoja();
+        await mostrarAviso(`Hoja del ${fechaBonita} vaciada.`, 'exito');
     } catch (err) {
-        alert('Error: ' + err.message);
+        await mostrarAviso('Error al vaciar la hoja: ' + err.message, 'error');
     }
 }
 

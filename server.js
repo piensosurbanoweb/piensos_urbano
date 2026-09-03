@@ -1583,8 +1583,18 @@ app.patch('/pedidos/editar-fecha/:id', async (req, res) => {
 // sincronizados con el calendario y no hay que duplicarlos. Los pedidos
 // entran a la hoja únicamente desde Calendario > Vista Diaria > "Enviar a
 // Hoja Reparto" (endpoint POST de más abajo).
+// Si se pasa ?fecha=YYYY-MM-DD, solo devuelve los pedidos de ese día
+// concreto de reparto (evita que se mezclen varios días enviados a la vez).
+// Sin ese parámetro devuelve todos (uso interno / compatibilidad).
 app.get('/pedidos/hoja-reparto', async (req, res) => {
   try {
+    const { fecha } = req.query;
+    const condiciones = ['p.enviado_reparto = true'];
+    const valores = [];
+    if (fecha) {
+      valores.push(fecha);
+      condiciones.push(`p.fecha_entrega::date = $${valores.length}::date`);
+    }
     const { rows } = await pool.query(`
       SELECT
         p.id, p.dia_reparto, p.fecha_entrega, p.orden_reparto, p.conductor, p.camion, p.observaciones,
@@ -1593,13 +1603,30 @@ app.get('/pedidos/hoja-reparto', async (req, res) => {
       FROM pedidos_calendario p
       JOIN pedidos_historial h ON h.id = p.historial_id
       LEFT JOIN clientes c ON p.cliente_id = c.id
-      WHERE p.enviado_reparto = true
+      WHERE ${condiciones.join(' AND ')}
       ORDER BY p.orden_reparto NULLS LAST, p.dia_reparto, c.apodo
-    `);
+    `, valores);
     res.json(rows);
   } catch (err) {
     console.error('Error al obtener la hoja de reparto:', err.message);
     res.status(500).json({ error: 'Error interno del servidor al cargar la hoja de reparto.' });
+  }
+});
+
+// Lista de días (fecha + nombre del día) que tienen actualmente pedidos
+// enviados a la hoja de reparto, para el selector del desplegable.
+app.get('/pedidos/hoja-reparto/fechas', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT DISTINCT p.fecha_entrega::date AS fecha, p.dia_reparto
+      FROM pedidos_calendario p
+      WHERE p.enviado_reparto = true
+      ORDER BY fecha
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error al obtener los días de la hoja de reparto:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
   }
 });
 
@@ -1692,11 +1719,21 @@ app.delete('/pedidos/hoja-reparto/:id', async (req, res) => {
   }
 });
 
-// Vacía toda la hoja de reparto (no borra los pedidos programados, solo los saca de la hoja)
+// Vacía la hoja de reparto (no borra los pedidos programados, solo los saca
+// de la hoja). Si se pasa ?fecha=YYYY-MM-DD, solo vacía ese día concreto;
+// los demás días enviados se quedan tal cual, con su orden/conductor/camión.
 app.delete('/pedidos/hoja-reparto', async (req, res) => {
   try {
+    const { fecha } = req.query;
+    const condiciones = ['enviado_reparto = true'];
+    const valores = [];
+    if (fecha) {
+      valores.push(fecha);
+      condiciones.push(`fecha_entrega::date = $${valores.length}::date`);
+    }
     await pool.query(
-      `UPDATE pedidos_calendario SET enviado_reparto = false, fecha_envio_reparto = NULL, orden_reparto = NULL WHERE enviado_reparto = true`
+      `UPDATE pedidos_calendario SET enviado_reparto = false, fecha_envio_reparto = NULL, orden_reparto = NULL WHERE ${condiciones.join(' AND ')}`,
+      valores
     );
     res.json({ success: true });
   } catch (err) {
