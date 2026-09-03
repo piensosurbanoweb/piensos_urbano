@@ -2370,7 +2370,7 @@ async function cargarFechasHoja() {
 
         if (selector) {
             selector.innerHTML = dias.map(d => {
-                const fechaBonita = new Date(d.fecha + 'T00:00:00').toLocaleDateString('es-ES');
+                const fechaBonita = new Date(String(d.fecha).slice(0, 10) + 'T00:00:00').toLocaleDateString('es-ES');
                 const dia = d.dia_reparto ? (d.dia_reparto.charAt(0).toUpperCase() + d.dia_reparto.slice(1)) : '';
                 return `<option value="${d.fecha}" ${d.fecha === fechaHojaSeleccionada ? 'selected' : ''}>${dia} ${fechaBonita}</option>`;
             }).join('');
@@ -2402,7 +2402,7 @@ async function cargarPedidosHoja() {
 
         const fechaEl = document.getElementById('fechaImpresionHoja');
         if (fechaEl) {
-            const fechaBonita = new Date(fechaHojaSeleccionada + 'T00:00:00').toLocaleDateString('es-ES');
+            const fechaBonita = new Date(String(fechaHojaSeleccionada).slice(0, 10) + 'T00:00:00').toLocaleDateString('es-ES');
             fechaEl.textContent = `Reparto del ${fechaBonita}`;
         }
     } catch (err) {
@@ -2452,7 +2452,7 @@ async function eliminarPedidoHoja(id) {
 
 async function limpiarHojaReparto() {
     if (!fechaHojaSeleccionada) return;
-    const fechaBonita = new Date(fechaHojaSeleccionada + 'T00:00:00').toLocaleDateString('es-ES');
+    const fechaBonita = new Date(String(fechaHojaSeleccionada).slice(0, 10) + 'T00:00:00').toLocaleDateString('es-ES');
     if (!(await confirmarAccion(`¿Vaciar la hoja de reparto del ${fechaBonita}? Los pedidos seguirán programados en el calendario, solo se quitan de esta hoja.`, 'Vaciar día'))) return;
     try {
         const res = await fetch(`/pedidos/hoja-reparto?fecha=${encodeURIComponent(fechaHojaSeleccionada)}`, { method: 'DELETE' });

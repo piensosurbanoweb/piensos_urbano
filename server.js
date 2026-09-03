@@ -1618,7 +1618,7 @@ app.get('/pedidos/hoja-reparto', async (req, res) => {
 app.get('/pedidos/hoja-reparto/fechas', async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT DISTINCT p.fecha_entrega::date AS fecha, p.dia_reparto
+      SELECT DISTINCT to_char(p.fecha_entrega, 'YYYY-MM-DD') AS fecha, p.dia_reparto
       FROM pedidos_calendario p
       WHERE p.enviado_reparto = true
       ORDER BY fecha
