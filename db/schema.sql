@@ -121,6 +121,35 @@ CREATE TABLE IF NOT EXISTS zonas (
   activa BOOLEAN NOT NULL DEFAULT true
 );
 
+-- Historial de accesos (quién ha iniciado sesión y cuándo) e historial de
+-- cambios (quién ha creado/editado/eliminado qué). Solo visibles en la app
+-- para el rol "desarrollador". El propio servidor las crea automáticamente
+-- al arrancar si no existen (ver server.js, asegurarTablasHistorial), así
+-- que ejecutar esto a mano es opcional.
+CREATE TABLE IF NOT EXISTS historial_accesos (
+  id SERIAL PRIMARY KEY,
+  usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+  nombre_usuario VARCHAR(80),
+  nombre VARCHAR(120),
+  ip VARCHAR(64),
+  fecha TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS historial_cambios (
+  id SERIAL PRIMARY KEY,
+  usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+  nombre_usuario VARCHAR(80),
+  nombre VARCHAR(120),
+  accion VARCHAR(30) NOT NULL,
+  entidad VARCHAR(60) NOT NULL,
+  entidad_id INTEGER,
+  detalle TEXT,
+  fecha TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_historial_accesos_fecha ON historial_accesos(fecha DESC);
+CREATE INDEX IF NOT EXISTS idx_historial_cambios_fecha ON historial_cambios(fecha DESC);
+
 CREATE INDEX IF NOT EXISTS idx_pedidos_calendario_fecha ON pedidos_calendario(fecha_entrega);
 CREATE INDEX IF NOT EXISTS idx_pedidos_calendario_dia ON pedidos_calendario(dia_reparto);
 CREATE INDEX IF NOT EXISTS idx_pedidos_pendientes_historial ON pedidos_pendientes(historial_id);

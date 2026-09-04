@@ -477,8 +477,10 @@ function inicializarGestionBBDD() {
     // El gestor autorizado usa toda la app igual que el propietario, pero no
     // gestiona usuarios ni roles: se le oculta directamente esa tarjeta.
     const tarjetaUsuarios = document.getElementById('tarjetaUsuarios');
+    const tarjetaHistorial = document.getElementById('tarjetaHistorial');
     if (rolActual === 'gestor') {
         if (tarjetaUsuarios) tarjetaUsuarios.classList.add('hidden');
+        if (tarjetaHistorial) tarjetaHistorial.classList.add('hidden');
         return;
     }
     if (tarjetaUsuarios) tarjetaUsuarios.classList.remove('hidden');
@@ -493,6 +495,103 @@ function inicializarGestionBBDD() {
     }
 
     cargarUsuarios();
+
+    // El historial de accesos y de cambios solo lo ve el desarrollador
+    // (superadmin): ni el propietario ni el gestor pueden verlo.
+    if (rolActual === 'desarrollador') {
+        if (tarjetaHistorial) tarjetaHistorial.classList.remove('hidden');
+        cargarHistorialAccesos(1);
+        cargarHistorialCambios(1);
+    } else if (tarjetaHistorial) {
+        tarjetaHistorial.classList.add('hidden');
+    }
+}
+
+// ------------------------------------------------------------
+// Historial de accesos (quién ha iniciado sesión y cuándo) e historial de
+// cambios (quién ha creado/editado/eliminado qué). Solo para "desarrollador".
+// ------------------------------------------------------------
+const TAMANO_PAGINA_HISTORIAL = 20;
+
+const ETIQUETAS_ACCION_HISTORIAL = {
+    crear: 'Crear',
+    editar: 'Editar',
+    eliminar: 'Eliminar',
+    cancelar: 'Cancelar',
+    importar: 'Importar',
+    cambiar_rol: 'Cambiar rol',
+    programar: 'Programar',
+    volver_a_pendientes: 'Volver a pendientes',
+    enviar_a_hoja: 'Enviar a hoja de reparto',
+    quitar_de_hoja: 'Quitar de hoja de reparto',
+    vaciar_hoja: 'Vaciar hoja de reparto',
+};
+
+async function cargarHistorialAccesos(pagina) {
+    const tbody = document.getElementById('listaHistorialAccesos');
+    const loading = document.getElementById('loadingHistorialAccesos');
+    const vacio = document.getElementById('vacioHistorialAccesos');
+    if (!tbody) return;
+    loading?.classList.remove('hidden');
+    vacio?.classList.add('hidden');
+    try {
+        const res = await fetch(`/historial/accesos?pagina=${pagina}`);
+        if (!res.ok) throw new Error('Error al obtener el historial de accesos');
+        const { total, datos } = await res.json();
+        tbody.innerHTML = '';
+        if (datos.length === 0) {
+            vacio?.classList.remove('hidden');
+        } else {
+            datos.forEach(a => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td class="px-3 py-2 border">${escapeHTML(a.nombre) || '—'} <span class="text-gray-400 text-xs">(${escapeHTML(a.nombre_usuario) || '—'})</span></td>
+                    <td class="px-3 py-2 border whitespace-nowrap">${new Date(a.fecha).toLocaleString('es-ES')}</td>
+                    <td class="px-3 py-2 border text-gray-500">${escapeHTML(a.ip) || '—'}</td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+        renderizarControlesPaginacion('paginacionHistorialAccesos', total, pagina, TAMANO_PAGINA_HISTORIAL, cargarHistorialAccesos);
+    } catch (err) {
+        console.error('Error al cargar el historial de accesos:', err);
+    } finally {
+        loading?.classList.add('hidden');
+    }
+}
+
+async function cargarHistorialCambios(pagina) {
+    const tbody = document.getElementById('listaHistorialCambios');
+    const loading = document.getElementById('loadingHistorialCambios');
+    const vacio = document.getElementById('vacioHistorialCambios');
+    if (!tbody) return;
+    loading?.classList.remove('hidden');
+    vacio?.classList.add('hidden');
+    try {
+        const res = await fetch(`/historial/cambios?pagina=${pagina}`);
+        if (!res.ok) throw new Error('Error al obtener el historial de cambios');
+        const { total, datos } = await res.json();
+        tbody.innerHTML = '';
+        if (datos.length === 0) {
+            vacio?.classList.remove('hidden');
+        } else {
+            datos.forEach(c => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td class="px-3 py-2 border">${escapeHTML(c.nombre) || '—'} <span class="text-gray-400 text-xs">(${escapeHTML(c.nombre_usuario) || '—'})</span></td>
+                    <td class="px-3 py-2 border">${escapeHTML(ETIQUETAS_ACCION_HISTORIAL[c.accion] || c.accion)}</td>
+                    <td class="px-3 py-2 border">${escapeHTML(c.detalle) || '—'}</td>
+                    <td class="px-3 py-2 border whitespace-nowrap">${new Date(c.fecha).toLocaleString('es-ES')}</td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+        renderizarControlesPaginacion('paginacionHistorialCambios', total, pagina, TAMANO_PAGINA_HISTORIAL, cargarHistorialCambios);
+    } catch (err) {
+        console.error('Error al cargar el historial de cambios:', err);
+    } finally {
+        loading?.classList.add('hidden');
+    }
 }
 
 async function inicializarHojaReparto() {

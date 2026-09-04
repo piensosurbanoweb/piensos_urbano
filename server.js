@@ -72,6 +72,78 @@ function requireGestionUsuarios(req, res, next) {
   }
   next();
 }
+// Middleware: solo el rol "desarrollador" puede ver el historial de accesos y de cambios.
+function requireDesarrollador(req, res, next) {
+  if (req.usuario?.rol !== 'desarrollador') {
+    return res.status(403).json({ error: 'Solo un desarrollador puede acceder a esto.' });
+  }
+  next();
+}
+
+// --- HISTORIAL DE ACCESOS Y DE CAMBIOS (solo visible para "desarrollador") ---
+// Se crean aquí (en vez de solo en db/schema.sql) para que funcione sin
+// tener que ir a ejecutar SQL a mano en Supabase: al arrancar el servidor
+// (o en el primer "cold start" en Vercel) se aseguran de que existan.
+async function asegurarTablasHistorial() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS historial_accesos (
+        id SERIAL PRIMARY KEY,
+        usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+        nombre_usuario VARCHAR(80),
+        nombre VARCHAR(120),
+        ip VARCHAR(64),
+        fecha TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS historial_cambios (
+        id SERIAL PRIMARY KEY,
+        usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+        nombre_usuario VARCHAR(80),
+        nombre VARCHAR(120),
+        accion VARCHAR(30) NOT NULL,
+        entidad VARCHAR(60) NOT NULL,
+        entidad_id INTEGER,
+        detalle TEXT,
+        fecha TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_historial_accesos_fecha ON historial_accesos(fecha DESC);');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_historial_cambios_fecha ON historial_cambios(fecha DESC);');
+  } catch (err) {
+    console.error('Error asegurando las tablas de historial:', err.message);
+  }
+}
+asegurarTablasHistorial();
+
+// Registra un inicio de sesión correcto (para el historial de accesos).
+async function registrarAcceso(usuario, req) {
+  try {
+    const ipCabecera = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim();
+    const ip = ipCabecera || req.socket?.remoteAddress || null;
+    await pool.query(
+      `INSERT INTO historial_accesos (usuario_id, nombre_usuario, nombre, ip) VALUES ($1, $2, $3, $4)`,
+      [usuario.id, usuario.nombre_usuario, usuario.nombre, ip]
+    );
+  } catch (err) {
+    console.error('Error al registrar el acceso:', err.message);
+  }
+}
+
+// Registra un cambio (crear/editar/eliminar/etc.) para el historial de cambios.
+// Nunca debe romper la petición principal si falla: por eso va en su propio try/catch.
+async function registrarCambio(usuario, accion, entidad, entidadId, detalle) {
+  try {
+    await pool.query(
+      `INSERT INTO historial_cambios (usuario_id, nombre_usuario, nombre, accion, entidad, entidad_id, detalle)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [usuario?.id || null, usuario?.nombre_usuario || null, usuario?.nombre || null, accion, entidad, entidadId || null, detalle || null]
+    );
+  } catch (err) {
+    console.error('Error al registrar el cambio:', err.message);
+  }
+}
 
 // Rutas que no requieren sesión: login/logout, recuperación de contraseña, y
 // los archivos estáticos conocidos (HTML/CSS/JS/imágenes/favicon) para que el
@@ -395,6 +467,7 @@ app.post('/login', async (req, res) => {
       sameSite: 'lax',
       maxAge: 12 * 60 * 60 * 1000,
     });
+    await registrarAcceso(usuario, req);
     res.json({ success: true, nombre: usuario.nombre });
   } catch (err) {
     console.error('Error en login:', err.message);
@@ -598,6 +671,7 @@ app.post('/usuarios', requireGestionUsuarios, async (req, res) => {
        VALUES ($1, $2, $3, $4, $5) RETURNING id, nombre_usuario, nombre, email, rol, activo`,
       [nombre_usuario, nombre, email || null, hash, rolFinal]
     );
+    await registrarCambio(req.usuario, 'crear', 'usuario', rows[0].id, `Usuario creado: ${nombre_usuario} (rol: ${rolFinal})`);
     res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === '23505') {
@@ -625,6 +699,7 @@ app.patch('/usuarios/:id/rol', requireGestionUsuarios, async (req, res) => {
       return res.status(403).json({ error: 'No tienes permiso para asignar ese rol.' });
     }
     await pool.query('UPDATE usuarios SET rol = $1 WHERE id = $2', [rol, id]);
+    await registrarCambio(req.usuario, 'cambiar_rol', 'usuario', id, `Rol cambiado de "${objetivo.rol}" a "${rol}"`);
     res.json({ success: true });
   } catch (err) {
     console.error('Error al cambiar el rol:', err.message);
@@ -645,6 +720,7 @@ app.delete('/usuarios/:id', requireGestionUsuarios, async (req, res) => {
       return res.status(403).json({ error: 'No tienes permiso para desactivar a este usuario.' });
     }
     await pool.query('UPDATE usuarios SET activo = false WHERE id = $1', [id]);
+    await registrarCambio(req.usuario, 'eliminar', 'usuario', id, `Usuario desactivado (rol: ${objetivo.rol})`);
     res.json({ success: true });
   } catch (err) {
     console.error('Error al desactivar usuario:', err.message);
@@ -714,6 +790,7 @@ app.post('/clientes', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [apodo, nombre_completo, telefono, localidad, zona_reparto, observaciones]
     );
+    await registrarCambio(req.usuario, 'crear', 'cliente', rows[0].id, `Cliente creado: ${apodo || ''}`);
     res.json(rows[0]);
   } catch (err) {
     console.error(err.message);
@@ -730,6 +807,7 @@ app.put('/clientes/:id', async (req, res) => {
        WHERE id=$7 RETURNING *`,
       [apodo, nombre_completo, telefono, localidad, zona_reparto, observaciones, id]
     );
+    await registrarCambio(req.usuario, 'editar', 'cliente', id, `Cliente editado: ${apodo || ''}`);
     res.json(rows[0]);
   } catch (err) {
     console.error(err.message);
@@ -740,7 +818,9 @@ app.put('/clientes/:id', async (req, res) => {
 app.delete('/clientes/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const previo = await pool.query('SELECT apodo FROM clientes WHERE id=$1', [id]);
     await pool.query('DELETE FROM clientes WHERE id=$1', [id]);
+    await registrarCambio(req.usuario, 'eliminar', 'cliente', id, `Cliente eliminado: ${previo.rows[0]?.apodo || ''}`);
     res.json({ success: true });
   } catch (err) {
     console.error(err.message);
@@ -757,7 +837,7 @@ app.delete('/clientes/:id', async (req, res) => {
 // vez de items), se trata como un pedido de un solo producto.
 // --- IMPORTACIÓN MASIVA DESDE EXCEL ---
 // El Excel se lee y se traduce a este formato en el propio navegador (ver
-// functions_copy_claude.js), porque cada Excel real usa sus propios nombres
+// functions_app.js), porque cada Excel real usa sus propios nombres
 // de columna; aquí solo llegan los datos ya mapeados. Se procesa fila a
 // fila, sin abortar todo si una fila falla, porque es normal que un Excel
 // real traiga alguna fila incompleta o rara: mejor importar 98 de 100 filas
@@ -806,6 +886,7 @@ app.post('/clientes/importar', async (req, res) => {
     }
   }
 
+  await registrarCambio(req.usuario, 'importar', 'cliente', null, `Importación de clientes desde Excel: ${creados} creados, ${actualizados} actualizados, ${errores.length} con error.`);
   res.json({ creados, actualizados, errores });
 });
 
@@ -964,6 +1045,7 @@ app.post('/pedidos', async (req, res) => {
     );
 
     await client.query('COMMIT');
+    await registrarCambio(req.usuario, 'crear', 'pedido', newPedidoId, `Pedido nuevo: ${resumen} - ${apodo_cliente || ''}`);
     res.json({ success: true, message: 'Pedido registrado en todas las tablas.' });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1145,6 +1227,7 @@ app.put('/pedidos_pendientes/:id/editar', async (req, res) => {
       );
     }
     await client.query('COMMIT');
+    await registrarCambio(req.usuario, 'editar', 'pedido_pendiente', id, `Pedido pendiente editado: ${resumen}`);
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1158,7 +1241,9 @@ app.put('/pedidos_pendientes/:id/editar', async (req, res) => {
 app.delete('/pedidos_pendientes/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const previo = await pool.query('SELECT apodo, pedido FROM pedidos_pendientes WHERE id=$1', [id]);
     await pool.query('DELETE FROM pedidos_pendientes WHERE id=$1', [id]);
+    await registrarCambio(req.usuario, 'cancelar', 'pedido_pendiente', id, `Pedido pendiente cancelado: ${previo.rows[0]?.pedido || ''} - ${previo.rows[0]?.apodo || ''}`);
     res.json({ success: true });
   } catch (err) {
     console.error('Error al eliminar pedido pendiente:', err.message);
@@ -1357,6 +1442,7 @@ app.put('/pedidos_calendario/:id/editar', async (req, res) => {
       );
     }
     await client.query('COMMIT');
+    await registrarCambio(req.usuario, 'editar', 'pedido_calendario', id, `Pedido del calendario editado (fecha: ${fecha_entrega || 'sin determinar'})`);
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1371,6 +1457,7 @@ app.delete('/pedidos_calendario/:id', async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query('DELETE FROM pedidos_calendario WHERE id=$1', [id]);
+    await registrarCambio(req.usuario, 'eliminar', 'pedido_calendario', id, 'Pedido eliminado del calendario');
     res.json({ success: true });
   } catch (err) {
     console.error(err.message);
@@ -1410,6 +1497,8 @@ async function programarConFecha(req, res) {
 
     await client.query('COMMIT');
 
+    await registrarCambio(req.usuario, 'programar', 'pedido', id, `Pedido programado para el ${fecha}: ${pedido.pedido || ''} - ${pedido.apodo || ''}`);
+
     res.json({
       success: true,
       message: 'Pedido programado con éxito.',
@@ -1447,6 +1536,7 @@ app.post('/conductores', async (req, res) => {
   try {
     const { nombre } = req.body;
     const { rows } = await pool.query('INSERT INTO conductores (nombre) VALUES ($1) RETURNING *', [nombre]);
+    await registrarCambio(req.usuario, 'crear', 'conductor', rows[0].id, `Conductor añadido: ${nombre || ''}`);
     res.json(rows[0]);
   } catch (err) {
     console.error(err.message);
@@ -1457,7 +1547,9 @@ app.post('/conductores', async (req, res) => {
 app.delete('/conductores/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const previo = await pool.query('SELECT nombre FROM conductores WHERE id=$1', [id]);
     await pool.query('UPDATE conductores SET activo=false WHERE id=$1', [id]);
+    await registrarCambio(req.usuario, 'eliminar', 'conductor', id, `Conductor eliminado: ${previo.rows[0]?.nombre || ''}`);
     res.json({ success: true });
   } catch (err) {
     console.error(err.message);
@@ -1483,6 +1575,7 @@ app.post('/camiones', async (req, res) => {
       return res.status(400).json({ error: 'La matrícula es requerida.' });
     }
     const { rows } = await pool.query('INSERT INTO camiones (nombre) VALUES ($1) RETURNING *', [matricula]);
+    await registrarCambio(req.usuario, 'crear', 'camion', rows[0].id, `Camión añadido: ${matricula || ''}`);
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error('Error al insertar camión:', err.message);
@@ -1493,7 +1586,9 @@ app.post('/camiones', async (req, res) => {
 app.delete('/camiones/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const previo = await pool.query('SELECT nombre FROM camiones WHERE id=$1', [id]);
     await pool.query('UPDATE camiones SET activo=false WHERE id=$1', [id]);
+    await registrarCambio(req.usuario, 'eliminar', 'camion', id, `Camión eliminado: ${previo.rows[0]?.nombre || ''}`);
     res.status(200).json({ success: true });
   } catch (err) {
     console.error('Error al eliminar camión:', err.message);
@@ -1516,6 +1611,7 @@ app.post('/zonas', async (req, res) => {
   try {
     const { nombre } = req.body;
     const { rows } = await pool.query('INSERT INTO zonas (nombre) VALUES ($1) RETURNING *', [nombre]);
+    await registrarCambio(req.usuario, 'crear', 'zona', rows[0].id, `Zona añadida: ${nombre || ''}`);
     res.json(rows[0]);
   } catch (err) {
     console.error(err.message);
@@ -1526,7 +1622,9 @@ app.post('/zonas', async (req, res) => {
 app.delete('/zonas/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const previo = await pool.query('SELECT nombre FROM zonas WHERE id=$1', [id]);
     await pool.query('UPDATE zonas SET activa=false WHERE id=$1', [id]);
+    await registrarCambio(req.usuario, 'eliminar', 'zona', id, `Zona eliminada: ${previo.rows[0]?.nombre || ''}`);
     res.json({ success: true });
   } catch (err) {
     console.error(err.message);
@@ -1624,6 +1722,7 @@ app.post('/pedidos/hoja-reparto', async (req, res) => {
     if (rowCount === 0) {
       return res.status(404).json({ error: 'No se encontraron pedidos con los IDs proporcionados en el calendario.' });
     }
+    await registrarCambio(req.usuario, 'enviar_a_hoja', 'hoja_reparto', null, `${rowCount} pedido(s) enviados a la hoja de reparto`);
     res.json({ success: true, actualizados: rowCount });
   } catch (err) {
     console.error('Error al enviar pedidos a la hoja de reparto:', err.message);
@@ -1667,6 +1766,7 @@ app.delete('/pedidos/hoja-reparto/:id', async (req, res) => {
       [id]
     );
     if (rowCount === 0) return res.status(404).json({ error: 'Pedido no encontrado en la hoja de reparto.' });
+    await registrarCambio(req.usuario, 'quitar_de_hoja', 'hoja_reparto', id, 'Pedido quitado de la hoja de reparto (sigue programado)');
     res.json({ success: true });
   } catch (err) {
     console.error('Error al quitar el pedido de la hoja de reparto:', err.message);
@@ -1713,6 +1813,7 @@ app.post('/pedidos_calendario/:id/volver-a-pendientes', async (req, res) => {
     await client.query('DELETE FROM pedidos_calendario WHERE id = $1', [id]);
 
     await client.query('COMMIT');
+    await registrarCambio(req.usuario, 'volver_a_pendientes', 'pedido', id, `Pedido devuelto a pendientes: ${resumen} - ${pedido.apodo || ''}`);
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1739,10 +1840,48 @@ app.delete('/pedidos/hoja-reparto', async (req, res) => {
       `UPDATE pedidos_calendario SET enviado_reparto = false, fecha_envio_reparto = NULL, orden_reparto = NULL WHERE ${condiciones.join(' AND ')}`,
       valores
     );
+    await registrarCambio(req.usuario, 'vaciar_hoja', 'hoja_reparto', null, fecha ? `Hoja de reparto vaciada para el día ${fecha}` : 'Hoja de reparto vaciada (todos los días)');
     res.json({ success: true });
   } catch (err) {
     console.error('Error al limpiar la hoja de reparto:', err.message);
     res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+});
+
+// --- CONSULTA DEL HISTORIAL DE ACCESOS Y DE CAMBIOS (solo "desarrollador") ---
+app.get('/historial/accesos', requireDesarrollador, async (req, res) => {
+  try {
+    const pagina = Math.max(1, parseInt(req.query.pagina, 10) || 1);
+    const tamano = 20;
+    const offset = (pagina - 1) * tamano;
+    const totalRes = await pool.query('SELECT COUNT(*)::int AS total FROM historial_accesos');
+    const { rows } = await pool.query(
+      `SELECT id, usuario_id, nombre_usuario, nombre, ip, fecha
+       FROM historial_accesos ORDER BY fecha DESC LIMIT $1 OFFSET $2`,
+      [tamano, offset]
+    );
+    res.json({ total: totalRes.rows[0].total, pagina, tamano, datos: rows });
+  } catch (err) {
+    console.error('Error al obtener el historial de accesos:', err.message);
+    res.status(500).json({ error: 'Error al obtener el historial de accesos.' });
+  }
+});
+
+app.get('/historial/cambios', requireDesarrollador, async (req, res) => {
+  try {
+    const pagina = Math.max(1, parseInt(req.query.pagina, 10) || 1);
+    const tamano = 20;
+    const offset = (pagina - 1) * tamano;
+    const totalRes = await pool.query('SELECT COUNT(*)::int AS total FROM historial_cambios');
+    const { rows } = await pool.query(
+      `SELECT id, usuario_id, nombre_usuario, nombre, accion, entidad, entidad_id, detalle, fecha
+       FROM historial_cambios ORDER BY fecha DESC LIMIT $1 OFFSET $2`,
+      [tamano, offset]
+    );
+    res.json({ total: totalRes.rows[0].total, pagina, tamano, datos: rows });
+  } catch (err) {
+    console.error('Error al obtener el historial de cambios:', err.message);
+    res.status(500).json({ error: 'Error al obtener el historial de cambios.' });
   }
 });
 
