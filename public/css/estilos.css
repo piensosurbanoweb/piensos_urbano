@@ -212,6 +212,16 @@
         .orden-cell {
             width: 70px;
         }
+
+        /* Los <select> de Conductor/Camión tienen width:100% (ver .hoja-select
+           más abajo), así que su ancho depende del que la tabla le dé a la
+           columna. Con "table-layout: auto" esa columna puede quedarse tan
+           estrecha que el texto elegido se corta (p. ej. "JOSE MARTÍNEZ" se
+           ve solo como "JOSE"). Le damos un ancho mínimo para que el nombre
+           se vea completo. */
+        .conductor-cell {
+            min-width: 140px;
+        }
         .hoja-input-orden {
             width: 100%;
             min-width: 0;
