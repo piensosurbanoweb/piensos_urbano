@@ -507,6 +507,48 @@ async function inicializarHojaReparto() {
 // BASE DE DATOS DE CLIENTES
 // ============================================================
 
+// ------------------------------------------------------------
+// Paginación genérica reutilizable para listas/tablas largas.
+// Pinta "‹ Anterior  Página X de Y  Siguiente ›" en el contenedor
+// indicado y llama a onCambiarPagina(nuevaPagina) al pulsar.
+// ------------------------------------------------------------
+function renderizarControlesPaginacion(containerId, totalItems, paginaActual, tamanoPagina, onCambiarPagina) {
+    const cont = document.getElementById(containerId);
+    if (!cont) return;
+
+    const totalPaginas = Math.max(1, Math.ceil(totalItems / tamanoPagina));
+
+    if (totalItems === 0 || totalPaginas <= 1) {
+        cont.classList.add('hidden');
+        cont.innerHTML = '';
+        return;
+    }
+
+    cont.classList.remove('hidden');
+    const desde = (paginaActual - 1) * tamanoPagina + 1;
+    const hasta = Math.min(paginaActual * tamanoPagina, totalItems);
+
+    cont.innerHTML = `
+        <p class="text-sm text-gray-500">Mostrando ${desde}-${hasta} de ${totalItems}</p>
+        <div class="flex items-center gap-2">
+            <button ${paginaActual <= 1 ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg text-sm font-medium border ${paginaActual <= 1 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-300 hover:bg-gray-100'}" data-pagina="${paginaActual - 1}">
+                <i class="fas fa-chevron-left mr-1"></i> Anterior
+            </button>
+            <span class="text-sm text-gray-600 px-1">Página ${paginaActual} de ${totalPaginas}</span>
+            <button ${paginaActual >= totalPaginas ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg text-sm font-medium border ${paginaActual >= totalPaginas ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-300 hover:bg-gray-100'}" data-pagina="${paginaActual + 1}">
+                Siguiente <i class="fas fa-chevron-right ml-1"></i>
+            </button>
+        </div>
+    `;
+
+    cont.querySelectorAll('button[data-pagina]').forEach(btn => {
+        btn.addEventListener('click', () => onCambiarPagina(parseInt(btn.dataset.pagina, 10)));
+    });
+}
+
+const TAMANO_PAGINA_CLIENTES = 20;
+let paginaActualClientes = 1;
+
 async function cargarClientes() {
     try {
         document.getElementById('loading')?.classList.remove('hidden');
@@ -516,47 +558,65 @@ async function cargarClientes() {
         if (!res.ok) throw new Error('Error en la respuesta del servidor');
 
         clientes = await res.json();
-        const tabla = document.getElementById('listaClientes');
-        if (!tabla) return;
-        tabla.innerHTML = '';
+        paginaActualClientes = 1;
 
         if (clientes.length === 0) {
+            document.getElementById('listaClientes').innerHTML = '';
             document.getElementById('mensajeVacio')?.classList.remove('hidden');
+            renderizarControlesPaginacion('paginacionClientes', 0, 1, TAMANO_PAGINA_CLIENTES, () => {});
             return;
         }
 
-        clientes.forEach(cliente => {
-            const fila = document.createElement('tr');
-            fila.innerHTML = `
-                <td class="px-4 py-2 border">${escapeHTML(cliente.apodo)}</td>
-                <td class="px-4 py-2 border">${escapeHTML(cliente.nombre_completo)}</td>
-                <td class="px-4 py-2 border">${escapeHTML(cliente.telefono)}</td>
-                <td class="px-4 py-2 border">${escapeHTML(cliente.localidad)}</td>
-                <td class="px-4 py-2 border">${escapeHTML(cliente.zona_reparto)}</td>
-                <td class="px-4 py-2 border">${escapeHTML(cliente.observaciones)}</td>
-                <td class="px-4 py-2 border flex gap-2">
-                    <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
-                        onclick='abrirModal(${JSON.stringify(cliente).replace(/'/g, '&#39;')})'>
-                        <i class="fa-solid fa-pen-to-square"></i>
-                    </button>
-                    <button class="bg-[#158765] hover:bg-[#0f6b50] text-white px-3 py-1 rounded"
-                        onclick="exportarHistorialClientePDF(${cliente.id})" title="Exportar historial a PDF">
-                        <i class="fas fa-file-pdf"></i>
-                    </button>
-                    <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-                        onclick="eliminarCliente(${cliente.id})">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </td>
-            `;
-            tabla.appendChild(fila);
-        });
+        renderizarPaginaClientes();
 
     } catch (err) {
         console.error('Error cargando clientes:', err);
     } finally {
         document.getElementById('loading')?.classList.add('hidden');
     }
+}
+
+function irAPaginaClientes(nuevaPagina) {
+    paginaActualClientes = nuevaPagina;
+    renderizarPaginaClientes();
+}
+
+function renderizarPaginaClientes() {
+    const tabla = document.getElementById('listaClientes');
+    if (!tabla) return;
+    tabla.innerHTML = '';
+
+    const inicio = (paginaActualClientes - 1) * TAMANO_PAGINA_CLIENTES;
+    const clientesPagina = clientes.slice(inicio, inicio + TAMANO_PAGINA_CLIENTES);
+
+    clientesPagina.forEach(cliente => {
+        const fila = document.createElement('tr');
+        fila.innerHTML = `
+            <td class="px-4 py-2 border">${escapeHTML(cliente.apodo)}</td>
+            <td class="px-4 py-2 border">${escapeHTML(cliente.nombre_completo)}</td>
+            <td class="px-4 py-2 border">${escapeHTML(cliente.telefono)}</td>
+            <td class="px-4 py-2 border">${escapeHTML(cliente.localidad)}</td>
+            <td class="px-4 py-2 border">${escapeHTML(cliente.zona_reparto)}</td>
+            <td class="px-4 py-2 border">${escapeHTML(cliente.observaciones)}</td>
+            <td class="px-4 py-2 border flex gap-2">
+                <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
+                    onclick='abrirModal(${JSON.stringify(cliente).replace(/'/g, '&#39;')})'>
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button class="bg-[#158765] hover:bg-[#0f6b50] text-white px-3 py-1 rounded"
+                    onclick="exportarHistorialClientePDF(${cliente.id})" title="Exportar historial a PDF">
+                    <i class="fas fa-file-pdf"></i>
+                </button>
+                <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                    onclick="eliminarCliente(${cliente.id})">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        `;
+        tabla.appendChild(fila);
+    });
+
+    renderizarControlesPaginacion('paginacionClientes', clientes.length, paginaActualClientes, TAMANO_PAGINA_CLIENTES, irAPaginaClientes);
 }
 
 
@@ -1023,7 +1083,7 @@ function renderizarPedidosPendientes(pedidos) {
                         : 'Sin fecha'}
                 </p>
                 <p class="text-sm text-gray-500">Obs: ${escapeHTML(pedido.observaciones) || 'Ninguna'}</p>
-                <div class="flex justify-end gap-2 mt-4">
+                <div class="flex flex-wrap justify-end gap-2 mt-4">
                     <button onclick="cancelarPedidoPendiente(${pedido.id})"
                         class="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg text-sm border border-red-200">
                         <i class="fas fa-ban mr-1"></i> Cancelar

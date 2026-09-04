@@ -120,16 +120,16 @@
         placeholder="Notas adicionales para este pedido..."></textarea>
     </div>
 
-    <div class="flex gap-4">
+    <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
       <button
         type="submit"
-        class="bg-[#158765] hover:bg-[#0f6b50] text-white px-8 py-3 rounded-lg font-medium text-lg transition-colors duration-200">
+        class="bg-[#158765] hover:bg-[#0f6b50] text-white px-8 py-3 rounded-lg font-medium text-lg transition-colors duration-200 w-full sm:w-auto">
         <i class="fas fa-floppy-disk mr-1"></i> Registrar Pedido
       </button>
       <button
         type="button"
         onclick="limpiarFormularioPedido()"
-        class="bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-lg font-medium text-lg transition-colors duration-200">
+        class="bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-lg font-medium text-lg transition-colors duration-200 w-full sm:w-auto">
         <i class="fas fa-trash mr-1"></i> Limpiar Formulario
       </button>
     </div>

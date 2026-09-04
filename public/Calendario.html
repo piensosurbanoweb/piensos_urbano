@@ -1,27 +1,27 @@
 <div id="pestanaCalendario" class="p-6">
     <div class="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
         <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-calendar-days mr-1"></i> Calendario de Reparto</h2>
-        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-4">
-            <div class="flex flex-wrap gap-2">
-                <button onclick="cambiarVistaCalendario('semanal')" id="btnVistaSemanal" class="bg-[#158765] hover:bg-[#0f6b50] text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    <i class="fas fa-calendar-week mr-1"></i> Vista Semanal
+        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+            <div class="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:w-auto">
+                <button onclick="cambiarVistaCalendario('semanal')" id="btnVistaSemanal" class="bg-[#158765] hover:bg-[#0f6b50] text-white px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors duration-200 whitespace-nowrap">
+                    <i class="fas fa-calendar-week mr-1"></i> <span class="hidden xs:inline">Vista </span>Semanal
                 </button>
-                <button onclick="cambiarVistaCalendario('mensual')" id="btnVistaMensual" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    <i class="fas fa-calendar mr-1"></i> Vista Mensual
+                <button onclick="cambiarVistaCalendario('mensual')" id="btnVistaMensual" class="bg-gray-500 hover:bg-gray-600 text-white px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors duration-200 whitespace-nowrap">
+                    <i class="fas fa-calendar mr-1"></i> <span class="hidden xs:inline">Vista </span>Mensual
                 </button>
-                <button onclick="cambiarVistaCalendario('diaria')" id="btnVistaDiaria" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    <i class="fas fa-calendar-day mr-1"></i> Vista Diaria
+                <button onclick="cambiarVistaCalendario('diaria')" id="btnVistaDiaria" class="bg-gray-500 hover:bg-gray-600 text-white px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors duration-200 whitespace-nowrap">
+                    <i class="fas fa-calendar-day mr-1"></i> <span class="hidden xs:inline">Vista </span>Diaria
                 </button>
             </div>
-            <div class="flex flex-wrap gap-2" id="controlesNavegacion">
-                <button onclick="periodoAnterior()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    <i class="fas fa-chevron-left mr-1"></i> Anterior
+            <div class="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:w-auto" id="controlesNavegacion">
+                <button onclick="periodoAnterior()" class="bg-gray-500 hover:bg-gray-600 text-white px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors duration-200 whitespace-nowrap">
+                    <i class="fas fa-chevron-left sm:mr-1"></i> <span class="hidden sm:inline">Anterior</span>
                 </button>
-                <button onclick="periodoActual()" id="btnPeriodoActual" class="bg-gray-100 text-gray-800 px-4 py-2 rounded-lg font-medium flex items-center justify-center min-w-[150px]">
+                <button onclick="periodoActual()" id="btnPeriodoActual" class="bg-gray-100 text-gray-800 px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm flex items-center justify-center text-center min-w-0 sm:min-w-[150px] truncate">
                    Semana Actual
                 </button>
-                <button onclick="periodoSiguiente()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200">
-                    Siguiente <i class="fas fa-chevron-right ml-1"></i>
+                <button onclick="periodoSiguiente()" class="bg-gray-500 hover:bg-gray-600 text-white px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors duration-200 whitespace-nowrap">
+                    <span class="hidden sm:inline">Siguiente</span> <i class="fas fa-chevron-right sm:ml-1"></i>
                 </button>
             </div>
         </div>
