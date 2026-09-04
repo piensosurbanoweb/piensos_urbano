@@ -25,11 +25,11 @@
 
             .no-print { display: none !important; }
 
-            /* La hoja se imprime a ancho completo de la página: se anulan el
-               contenedor centrado (container, con su max-width por breakpoint)
-               y los paddings/tarjetas anidadas que la encogían y la dejaban
-               pequeña y descentrada en el papel. */
-            .container {
+            /* La hoja se imprime a ancho completo de la página: se anula el
+               contenedor centrado (con su max-width) y los paddings/tarjetas
+               anidadas que la encogían y la dejaban pequeña y descentrada en
+               el papel. */
+            #contenidoPrincipal {
                 max-width: none !important;
                 width: 100% !important;
                 margin: 0 !important;
