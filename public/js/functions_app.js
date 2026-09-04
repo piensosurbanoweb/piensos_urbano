@@ -545,14 +545,14 @@ async function cargarHistorialAccesos(pagina) {
             datos.forEach(a => {
                 const fila = document.createElement('tr');
                 fila.innerHTML = `
-                    <td class="px-3 py-2 border">${escapeHTML(a.nombre) || '—'} <span class="text-gray-400 text-xs">(${escapeHTML(a.nombre_usuario) || '—'})</span></td>
-                    <td class="px-3 py-2 border whitespace-nowrap">${new Date(a.fecha).toLocaleString('es-ES')}</td>
-                    <td class="px-3 py-2 border text-gray-500">${escapeHTML(a.ip) || '—'}</td>
+                    <td class="px-3 py-2 border align-middle">${escapeHTML(a.nombre) || '—'} <span class="text-gray-400 text-xs">(${escapeHTML(a.nombre_usuario) || '—'})</span></td>
+                    <td class="px-3 py-2 border align-middle whitespace-nowrap">${new Date(a.fecha).toLocaleString('es-ES')}</td>
+                    <td class="px-3 py-2 border align-middle text-gray-500">${escapeHTML(a.ip) || '—'}</td>
                 `;
                 tbody.appendChild(fila);
             });
         }
-        renderizarControlesPaginacion(['paginacionHistorialAccesosArriba', 'paginacionHistorialAccesos'], total, pagina, TAMANO_PAGINA_HISTORIAL, cargarHistorialAccesos);
+        renderizarControlesPaginacion('paginacionHistorialAccesos', total, pagina, TAMANO_PAGINA_HISTORIAL, cargarHistorialAccesos);
     } catch (err) {
         console.error('Error al cargar el historial de accesos:', err);
     } finally {
@@ -578,15 +578,15 @@ async function cargarHistorialCambios(pagina) {
             datos.forEach(c => {
                 const fila = document.createElement('tr');
                 fila.innerHTML = `
-                    <td class="px-3 py-2 border">${escapeHTML(c.nombre) || '—'} <span class="text-gray-400 text-xs">(${escapeHTML(c.nombre_usuario) || '—'})</span></td>
-                    <td class="px-3 py-2 border">${escapeHTML(ETIQUETAS_ACCION_HISTORIAL[c.accion] || c.accion)}</td>
-                    <td class="px-3 py-2 border">${escapeHTML(c.detalle) || '—'}</td>
-                    <td class="px-3 py-2 border whitespace-nowrap">${new Date(c.fecha).toLocaleString('es-ES')}</td>
+                    <td class="px-3 py-2 border align-middle">${escapeHTML(c.nombre) || '—'} <span class="text-gray-400 text-xs">(${escapeHTML(c.nombre_usuario) || '—'})</span></td>
+                    <td class="px-3 py-2 border align-middle">${escapeHTML(ETIQUETAS_ACCION_HISTORIAL[c.accion] || c.accion)}</td>
+                    <td class="px-3 py-2 border align-middle">${escapeHTML(c.detalle) || '—'}</td>
+                    <td class="px-3 py-2 border align-middle whitespace-nowrap">${new Date(c.fecha).toLocaleString('es-ES')}</td>
                 `;
                 tbody.appendChild(fila);
             });
         }
-        renderizarControlesPaginacion(['paginacionHistorialCambiosArriba', 'paginacionHistorialCambios'], total, pagina, TAMANO_PAGINA_HISTORIAL, cargarHistorialCambios);
+        renderizarControlesPaginacion('paginacionHistorialCambios', total, pagina, TAMANO_PAGINA_HISTORIAL, cargarHistorialCambios);
     } catch (err) {
         console.error('Error al cargar el historial de cambios:', err);
     } finally {
@@ -673,7 +673,7 @@ async function cargarClientes() {
             if (titulo) titulo.textContent = 'No hay clientes registrados';
             if (subtitulo) subtitulo.textContent = '¡Agrega el primero para empezar!';
             document.getElementById('mensajeVacio')?.classList.remove('hidden');
-            renderizarControlesPaginacion(['paginacionClientesArriba', 'paginacionClientes'], 0, 1, TAMANO_PAGINA_CLIENTES, () => {});
+            renderizarControlesPaginacion('paginacionClientes', 0, 1, TAMANO_PAGINA_CLIENTES, () => {});
             return;
         }
 
@@ -718,7 +718,7 @@ function renderizarPaginaClientes() {
         if (titulo) titulo.textContent = 'No se encontraron clientes';
         if (subtitulo) subtitulo.textContent = 'Prueba con otro término de búsqueda.';
         vacio?.classList.remove('hidden');
-        renderizarControlesPaginacion(['paginacionClientesArriba', 'paginacionClientes'], 0, 1, TAMANO_PAGINA_CLIENTES, () => {});
+        renderizarControlesPaginacion('paginacionClientes', 0, 1, TAMANO_PAGINA_CLIENTES, () => {});
         return;
     }
     vacio?.classList.add('hidden');
@@ -729,13 +729,13 @@ function renderizarPaginaClientes() {
     clientesPagina.forEach(cliente => {
         const fila = document.createElement('tr');
         fila.innerHTML = `
-            <td class="px-4 py-2 border">${escapeHTML(cliente.apodo)}</td>
-            <td class="px-4 py-2 border">${escapeHTML(cliente.nombre_completo)}</td>
-            <td class="px-4 py-2 border">${escapeHTML(cliente.telefono)}</td>
-            <td class="px-4 py-2 border">${escapeHTML(cliente.localidad)}</td>
-            <td class="px-4 py-2 border">${escapeHTML(cliente.zona_reparto)}</td>
-            <td class="px-4 py-2 border">${escapeHTML(cliente.observaciones)}</td>
-            <td class="px-4 py-2 border">
+            <td class="px-4 py-2 border align-middle">${escapeHTML(cliente.apodo)}</td>
+            <td class="px-4 py-2 border align-middle">${escapeHTML(cliente.nombre_completo)}</td>
+            <td class="px-4 py-2 border align-middle">${escapeHTML(cliente.telefono)}</td>
+            <td class="px-4 py-2 border align-middle">${escapeHTML(cliente.localidad)}</td>
+            <td class="px-4 py-2 border align-middle">${escapeHTML(cliente.zona_reparto)}</td>
+            <td class="px-4 py-2 border align-middle">${escapeHTML(cliente.observaciones)}</td>
+            <td class="px-4 py-2 border align-middle">
                 <div class="flex gap-2">
                     <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
                         onclick='abrirModal(${JSON.stringify(cliente).replace(/'/g, '&#39;')})'>
@@ -755,7 +755,7 @@ function renderizarPaginaClientes() {
         tabla.appendChild(fila);
     });
 
-    renderizarControlesPaginacion(['paginacionClientesArriba', 'paginacionClientes'], clientesFiltrados.length, paginaActualClientes, TAMANO_PAGINA_CLIENTES, irAPaginaClientes);
+    renderizarControlesPaginacion('paginacionClientes', clientesFiltrados.length, paginaActualClientes, TAMANO_PAGINA_CLIENTES, irAPaginaClientes);
 }
 
 
@@ -2544,11 +2544,19 @@ function construirSelectHoja(valores, valorActual, onChangeAttr) {
 }
 
 let terminoBusquedaHoja = '';
+const TAMANO_PAGINA_HOJA = 20;
+let paginaActualHoja = 1;
 
 /** Filtra la vista de la hoja de reparto (no toca pedidosHojaReparto, que se usa entero para imprimir/exportar). */
 function filtrarHojaReparto() {
     const input = document.getElementById('buscarHojaReparto');
     terminoBusquedaHoja = (input?.value || '').trim().toLowerCase();
+    paginaActualHoja = 1;
+    renderizarHojaReparto();
+}
+
+function irAPaginaHoja(nuevaPagina) {
+    paginaActualHoja = nuevaPagina;
     renderizarHojaReparto();
 }
 
@@ -2573,6 +2581,7 @@ function renderizarHojaReparto() {
         if (titulo) titulo.textContent = 'La hoja de reparto está vacía';
         if (subtitulo) subtitulo.textContent = 'Envía pedidos desde Calendario → Vista Diaria para empezar';
         vacio.classList.remove('hidden');
+        renderizarControlesPaginacion('paginacionHoja', 0, 1, TAMANO_PAGINA_HOJA, () => {});
         return;
     }
     if (pedidosFiltrados.length === 0) {
@@ -2581,30 +2590,34 @@ function renderizarHojaReparto() {
         if (titulo) titulo.textContent = 'No se encontraron pedidos';
         if (subtitulo) subtitulo.textContent = 'Prueba con otro término de búsqueda.';
         vacio.classList.remove('hidden');
+        renderizarControlesPaginacion('paginacionHoja', 0, 1, TAMANO_PAGINA_HOJA, () => {});
         return;
     }
     vacio.classList.add('hidden');
 
-    pedidosFiltrados.forEach((p, index) => {
+    const inicio = (paginaActualHoja - 1) * TAMANO_PAGINA_HOJA;
+    const pedidosPagina = pedidosFiltrados.slice(inicio, inicio + TAMANO_PAGINA_HOJA);
+
+    pedidosPagina.forEach((p, index) => {
         const fila = document.createElement('tr');
         fila.innerHTML = `
-            <td class="border px-2 py-2 text-center orden-cell">${index + 1}</td>
-            <td class="border px-2 py-2">${escapeHTML(p.apodo_cliente)}</td>
-            <td class="border px-2 py-2">${escapeHTML(p.telefono)}</td>
-            <td class="border px-2 py-2 observaciones-cell">${resumenItemsTexto(p.items)}</td>
-            <td class="border px-1 py-2 orden-cell">
+            <td class="border px-2 py-2 text-center align-middle orden-cell">${inicio + index + 1}</td>
+            <td class="border px-2 py-2 align-middle">${escapeHTML(p.apodo_cliente)}</td>
+            <td class="border px-2 py-2 align-middle">${escapeHTML(p.telefono)}</td>
+            <td class="border px-2 py-2 align-middle observaciones-cell">${resumenItemsTexto(p.items)}</td>
+            <td class="border px-1 py-2 align-middle orden-cell">
                 <input type="number" min="1" step="1" value="${p.orden_reparto ?? ''}" class="hoja-input hoja-input-orden"
                     onwheel="this.blur()"
                     onchange="actualizarCampoHoja(${p.id}, 'orden_reparto', this.value ? parseInt(this.value, 10) : null)">
             </td>
-            <td class="border px-2 py-2 conductor-cell">
+            <td class="border px-2 py-2 align-middle conductor-cell">
                 ${construirSelectHoja(conductoresHoja, p.conductor, `onchange="actualizarCampoHoja(${p.id}, 'conductor', this.value || null)"`)}
             </td>
-            <td class="border px-2 py-2 conductor-cell">
+            <td class="border px-2 py-2 align-middle conductor-cell">
                 ${construirSelectHoja(camionesHoja, p.camion, `onchange="actualizarCampoHoja(${p.id}, 'camion', this.value || null)"`)}
             </td>
-            <td class="border px-2 py-2">${escapeHTML(p.localidad)}</td>
-            <td class="border px-2 py-2 text-center no-print">
+            <td class="border px-2 py-2 align-middle">${escapeHTML(p.localidad)}</td>
+            <td class="border px-2 py-2 text-center align-middle no-print">
                 <div class="flex items-center justify-center gap-3">
                     <button onclick="eliminarPedidoHoja(${p.id})" class="text-gray-500 hover:text-red-600" title="Volver a Calendario (quita de esta hoja, sigue programado)"><i class="fas fa-calendar-days"></i></button>
                     <button onclick="volverAPendientesDesdeHoja(${p.id})" class="text-red-600 hover:text-red-800" title="Volver a Pedidos Pendientes (deja de estar programado)"><i class="fas fa-rotate-left"></i></button>
@@ -2613,6 +2626,8 @@ function renderizarHojaReparto() {
         `;
         tbody.appendChild(fila);
     });
+
+    renderizarControlesPaginacion('paginacionHoja', pedidosFiltrados.length, paginaActualHoja, TAMANO_PAGINA_HOJA, irAPaginaHoja);
 }
 
 // Día actualmente elegido en el selector (fecha en formato YYYY-MM-DD, o
@@ -2658,6 +2673,7 @@ async function cargarFechasHoja() {
 function cambiarFechaHoja(fecha) {
     fechaHojaSeleccionada = fecha;
     terminoBusquedaHoja = '';
+    paginaActualHoja = 1;
     const input = document.getElementById('buscarHojaReparto');
     if (input) input.value = '';
     cargarPedidosHoja();
