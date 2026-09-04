@@ -51,30 +51,30 @@
         </div>
         <nav class="w-full bg-gray-50 border-t border-b border-gray-200 overflow-x-auto">
             <div class="flex w-full min-w-max sm:min-w-0">
-                <button onclick="cambiarPestana('BaseDatos')" id="tabBaseDatos"
+                <button onclick="cambiarPestana('BaseDatos')" id="tabBaseDatos" title="Base de Datos"
                         class="flex-1 px-3 py-3 text-center font-medium text-xs sm:text-sm border-b-2 transition-colors duration-200">
-                    <i class="fas fa-database mr-1"></i> Base de Datos
+                    <i class="fas fa-database text-lg sm:text-sm sm:mr-1"></i><span class="hidden sm:inline"> Base de Datos</span>
                 </button>
-                <button onclick="cambiarPestana('NuevoPedido')" id="tabNuevoPedido"
+                <button onclick="cambiarPestana('NuevoPedido')" id="tabNuevoPedido" title="Nuevo Pedido"
                         class="flex-1 px-3 py-3 text-center font-medium text-xs sm:text-sm border-b-2 transition-colors duration-200">
-                    <i class="fas fa-cart-plus mr-1"></i> Nuevo Pedido
+                    <i class="fas fa-cart-plus text-lg sm:text-sm sm:mr-1"></i><span class="hidden sm:inline"> Nuevo Pedido</span>
                 </button>
-                <button onclick="cambiarPestana('Pendientes')" id="tabPendientes"
+                <button onclick="cambiarPestana('Pendientes')" id="tabPendientes" title="Pendientes"
                         class="flex-1 px-3 py-3 text-center font-medium text-xs sm:text-sm border-b-2 transition-colors duration-200">
-                    <i class="fas fa-clipboard-list mr-1"></i> Pendientes
+                    <i class="fas fa-clipboard-list text-lg sm:text-sm sm:mr-1"></i><span class="hidden sm:inline"> Pendientes</span>
                     <span id="totalPendientes" class="bg-red-500 text-white rounded-full px-2 py-1 text-xs ml-1">0</span>
                 </button>
-                <button onclick="cambiarPestana('Calendario')" id="tabCalendario"
+                <button onclick="cambiarPestana('Calendario')" id="tabCalendario" title="Calendario"
                         class="flex-1 px-3 py-3 text-center font-medium text-xs sm:text-sm border-b-2 transition-colors duration-200">
-                    <i class="fas fa-calendar-days mr-1"></i> Calendario
+                    <i class="fas fa-calendar-days text-lg sm:text-sm sm:mr-1"></i><span class="hidden sm:inline"> Calendario</span>
                 </button>
-                <button onclick="cambiarPestana('HojaReparto')" id="tabHojaReparto"
+                <button onclick="cambiarPestana('HojaReparto')" id="tabHojaReparto" title="Hoja Reparto"
                         class="flex-1 px-3 py-3 text-center font-medium text-xs sm:text-sm border-b-2 transition-colors duration-200">
-                    <i class="fas fa-truck mr-1"></i> Hoja Reparto
+                    <i class="fas fa-truck text-lg sm:text-sm sm:mr-1"></i><span class="hidden sm:inline"> Hoja Reparto</span>
                 </button>
-                <button onclick="cambiarPestana('GestionBBDD')" id="tabGestionBBDD"
+                <button onclick="cambiarPestana('GestionBBDD')" id="tabGestionBBDD" title="Gestión BD"
                         class="flex-1 px-3 py-3 text-center font-medium text-xs sm:text-sm border-b-2 transition-colors duration-200">
-                    <i class="fas fa-gear mr-1"></i> Gestión BD
+                    <i class="fas fa-gear text-lg sm:text-sm sm:mr-1"></i><span class="hidden sm:inline"> Gestión BD</span>
                 </button>
             </div>
         </nav>

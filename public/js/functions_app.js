@@ -552,7 +552,7 @@ async function cargarHistorialAccesos(pagina) {
                 tbody.appendChild(fila);
             });
         }
-        renderizarControlesPaginacion('paginacionHistorialAccesos', total, pagina, TAMANO_PAGINA_HISTORIAL, cargarHistorialAccesos);
+        renderizarControlesPaginacion(['paginacionHistorialAccesosArriba', 'paginacionHistorialAccesos'], total, pagina, TAMANO_PAGINA_HISTORIAL, cargarHistorialAccesos);
     } catch (err) {
         console.error('Error al cargar el historial de accesos:', err);
     } finally {
@@ -586,7 +586,7 @@ async function cargarHistorialCambios(pagina) {
                 tbody.appendChild(fila);
             });
         }
-        renderizarControlesPaginacion('paginacionHistorialCambios', total, pagina, TAMANO_PAGINA_HISTORIAL, cargarHistorialCambios);
+        renderizarControlesPaginacion(['paginacionHistorialCambiosArriba', 'paginacionHistorialCambios'], total, pagina, TAMANO_PAGINA_HISTORIAL, cargarHistorialCambios);
     } catch (err) {
         console.error('Error al cargar el historial de cambios:', err);
     } finally {
@@ -611,37 +611,43 @@ async function inicializarHojaReparto() {
 // Pinta "‹ Anterior  Página X de Y  Siguiente ›" en el contenedor
 // indicado y llama a onCambiarPagina(nuevaPagina) al pulsar.
 // ------------------------------------------------------------
+// containerId puede ser un solo id ("paginacionClientes") o varios a la vez
+// (["paginacionClientesArriba", "paginacionClientes"]) para pintar los
+// mismos controles arriba y abajo de una tabla larga.
 function renderizarControlesPaginacion(containerId, totalItems, paginaActual, tamanoPagina, onCambiarPagina) {
-    const cont = document.getElementById(containerId);
-    if (!cont) return;
-
+    const ids = Array.isArray(containerId) ? containerId : [containerId];
     const totalPaginas = Math.max(1, Math.ceil(totalItems / tamanoPagina));
 
-    if (totalItems === 0 || totalPaginas <= 1) {
-        cont.classList.add('hidden');
-        cont.innerHTML = '';
-        return;
-    }
+    ids.forEach(id => {
+        const cont = document.getElementById(id);
+        if (!cont) return;
 
-    cont.classList.remove('hidden');
-    const desde = (paginaActual - 1) * tamanoPagina + 1;
-    const hasta = Math.min(paginaActual * tamanoPagina, totalItems);
+        if (totalItems === 0 || totalPaginas <= 1) {
+            cont.classList.add('hidden');
+            cont.innerHTML = '';
+            return;
+        }
 
-    cont.innerHTML = `
-        <p class="text-sm text-gray-500">Mostrando ${desde}-${hasta} de ${totalItems}</p>
-        <div class="flex items-center gap-2">
-            <button ${paginaActual <= 1 ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg text-sm font-medium border ${paginaActual <= 1 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-300 hover:bg-gray-100'}" data-pagina="${paginaActual - 1}">
-                <i class="fas fa-chevron-left mr-1"></i> Anterior
-            </button>
-            <span class="text-sm text-gray-600 px-1">Página ${paginaActual} de ${totalPaginas}</span>
-            <button ${paginaActual >= totalPaginas ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg text-sm font-medium border ${paginaActual >= totalPaginas ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-300 hover:bg-gray-100'}" data-pagina="${paginaActual + 1}">
-                Siguiente <i class="fas fa-chevron-right ml-1"></i>
-            </button>
-        </div>
-    `;
+        cont.classList.remove('hidden');
+        const desde = (paginaActual - 1) * tamanoPagina + 1;
+        const hasta = Math.min(paginaActual * tamanoPagina, totalItems);
 
-    cont.querySelectorAll('button[data-pagina]').forEach(btn => {
-        btn.addEventListener('click', () => onCambiarPagina(parseInt(btn.dataset.pagina, 10)));
+        cont.innerHTML = `
+            <p class="text-sm text-gray-500">Mostrando ${desde}-${hasta} de ${totalItems}</p>
+            <div class="flex items-center gap-2">
+                <button ${paginaActual <= 1 ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg text-sm font-medium border ${paginaActual <= 1 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-300 hover:bg-gray-100'}" data-pagina="${paginaActual - 1}">
+                    <i class="fas fa-chevron-left mr-1"></i> Anterior
+                </button>
+                <span class="text-sm text-gray-600 px-1">Página ${paginaActual} de ${totalPaginas}</span>
+                <button ${paginaActual >= totalPaginas ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg text-sm font-medium border ${paginaActual >= totalPaginas ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-300 hover:bg-gray-100'}" data-pagina="${paginaActual + 1}">
+                    Siguiente <i class="fas fa-chevron-right ml-1"></i>
+                </button>
+            </div>
+        `;
+
+        cont.querySelectorAll('button[data-pagina]').forEach(btn => {
+            btn.addEventListener('click', () => onCambiarPagina(parseInt(btn.dataset.pagina, 10)));
+        });
     });
 }
 
@@ -667,7 +673,7 @@ async function cargarClientes() {
             if (titulo) titulo.textContent = 'No hay clientes registrados';
             if (subtitulo) subtitulo.textContent = '¡Agrega el primero para empezar!';
             document.getElementById('mensajeVacio')?.classList.remove('hidden');
-            renderizarControlesPaginacion('paginacionClientes', 0, 1, TAMANO_PAGINA_CLIENTES, () => {});
+            renderizarControlesPaginacion(['paginacionClientesArriba', 'paginacionClientes'], 0, 1, TAMANO_PAGINA_CLIENTES, () => {});
             return;
         }
 
@@ -712,7 +718,7 @@ function renderizarPaginaClientes() {
         if (titulo) titulo.textContent = 'No se encontraron clientes';
         if (subtitulo) subtitulo.textContent = 'Prueba con otro término de búsqueda.';
         vacio?.classList.remove('hidden');
-        renderizarControlesPaginacion('paginacionClientes', 0, 1, TAMANO_PAGINA_CLIENTES, () => {});
+        renderizarControlesPaginacion(['paginacionClientesArriba', 'paginacionClientes'], 0, 1, TAMANO_PAGINA_CLIENTES, () => {});
         return;
     }
     vacio?.classList.add('hidden');
@@ -747,7 +753,7 @@ function renderizarPaginaClientes() {
         tabla.appendChild(fila);
     });
 
-    renderizarControlesPaginacion('paginacionClientes', clientesFiltrados.length, paginaActualClientes, TAMANO_PAGINA_CLIENTES, irAPaginaClientes);
+    renderizarControlesPaginacion(['paginacionClientesArriba', 'paginacionClientes'], clientesFiltrados.length, paginaActualClientes, TAMANO_PAGINA_CLIENTES, irAPaginaClientes);
 }
 
 
