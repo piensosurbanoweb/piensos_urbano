@@ -858,11 +858,12 @@ function repetirPedidoAnterior(pedido) {
 }
 
 function inicializarFormularioPedidos() {
-    const tipoPedido = document.getElementById('tipoPedido');
-    if (tipoPedido) {
-        tipoPedido.addEventListener('change', () => {
-            const container = document.getElementById('diasSemanaContainer');
-            if (container) container.classList.toggle('hidden', !['semanal', 'quincena', 'mensual'].includes(tipoPedido.value));
+    const fechaEntregaInput = document.getElementById('fechaEntregaNuevo');
+    const checkSinDeterminar = document.getElementById('fechaEntregaSinDeterminar');
+    if (checkSinDeterminar && fechaEntregaInput) {
+        checkSinDeterminar.addEventListener('change', () => {
+            fechaEntregaInput.disabled = checkSinDeterminar.checked;
+            if (checkSinDeterminar.checked) fechaEntregaInput.value = '';
         });
     }
 
@@ -893,13 +894,13 @@ function inicializarFormularioPedidos() {
             return;
         }
 
+        const sinDeterminar = document.getElementById('fechaEntregaSinDeterminar')?.checked;
         const pedidoData = {
             cliente_id:    clienteSeleccionado.id,
             apodo_cliente: clienteSeleccionado.apodo,
-            tipo:          document.getElementById('tipoPedido').value,
-            dia_semana:    document.getElementById('diaSemana')?.value || null,
+            fecha_pedido:  document.getElementById('fechaPedidoRealizado').value || null,
             items:         items,
-            fecha_entrega: document.getElementById('fechaEntregaNuevo').value,
+            fecha_entrega: sinDeterminar ? null : (document.getElementById('fechaEntregaNuevo').value || null),
             observaciones: document.getElementById('observacionesPedido').value || null
         };
 
@@ -930,6 +931,8 @@ function limpiarFormularioPedido() {
     if (document.getElementById('nombreCompleto')) document.getElementById('nombreCompleto').value = '';
     if (document.getElementById('zonaReparto'))    document.getElementById('zonaReparto').value    = '';
     if (document.getElementById('localidad'))      document.getElementById('localidad').value      = '';
+    const fechaEntregaInput = document.getElementById('fechaEntregaNuevo');
+    if (fechaEntregaInput) fechaEntregaInput.disabled = false;
     reiniciarItemsPedido();
 }
 
@@ -1356,6 +1359,10 @@ function cambiarVistaCalendario(vista) {
         if (btnDiaria) btnDiaria.className = activoClass;
         vistaDiariaDiv?.classList.remove('hidden');
         controlesNav?.classList.add('hidden');
+        const fechaHoyEl = document.getElementById('fechaHoyDiaria');
+        if (fechaHoyEl) {
+            fechaHoyEl.textContent = 'Hoy es ' + new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+        }
         cambiarDiaDiario();
     }
 }
@@ -1460,6 +1467,7 @@ function renderizarVistaSemanal(pedidos, diasSem) {
                             <div class="border border-gray-200 rounded-lg p-2 w-56 shrink-0 cursor-pointer hover:bg-emerald-50 transition-colors"
                                  onclick="mostrarDetallesPedido(${p.id})">
                                 <p class="text-sm font-semibold text-gray-800 truncate" title="${escapeHTML(p.apodo_cliente)}">${escapeHTML(p.apodo_cliente)}</p>
+                                ${p.localidad ? `<p class="text-xs text-gray-400 truncate"><i class="fas fa-location-dot mr-1"></i>${escapeHTML(p.localidad)}</p>` : ''}
                                 <p class="text-xs text-gray-500">${resumenItemsTexto(p.items)}</p>
                             </div>
                         `).join('')}
@@ -1496,6 +1504,7 @@ async function cambiarDiaDiario() {
                     <div class="flex justify-between items-start">
                         <div>
                             <h3 class="font-bold text-lg">${escapeHTML(p.apodo_cliente)}</h3>
+                            ${p.localidad ? `<p class="text-xs text-gray-400"><i class="fas fa-location-dot mr-1"></i>${escapeHTML(p.localidad)}</p>` : ''}
                             <p class="text-sm text-gray-600">${resumenItemsTexto(p.items)}</p>
                         </div>
                         <span class="text-xs text-gray-400">
@@ -2262,34 +2271,43 @@ function exportarHojaRepartoPDF() {
         return;
     }
 
+    // El título lleva el día y la fecha del día seleccionado (no el de hoy: se puede
+    // estar exportando la hoja de otro día), así que ya no hace falta repetirlo en
+    // cada fila de la tabla.
+    const diaCapitalizado = pedidosHojaReparto[0]?.dia_reparto
+        ? pedidosHojaReparto[0].dia_reparto.charAt(0).toUpperCase() + pedidosHojaReparto[0].dia_reparto.slice(1)
+        : '';
+    const fechaBonita = fechaHojaSeleccionada
+        ? new Date(String(fechaHojaSeleccionada).slice(0, 10) + 'T00:00:00').toLocaleDateString('es-ES')
+        : new Date().toLocaleDateString('es-ES');
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape' });
     doc.setFontSize(14);
     doc.text('Hoja de Reparto', 14, 12);
     doc.setFontSize(10);
-    doc.text(new Date().toLocaleDateString('es-ES'), 14, 18);
+    doc.text(`${diaCapitalizado} ${fechaBonita}`.trim(), 14, 18);
 
     const filas = pedidosHojaReparto.map((p, i) => [
         i + 1,
         p.apodo_cliente || '',
         p.telefono || '',
         resumenItemsTexto(p.items),
-        p.dia_reparto || '',
         p.orden_reparto ?? '',
         p.camion || '',
-        p.zona || '',
+        p.localidad || '',
         p.conductor || '',
     ]);
 
     doc.autoTable({
         startY: 24,
-        head: [['Nº', 'Cliente', 'Teléfono', 'Pedido', 'Día', 'Orden', 'Camión', 'Zona', 'Conductor']],
+        head: [['Nº', 'Cliente', 'Teléfono', 'Pedido', 'Orden', 'Camión', 'Localidad', 'Conductor']],
         body: filas,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [21, 135, 101] },
     });
 
-    const fecha = new Date().toISOString().split('T')[0];
+    const fecha = fechaHojaSeleccionada || new Date().toISOString().split('T')[0];
     doc.save(`hoja_reparto_${fecha}.pdf`);
 }
 
@@ -2345,8 +2363,9 @@ function renderizarHojaReparto() {
             <td class="border px-2 py-2">${escapeHTML(p.apodo_cliente)}</td>
             <td class="border px-2 py-2">${escapeHTML(p.telefono)}</td>
             <td class="border px-2 py-2 observaciones-cell">${resumenItemsTexto(p.items)}</td>
-            <td class="border px-2 py-2 orden-cell">
-                <input type="number" min="1" step="1" value="${p.orden_reparto ?? ''}" class="hoja-input"
+            <td class="border px-1 py-2 orden-cell">
+                <input type="number" min="1" step="1" value="${p.orden_reparto ?? ''}" class="hoja-input hoja-input-orden"
+                    onwheel="this.blur()"
                     onchange="actualizarCampoHoja(${p.id}, 'orden_reparto', this.value ? parseInt(this.value, 10) : null)">
             </td>
             <td class="border px-2 py-2 conductor-cell">
@@ -2355,8 +2374,7 @@ function renderizarHojaReparto() {
             <td class="border px-2 py-2 conductor-cell">
                 ${construirSelectHoja(camionesHoja, p.camion, `onchange="actualizarCampoHoja(${p.id}, 'camion', this.value || null)"`)}
             </td>
-            <td class="border px-2 py-2">${escapeHTML(p.zona)}</td>
-            <td class="border px-2 py-2 capitalize">${escapeHTML(p.dia_reparto)}</td>
+            <td class="border px-2 py-2">${escapeHTML(p.localidad)}</td>
             <td class="border px-2 py-2 text-center no-print">
                 <div class="flex items-center justify-center gap-3">
                     <button onclick="eliminarPedidoHoja(${p.id})" class="text-gray-500 hover:text-red-600" title="Volver a Calendario (quita de esta hoja, sigue programado)"><i class="fas fa-calendar-days"></i></button>

@@ -205,6 +205,21 @@
             width: 100%;
         }
 
+        /* La columna "Orden" se veía demasiado ancha en pantalla y el número
+           se descolocaba con facilidad (además de que un input number cambia
+           de valor si giras la rueda del ratón encima sin querer, ver
+           onwheel="this.blur()" en el input). La hacemos más estrecha. */
+        .orden-cell {
+            width: 70px;
+        }
+        .hoja-input-orden {
+            width: 100%;
+            min-width: 0;
+            text-align: center;
+            padding-left: 0.25rem;
+            padding-right: 0.25rem;
+        }
+
         @media print {
             .hoja-input,
             .hoja-select {

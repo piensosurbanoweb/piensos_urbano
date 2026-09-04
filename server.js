@@ -898,7 +898,12 @@ app.post('/pedidos', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    const { cliente_id, apodo_cliente, tipo, dia_semana, fecha_entrega, observaciones } = req.body;
+    // "tipo"/"dia_semana" ya no se piden en el formulario de Nuevo Pedido (se
+    // sustituyó por "fecha_pedido": la fecha en que el cliente hizo el
+    // pedido, editable, en vez de fijarla siempre a "ahora mismo"). Las
+    // columnas se mantienen en la tabla "pedidos" por compatibilidad con la
+    // importación desde Excel, que sí puede seguir rellenándolas.
+    const { cliente_id, apodo_cliente, fecha_pedido, fecha_entrega, observaciones } = req.body;
     let items = Array.isArray(req.body.items) ? req.body.items : null;
     if (!items && req.body.cantidad && req.body.producto) {
       items = [{ cantidad: req.body.cantidad, producto: req.body.producto }];
@@ -916,12 +921,14 @@ app.post('/pedidos', async (req, res) => {
     // tabla "pedidos" por compatibilidad con datos/consultas antiguas; el
     // detalle real de todos los productos vive en pedido_items.
     const pedidoResult = await client.query(
-      `INSERT INTO pedidos (cliente_id, apodo_cliente, tipo, dia_semana, cantidad, producto, fecha_entrega, observaciones)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, fecha_creacion`,
-      [cliente_id, apodo_cliente, tipo, dia_semana, items[0].cantidad, items[0].producto, fecha_entrega, observaciones]
+      `INSERT INTO pedidos (cliente_id, apodo_cliente, cantidad, producto, fecha_entrega, observaciones)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, fecha_creacion`,
+      [cliente_id, apodo_cliente, items[0].cantidad, items[0].producto, fecha_entrega, observaciones]
     );
     const newPedidoId = pedidoResult.rows[0].id;
-    const fechaPedido = pedidoResult.rows[0].fecha_creacion;
+    // Si se indicó "fecha en que se realizó el pedido", se usa esa; si no,
+    // se usa el momento exacto de creación del registro (como antes).
+    const fechaPedido = fecha_pedido || pedidoResult.rows[0].fecha_creacion;
 
     const resumen = resumenItems(items);
     const descripcion = `${resumen} - ${apodo_cliente}`;
@@ -945,11 +952,10 @@ app.post('/pedidos', async (req, res) => {
     );
     const clienteData = clienteResult.rows[0];
 
-    let diaRepartoCorregido = dia_semana;
-    if (!diaRepartoCorregido || diaRepartoCorregido.trim() === '') {
-      const pedidoOriginalResult = await client.query('SELECT dia_semana FROM pedidos WHERE id = $1', [newPedidoId]);
-      diaRepartoCorregido = pedidoOriginalResult.rows[0]?.dia_semana || null;
-    }
+    // El día de reparto se deriva de la fecha de entrega; si la fecha de
+    // entrega se ha dejado "sin determinar", el pedido queda pendiente sin
+    // día asignado todavía (se le pondrá al programarlo en el calendario).
+    const diaRepartoCorregido = fecha_entrega ? getDiaRepartoUTC(fecha_entrega) : null;
 
     await client.query(
       `INSERT INTO pedidos_pendientes (historial_id, cliente_id, apodo, nombre_completo, telefono, localidad, zona, pedido, fecha_programacion, observaciones, dia_reparto)
@@ -1232,6 +1238,7 @@ app.get('/pedidos_calendario', async (req, res) => {
          p.dia_reparto,
          p.fecha_entrega AS fecha_reparto,
          c.apodo AS apodo_cliente,
+         c.localidad,
          ${SUBQUERY_ITEMS}
        FROM pedidos_calendario p
        JOIN pedidos_historial h ON h.id = p.historial_id
@@ -1258,6 +1265,7 @@ app.get('/pedidos/diarios/:dia', async (req, res) => {
          p.dia_reparto,
          p.fecha_entrega AS fecha_reparto,
          c.apodo AS apodo_cliente,
+         c.localidad,
          p.observaciones,
          ${SUBQUERY_ITEMS}
        FROM pedidos_calendario p
@@ -1571,7 +1579,7 @@ app.get('/pedidos/hoja-reparto', async (req, res) => {
     const { rows } = await pool.query(`
       SELECT
         p.id, p.dia_reparto, p.fecha_entrega, p.orden_reparto, p.conductor, p.camion, p.observaciones,
-        c.apodo AS apodo_cliente, c.telefono, c.zona_reparto AS zona,
+        c.apodo AS apodo_cliente, c.telefono, c.localidad, c.zona_reparto AS zona,
         ${SUBQUERY_ITEMS}
       FROM pedidos_calendario p
       JOIN pedidos_historial h ON h.id = p.historial_id
