@@ -735,19 +735,21 @@ function renderizarPaginaClientes() {
             <td class="px-4 py-2 border">${escapeHTML(cliente.localidad)}</td>
             <td class="px-4 py-2 border">${escapeHTML(cliente.zona_reparto)}</td>
             <td class="px-4 py-2 border">${escapeHTML(cliente.observaciones)}</td>
-            <td class="px-4 py-2 border flex gap-2">
-                <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
-                    onclick='abrirModal(${JSON.stringify(cliente).replace(/'/g, '&#39;')})'>
-                    <i class="fa-solid fa-pen-to-square"></i>
-                </button>
-                <button class="bg-[#158765] hover:bg-[#0f6b50] text-white px-3 py-1 rounded"
-                    onclick="exportarHistorialClientePDF(${cliente.id})" title="Exportar historial a PDF">
-                    <i class="fas fa-file-pdf"></i>
-                </button>
-                <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-                    onclick="eliminarCliente(${cliente.id})">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
+            <td class="px-4 py-2 border">
+                <div class="flex gap-2">
+                    <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
+                        onclick='abrirModal(${JSON.stringify(cliente).replace(/'/g, '&#39;')})'>
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button class="bg-[#158765] hover:bg-[#0f6b50] text-white px-3 py-1 rounded"
+                        onclick="exportarHistorialClientePDF(${cliente.id})" title="Exportar historial a PDF">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                    <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                        onclick="eliminarCliente(${cliente.id})">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
             </td>
         `;
         tabla.appendChild(fila);
