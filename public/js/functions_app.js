@@ -647,6 +647,7 @@ function renderizarControlesPaginacion(containerId, totalItems, paginaActual, ta
 
 const TAMANO_PAGINA_CLIENTES = 20;
 let paginaActualClientes = 1;
+let terminoBusquedaClientes = '';
 
 async function cargarClientes() {
     try {
@@ -661,6 +662,10 @@ async function cargarClientes() {
 
         if (clientes.length === 0) {
             document.getElementById('listaClientes').innerHTML = '';
+            const titulo = document.getElementById('mensajeVacioTitulo');
+            const subtitulo = document.getElementById('mensajeVacioSubtitulo');
+            if (titulo) titulo.textContent = 'No hay clientes registrados';
+            if (subtitulo) subtitulo.textContent = '¡Agrega el primero para empezar!';
             document.getElementById('mensajeVacio')?.classList.remove('hidden');
             renderizarControlesPaginacion('paginacionClientes', 0, 1, TAMANO_PAGINA_CLIENTES, () => {});
             return;
@@ -675,6 +680,20 @@ async function cargarClientes() {
     }
 }
 
+/** Filtra la tabla de clientes según lo escrito en el buscador (apodo, nombre, teléfono, localidad, zona u observaciones). */
+function filtrarClientes() {
+    const input = document.getElementById('buscarClientes');
+    terminoBusquedaClientes = (input?.value || '').trim().toLowerCase();
+    paginaActualClientes = 1;
+    renderizarPaginaClientes();
+}
+
+function obtenerClientesFiltrados() {
+    if (!terminoBusquedaClientes) return clientes;
+    return clientes.filter(c => [c.apodo, c.nombre_completo, c.telefono, c.localidad, c.zona_reparto, c.observaciones]
+        .some(campo => (campo || '').toLowerCase().includes(terminoBusquedaClientes)));
+}
+
 function irAPaginaClientes(nuevaPagina) {
     paginaActualClientes = nuevaPagina;
     renderizarPaginaClientes();
@@ -685,8 +704,21 @@ function renderizarPaginaClientes() {
     if (!tabla) return;
     tabla.innerHTML = '';
 
+    const clientesFiltrados = obtenerClientesFiltrados();
+    const vacio = document.getElementById('mensajeVacio');
+    if (clientesFiltrados.length === 0) {
+        const titulo = document.getElementById('mensajeVacioTitulo');
+        const subtitulo = document.getElementById('mensajeVacioSubtitulo');
+        if (titulo) titulo.textContent = 'No se encontraron clientes';
+        if (subtitulo) subtitulo.textContent = 'Prueba con otro término de búsqueda.';
+        vacio?.classList.remove('hidden');
+        renderizarControlesPaginacion('paginacionClientes', 0, 1, TAMANO_PAGINA_CLIENTES, () => {});
+        return;
+    }
+    vacio?.classList.add('hidden');
+
     const inicio = (paginaActualClientes - 1) * TAMANO_PAGINA_CLIENTES;
-    const clientesPagina = clientes.slice(inicio, inicio + TAMANO_PAGINA_CLIENTES);
+    const clientesPagina = clientesFiltrados.slice(inicio, inicio + TAMANO_PAGINA_CLIENTES);
 
     clientesPagina.forEach(cliente => {
         const fila = document.createElement('tr');
@@ -715,7 +747,7 @@ function renderizarPaginaClientes() {
         tabla.appendChild(fila);
     });
 
-    renderizarControlesPaginacion('paginacionClientes', clientes.length, paginaActualClientes, TAMANO_PAGINA_CLIENTES, irAPaginaClientes);
+    renderizarControlesPaginacion('paginacionClientes', clientesFiltrados.length, paginaActualClientes, TAMANO_PAGINA_CLIENTES, irAPaginaClientes);
 }
 
 
@@ -2503,19 +2535,49 @@ function construirSelectHoja(valores, valorActual, onChangeAttr) {
     return `<select class="hoja-select" ${onChangeAttr}>${opciones.join('')}</select>`;
 }
 
+let terminoBusquedaHoja = '';
+
+/** Filtra la vista de la hoja de reparto (no toca pedidosHojaReparto, que se usa entero para imprimir/exportar). */
+function filtrarHojaReparto() {
+    const input = document.getElementById('buscarHojaReparto');
+    terminoBusquedaHoja = (input?.value || '').trim().toLowerCase();
+    renderizarHojaReparto();
+}
+
+function obtenerPedidosHojaFiltrados() {
+    if (!terminoBusquedaHoja) return pedidosHojaReparto;
+    return pedidosHojaReparto.filter(p => [p.apodo_cliente, p.telefono, p.localidad, p.conductor, p.camion, resumenItemsTexto(p.items)]
+        .some(campo => (campo || '').toLowerCase().includes(terminoBusquedaHoja)));
+}
+
 function renderizarHojaReparto() {
     const tbody = document.getElementById('tablaPedidosHoja');
     const vacio = document.getElementById('mensajeVacioHoja');
     if (!tbody || !vacio) return;
 
     tbody.innerHTML = '';
+
+    const pedidosFiltrados = obtenerPedidosHojaFiltrados();
+
     if (pedidosHojaReparto.length === 0) {
+        const titulo = document.getElementById('mensajeVacioHojaTitulo');
+        const subtitulo = document.getElementById('mensajeVacioHojaSubtitulo');
+        if (titulo) titulo.textContent = 'La hoja de reparto está vacía';
+        if (subtitulo) subtitulo.textContent = 'Envía pedidos desde Calendario → Vista Diaria para empezar';
+        vacio.classList.remove('hidden');
+        return;
+    }
+    if (pedidosFiltrados.length === 0) {
+        const titulo = document.getElementById('mensajeVacioHojaTitulo');
+        const subtitulo = document.getElementById('mensajeVacioHojaSubtitulo');
+        if (titulo) titulo.textContent = 'No se encontraron pedidos';
+        if (subtitulo) subtitulo.textContent = 'Prueba con otro término de búsqueda.';
         vacio.classList.remove('hidden');
         return;
     }
     vacio.classList.add('hidden');
 
-    pedidosHojaReparto.forEach((p, index) => {
+    pedidosFiltrados.forEach((p, index) => {
         const fila = document.createElement('tr');
         fila.innerHTML = `
             <td class="border px-2 py-2 text-center orden-cell">${index + 1}</td>
@@ -2587,6 +2649,9 @@ async function cargarFechasHoja() {
 
 function cambiarFechaHoja(fecha) {
     fechaHojaSeleccionada = fecha;
+    terminoBusquedaHoja = '';
+    const input = document.getElementById('buscarHojaReparto');
+    if (input) input.value = '';
     cargarPedidosHoja();
 }
 
