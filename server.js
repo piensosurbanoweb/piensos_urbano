@@ -790,6 +790,60 @@ app.post('/usuarios', requireGestionUsuarios, async (req, res) => {
   }
 });
 
+// Edita el nombre, el nombre de usuario (login) y el email de un usuario ya
+// existente. No toca el rol (eso es PATCH /usuarios/:id/rol) ni la
+// contraseña. Si el nombre de usuario o el email ya los usa otra persona,
+// la restricción UNIQUE de la tabla lo rechaza con un 409 legible.
+app.patch('/usuarios/:id', requireGestionUsuarios, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nombre, nombre_usuario, email } = req.body;
+    if (!nombre || !nombre.trim() || !nombre_usuario || !nombre_usuario.trim()) {
+      return res.status(400).json({ error: 'El nombre y el nombre de usuario son obligatorios.' });
+    }
+    const { rows } = await pool.query('SELECT rol FROM usuarios WHERE id = $1', [id]);
+    const objetivo = rows[0];
+    if (!objetivo) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    if (!puedeGestionarRol(req.usuario.rol, objetivo.rol)) {
+      return res.status(403).json({ error: 'No tienes permiso para editar a este usuario.' });
+    }
+
+    const emailLimpio = email && email.trim() ? email.trim() : null;
+    const actualizado = await pool.query(
+      `UPDATE usuarios SET nombre = $1, nombre_usuario = $2, email = $3 WHERE id = $4
+       RETURNING id, nombre_usuario, nombre, email, rol, activo`,
+      [nombre.trim(), nombre_usuario.trim(), emailLimpio, id]
+    );
+
+    await registrarCambio(req.usuario, 'editar', 'usuario', id, `Usuario editado: ${nombre_usuario.trim()}`);
+
+    // Si te has editado a ti mismo, se reemite la cookie de sesión con los
+    // datos nuevos (igual que PATCH /me) para que el menú de arriba no se
+    // quede mostrando el nombre/usuario antiguo hasta volver a iniciar sesión.
+    if (String(req.usuario.id) === String(id)) {
+      const token = jwt.sign(
+        { id: actualizado.rows[0].id, nombre_usuario: actualizado.rows[0].nombre_usuario, nombre: actualizado.rows[0].nombre, rol: actualizado.rows[0].rol },
+        JWT_SECRET,
+        { expiresIn: '12h' }
+      );
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 12 * 60 * 60 * 1000,
+      });
+    }
+
+    res.json(actualizado.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'Ese nombre de usuario o email ya está en uso por otra persona.' });
+    }
+    console.error('Error al editar usuario:', err.message);
+    res.status(500).json({ error: 'Error al editar el usuario.' });
+  }
+});
+
 // Cambia el rol de un usuario (solo desarrollador/propietario, respetando la jerarquía).
 app.patch('/usuarios/:id/rol', requireGestionUsuarios, async (req, res) => {
   try {

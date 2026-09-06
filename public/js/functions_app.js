@@ -2009,7 +2009,11 @@ async function cargarUsuarios() {
         if (!lista) return;
         lista.innerHTML = '';
         data.forEach(u => {
-            const puedeGestionar = puedeGestionarRolCliente(u.rol) && u.id !== usuarioActualId;
+            // Editar (nombre/usuario/email) se permite para cualquier usuario que puedas
+            // gestionar, incluido tú mismo. Cambiar rol y desactivar, en cambio, nunca
+            // se permiten sobre tu propia cuenta (por eso llevan su propia comprobación aparte).
+            const puedeEditar = puedeGestionarRolCliente(u.rol);
+            const puedeGestionar = puedeEditar && u.id !== usuarioActualId;
             const li = document.createElement('li');
             li.className = 'flex justify-between items-center p-3 gap-2';
 
@@ -2027,6 +2031,9 @@ async function cargarUsuarios() {
                     ${puedeGestionar
                         ? `<select onchange="cambiarRolUsuario(${u.id}, this.value)" class="text-xs border rounded px-1 py-1 focus:ring-2 focus:ring-[#20c997]">${opcionesRol}</select>`
                         : `<span class="text-xs text-gray-500">${escapeHTML(ETIQUETAS_ROL[u.rol] || u.rol)}</span>`}
+                    ${puedeEditar
+                        ? `<button onclick='abrirModalEditarUsuario(${JSON.stringify(u).replace(/'/g, '&#39;')})' class="text-gray-500 hover:text-[#158765]" title="Editar usuario"><i class="fas fa-pen-to-square"></i></button>`
+                        : ''}
                     ${puedeGestionar
                         ? `<button onclick="eliminarUsuario(${u.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>`
                         : ''}
@@ -2070,6 +2077,69 @@ async function agregarUsuario() {
         mostrarMensajeExito(`Usuario "${nombre_usuario}" creado`);
     } catch (err) {
         alert('Error: ' + err.message);
+    }
+}
+
+let usuarioParaEditarId = null;
+
+/** Abre el modal de "Editar usuario" (nombre, usuario de acceso y email) ya relleno con sus datos actuales. */
+function abrirModalEditarUsuario(usuario) {
+    usuarioParaEditarId = usuario.id;
+    const modal = document.getElementById('modalEditarUsuario');
+    const nombreInput = document.getElementById('editarUsuarioNombre');
+    const loginInput = document.getElementById('editarUsuarioLogin');
+    const emailInput = document.getElementById('editarUsuarioEmail');
+    const mensaje = document.getElementById('mensajeEditarUsuario');
+    if (!modal || !nombreInput || !loginInput || !emailInput) return;
+    nombreInput.value = usuario.nombre || '';
+    loginInput.value = usuario.nombre_usuario || '';
+    emailInput.value = usuario.email || '';
+    if (mensaje) mensaje.classList.add('hidden');
+    modal.classList.remove('hidden');
+}
+
+function cerrarModalEditarUsuario() {
+    document.getElementById('modalEditarUsuario')?.classList.add('hidden');
+    usuarioParaEditarId = null;
+}
+
+async function guardarEdicionUsuario() {
+    if (!usuarioParaEditarId) return;
+    const nombreInput = document.getElementById('editarUsuarioNombre');
+    const loginInput = document.getElementById('editarUsuarioLogin');
+    const emailInput = document.getElementById('editarUsuarioEmail');
+    const mensaje = document.getElementById('mensajeEditarUsuario');
+    const nombre = nombreInput?.value.trim();
+    const nombre_usuario = loginInput?.value.trim();
+    const email = emailInput?.value.trim();
+
+    if (!nombre) { marcarCampoInvalido(nombreInput, 'Escribe un nombre'); return; }
+    if (!nombre_usuario) { marcarCampoInvalido(loginInput, 'Escribe un usuario'); return; }
+
+    try {
+        const res = await fetch(`/usuarios/${usuarioParaEditarId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, nombre_usuario, email: email || null })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo editar el usuario');
+        cerrarModalEditarUsuario();
+        cargarUsuarios();
+        mostrarMensajeExito('Usuario actualizado');
+        // Si te has editado a ti mismo, el nombre/usuario mostrado arriba (menú de usuario) se actualiza al vuelo.
+        if (usuarioActualId === data.id) {
+            const span = document.getElementById('usuarioActual');
+            if (span) span.textContent = `${data.nombre} (${data.nombre_usuario})`;
+        }
+    } catch (err) {
+        if (mensaje) {
+            mensaje.textContent = err.message;
+            mensaje.className = 'text-sm mb-3 text-red-600';
+            mensaje.classList.remove('hidden');
+        } else {
+            alert('Error: ' + err.message);
+        }
     }
 }
 

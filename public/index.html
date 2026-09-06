@@ -127,6 +127,30 @@
             </div>
         </div>
 
+        <!-- Modal para editar nombre/usuario/email de otra persona (o de uno mismo), desde Gestión de Base de Datos -->
+        <div id="modalEditarUsuario" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+            <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-user-pen mr-1"></i> Editar usuario</h3>
+                <div class="mb-3">
+                    <label class="campo-label campo-obligatorio">Nombre</label>
+                    <input type="text" id="editarUsuarioNombre" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#20c997]" required>
+                </div>
+                <div class="mb-3">
+                    <label class="campo-label campo-obligatorio">Usuario para entrar</label>
+                    <input type="text" id="editarUsuarioLogin" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#20c997]" required>
+                </div>
+                <div class="mb-4">
+                    <label class="campo-label campo-opcional">Email <span class="text-xs text-gray-400 font-normal">(para recuperar la contraseña)</span></label>
+                    <input type="email" id="editarUsuarioEmail" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#20c997]">
+                </div>
+                <p id="mensajeEditarUsuario" class="text-sm mb-3 hidden"></p>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="cerrarModalEditarUsuario()" class="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100">Cancelar</button>
+                    <button type="button" onclick="guardarEdicionUsuario()" class="px-4 py-2 rounded-lg bg-[#158765] hover:bg-[#0f6b50] text-white font-medium">Guardar</button>
+                </div>
+            </div>
+        </div>
+
         <div id="modalConfirmacion" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
             <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-5">
                 <div class="flex items-start gap-3 mb-5">
