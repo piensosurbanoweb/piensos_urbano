@@ -12,13 +12,86 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 const XLSX = require('xlsx');
+const helmet = require('helmet');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 
-// No se usa cors(): el frontend (HTML/CSS/JS) se sirve desde este mismo
-// servidor Express, así que todas las peticiones de la propia app son del
-// mismo origen y no necesitan CORS. Dejar cors() abierto solo serviría para
-// permitir que OTRAS webs llamaran a esta API, así que se ha quitado.
+// Vercel/Railway/etc van detrás de un proxy: hace falta esto para que
+// express-rate-limit identifique la IP real del cliente (X-Forwarded-For)
+// en vez de la IP del proxy para todas las peticiones.
+app.set('trust proxy', 1);
+
+// --- CABECERAS DE SEGURIDAD (Helmet) + CONTENT SECURITY POLICY ---
+// La CSP solo permite cargar scripts/estilos/fuentes desde este mismo
+// servidor y de los CDNs que la app realmente usa (Tailwind Play CDN,
+// cdnjs para Font Awesome/jsPDF/SheetJS). 'unsafe-inline' en script/style
+// sigue haciendo falta porque las páginas usan atributos onclick="..." y
+// bloques <script> embebidos; quitarlo requeriría reescribir el frontend
+// para no usar manejadores de eventos inline (mejora futura, no bloqueante
+// para esta ronda).
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.tailwindcss.com', 'https://cdnjs.cloudflare.com'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'],
+      fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'data:'],
+      imgSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      frameAncestors: ["'self'"],
+    },
+  },
+  // La API se sirve desde el propio dominio; crossOriginEmbedderPolicy por
+  // defecto puede romper la carga de scripts de CDN sin CORS, así que se
+  // desactiva (no hace falta para esta app).
+  crossOriginEmbedderPolicy: false,
+}));
+
+// --- CORS ---
+// El frontend se sirve desde este mismo servidor Express, así que las
+// peticiones normales de la app son same-origin y no necesitan CORS. Aun
+// así se configura explícitamente para que, si algún día el frontend se
+// sirve desde otro dominio (o alguien intenta llamar a la API desde una
+// web distinta), solo se acepten peticiones cuyo origen sea el de la propia
+// app (ALLOWED_ORIGIN en .env / Vercel). Sin ALLOWED_ORIGIN definida, no se
+// permite ningún origen cross-site (las peticiones same-origin del propio
+// navegador siguen funcionando igual, porque el navegador no manda
+// cabecera Origin distinta ni aplica CORS a peticiones same-origin).
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || null;
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) return callback(null, true); // same-origin / curl / apps móviles
+    if (ALLOWED_ORIGIN && origin === ALLOWED_ORIGIN) return callback(null, true);
+    return callback(new Error('Origen no permitido por CORS'));
+  },
+  credentials: true,
+}));
+
+// --- RATE LIMITING ---
+// Límite general para toda la API (evita abuso/scraping/DoS básico).
+const limitadorGeneral = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas peticiones. Inténtalo de nuevo en unos minutos.' },
+});
+app.use(limitadorGeneral);
+
+// Límite estricto para login y recuperación de contraseña (evita fuerza
+// bruta de contraseñas y abuso del envío de emails de recuperación).
+const limitadorAuth = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos. Espera unos minutos antes de volver a intentarlo.' },
+});
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -52,6 +125,35 @@ function requireAuth(req, res, next) {
   } catch (err) {
     return res.status(401).json({ error: 'Tu sesión ha caducado. Vuelve a iniciar sesión.' });
   }
+}
+
+// --- VALIDACIÓN Y SANITIZACIÓN DE ENTRADA (también en el backend, no solo
+// en el frontend: cualquiera puede saltarse el formulario y llamar a la API
+// directamente con curl/Postman). Recorta espacios y limita la longitud de
+// los campos de texto libre antes de guardarlos; el uso de parámetros
+// preparados ($1, $2...) en TODAS las consultas de este archivo ya evita la
+// inyección SQL, así que aquí el foco es: campos obligatorios, tipos,
+// rangos y longitudes razonables.
+function limpiarTexto(valor, maxLength) {
+  if (valor === undefined || valor === null) return null;
+  const texto = String(valor).trim().slice(0, maxLength);
+  return texto.length ? texto : null;
+}
+function esEmailValido(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+function validarCliente(body, { requerido }) {
+  const errores = [];
+  const apodo = limpiarTexto(body.apodo, 80);
+  const nombre_completo = limpiarTexto(body.nombre_completo, 150);
+  const telefono = limpiarTexto(body.telefono, 30);
+  const localidad = limpiarTexto(body.localidad, 100);
+  const zona_reparto = limpiarTexto(body.zona_reparto, 60);
+  const observaciones = limpiarTexto(body.observaciones, 1000);
+  if (requerido && !apodo) errores.push('El apodo es obligatorio.');
+  if (requerido && !nombre_completo) errores.push('El nombre completo es obligatorio.');
+  if (telefono && !/^[0-9+\-\s()]{6,30}$/.test(telefono)) errores.push('El teléfono no es válido.');
+  return { errores, datos: { apodo, nombre_completo, telefono, localidad, zona_reparto, observaciones } };
 }
 
 // --- ROLES Y PERMISOS ---
@@ -440,7 +542,7 @@ app.post('/backup-manual', async (req, res) => {
   }
 });
 
-app.post('/login', async (req, res) => {
+app.post('/login', limitadorAuth, async (req, res) => {
   try {
     const { nombre_usuario, contrasena } = req.body;
     if (!nombre_usuario || !contrasena) {
@@ -506,6 +608,9 @@ app.patch('/me', async (req, res) => {
       return res.status(400).json({ error: 'El nombre no puede estar vacío.' });
     }
     const emailLimpio = email && email.trim() ? email.trim() : null;
+    if (emailLimpio && !esEmailValido(emailLimpio)) {
+      return res.status(400).json({ error: 'El email no es válido.' });
+    }
 
     const { rows } = await pool.query(
       `UPDATE usuarios SET nombre = $1, email = $2 WHERE id = $3
@@ -566,7 +671,7 @@ app.post('/change-password', async (req, res) => {
 });
 
 // --- RECUPERACIÓN DE CONTRASEÑA (sin sesión iniciada) ---
-app.post('/forgot-password', async (req, res) => {
+app.post('/forgot-password', limitadorAuth, async (req, res) => {
   // Siempre se responde igual, exista o no ese usuario/email, para no revelar
   // qué cuentas existen (evita que alguien use esto para adivinar usuarios).
   const RESPUESTA_GENERICA = { success: true, message: 'Si ese usuario o email existe y tiene un correo asociado, recibirás un enlace para recuperar la contraseña.' };
@@ -603,7 +708,7 @@ app.post('/forgot-password', async (req, res) => {
   }
 });
 
-app.post('/reset-password', async (req, res) => {
+app.post('/reset-password', limitadorAuth, async (req, res) => {
   try {
     const { token, contrasena } = req.body;
     if (!token || !contrasena) {
@@ -657,6 +762,9 @@ app.post('/usuarios', requireGestionUsuarios, async (req, res) => {
     }
     if (contrasena.length < 8) {
       return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres.' });
+    }
+    if (email && !esEmailValido(email)) {
+      return res.status(400).json({ error: 'El email no es válido.' });
     }
     const rolFinal = rol || 'gestor';
     if (!ROLES_VALIDOS.includes(rolFinal)) {
@@ -784,7 +892,9 @@ app.get('/clientes', async (req, res) => {
 
 app.post('/clientes', async (req, res) => {
   try {
-    const { apodo, nombre_completo, telefono, localidad, zona_reparto, observaciones } = req.body;
+    const { errores, datos } = validarCliente(req.body, { requerido: true });
+    if (errores.length) return res.status(400).json({ error: errores.join(' ') });
+    const { apodo, nombre_completo, telefono, localidad, zona_reparto, observaciones } = datos;
     const { rows } = await pool.query(
       `INSERT INTO clientes (apodo, nombre_completo, telefono, localidad, zona_reparto, observaciones)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
@@ -801,7 +911,10 @@ app.post('/clientes', async (req, res) => {
 app.put('/clientes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { apodo, nombre_completo, telefono, localidad, zona_reparto, observaciones } = req.body;
+    if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'Id de cliente no válido.' });
+    const { errores, datos } = validarCliente(req.body, { requerido: true });
+    if (errores.length) return res.status(400).json({ error: errores.join(' ') });
+    const { apodo, nombre_completo, telefono, localidad, zona_reparto, observaciones } = datos;
     const { rows } = await pool.query(
       `UPDATE clientes SET apodo=$1, nombre_completo=$2, telefono=$3, localidad=$4, zona_reparto=$5, observaciones=$6
        WHERE id=$7 RETURNING *`,
@@ -1534,7 +1647,8 @@ app.get('/conductores', async (req, res) => {
 
 app.post('/conductores', async (req, res) => {
   try {
-    const { nombre } = req.body;
+    const nombre = limpiarTexto(req.body.nombre, 100);
+    if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio.' });
     const { rows } = await pool.query('INSERT INTO conductores (nombre) VALUES ($1) RETURNING *', [nombre]);
     await registrarCambio(req.usuario, 'crear', 'conductor', rows[0].id, `Conductor añadido: ${nombre || ''}`);
     res.json(rows[0]);
@@ -1570,7 +1684,7 @@ app.get('/camiones', async (req, res) => {
 
 app.post('/camiones', async (req, res) => {
   try {
-    const { matricula } = req.body;
+    const matricula = limpiarTexto(req.body.matricula, 20);
     if (!matricula) {
       return res.status(400).json({ error: 'La matrícula es requerida.' });
     }
@@ -1609,7 +1723,8 @@ app.get('/zonas', async (req, res) => {
 
 app.post('/zonas', async (req, res) => {
   try {
-    const { nombre } = req.body;
+    const nombre = limpiarTexto(req.body.nombre, 60);
+    if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio.' });
     const { rows } = await pool.query('INSERT INTO zonas (nombre) VALUES ($1) RETURNING *', [nombre]);
     await registrarCambio(req.usuario, 'crear', 'zona', rows[0].id, `Zona añadida: ${nombre || ''}`);
     res.json(rows[0]);

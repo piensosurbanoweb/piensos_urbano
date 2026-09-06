@@ -154,3 +154,61 @@ CREATE INDEX IF NOT EXISTS idx_pedidos_calendario_fecha ON pedidos_calendario(fe
 CREATE INDEX IF NOT EXISTS idx_pedidos_calendario_dia ON pedidos_calendario(dia_reparto);
 CREATE INDEX IF NOT EXISTS idx_pedidos_pendientes_historial ON pedidos_pendientes(historial_id);
 CREATE INDEX IF NOT EXISTS idx_pedidos_historial_cliente ON pedidos_historial(cliente_id);
+
+-- =====================================================================
+-- RONDA 10 (seguridad): ROW LEVEL SECURITY en todas las tablas.
+--
+-- Por qué hace falta aunque el backend (server.js) no se rompa: Supabase
+-- expone AUTOMÁTICAMENTE una API REST pública (PostgREST) para cada tabla
+-- de tu base de datos en https://TU-PROYECTO.supabase.co/rest/v1/... Esa
+-- API usa un rol distinto ("anon"/"authenticated", con su propia API key
+-- pública de Supabase) que NO es el mismo que usa tu servidor Express para
+-- conectarse por DATABASE_URL. Si esa API key pública llegara a manos de
+-- alguien (aunque tú no la uses ni la hayas puesto en el frontend, existe
+-- siempre en tu proyecto de Supabase) y RLS está desactivado, esa persona
+-- podría leer o modificar TODOS los datos de TODAS las tablas directamente,
+-- sin pasar por tu backend ni por el login. Con RLS activado y sin
+-- políticas permisivas, esa vía queda bloqueada por completo.
+--
+-- Tu servidor Express (conexión por DATABASE_URL, con el usuario "postgres"
+-- de Supabase) sigue funcionando exactamente igual: ese usuario es el
+-- propietario de las tablas y por eso Postgres le deja saltarse RLS
+-- automáticamente (esto es un comportamiento estándar de Postgres, no algo
+-- que haya que configurar aparte).
+--
+-- CÓMO APLICARLO: pega y ejecuta este bloque en el SQL Editor de Supabase.
+-- CÓMO COMPROBAR QUE NO ROMPE NADA: justo después de ejecutarlo, entra en
+-- la app (login, ver clientes, crear un pedido...). Si algo deja de
+-- funcionar, ejecuta el bloque de "REVERTIR" que hay más abajo y avisa.
+ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pedidos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pedidos_historial ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pedido_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pedidos_pendientes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pedidos_calendario ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pedidos_hoja_reparto ENABLE ROW LEVEL SECURITY;
+ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conductores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE camiones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE zonas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE historial_accesos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE historial_cambios ENABLE ROW LEVEL SECURITY;
+-- No se crea ninguna política (CREATE POLICY): con RLS activado y sin
+-- políticas, la API pública de Supabase (roles anon/authenticated) no
+-- puede leer ni escribir NADA en estas tablas. Es exactamente lo que
+-- queremos, porque tu app nunca usa esa API: todo pasa por server.js.
+
+-- REVERTIR (solo si algo se rompe en la app tras ejecutar lo de arriba):
+-- ALTER TABLE clientes DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE pedidos DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE pedidos_historial DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE pedido_items DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE pedidos_pendientes DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE pedidos_calendario DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE pedidos_hoja_reparto DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE usuarios DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE conductores DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE camiones DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE zonas DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE historial_accesos DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE historial_cambios DISABLE ROW LEVEL SECURITY;
