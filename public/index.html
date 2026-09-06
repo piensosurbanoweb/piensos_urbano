@@ -81,7 +81,7 @@
     </header>
 
     <div id="contenidoPrincipal" class="mx-auto px-8 py-8 max-w-[1280px]">
-        <div id="modalEditarPerfil" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+        <div id="modalEditarPerfil" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onclick="if(event.target===this) cerrarModalEditarPerfil()">
             <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-6">
                 <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-user-pen mr-1"></i> Editar mi perfil</h3>
                 <form id="formEditarPerfil" novalidate>
@@ -102,7 +102,7 @@
             </div>
         </div>
 
-        <div id="modalCambiarPassword" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+        <div id="modalCambiarPassword" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onclick="if(event.target===this) cerrarModalCambiarPassword()">
             <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-6">
                 <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-key mr-1"></i> Cambiar contraseña</h3>
                 <form id="formCambiarPassword" novalidate>
@@ -128,7 +128,7 @@
         </div>
 
         <!-- Modal para editar nombre/usuario/email de otra persona (o de uno mismo), desde Gestión de Base de Datos -->
-        <div id="modalEditarUsuario" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+        <div id="modalEditarUsuario" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onclick="if(event.target===this) cerrarModalEditarUsuario()">
             <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-6">
                 <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-user-pen mr-1"></i> Editar usuario</h3>
                 <div class="mb-3">
@@ -167,7 +167,7 @@
         </div>
 
         <!-- Modal compartido para editar un pedido (desde Pendientes o desde Calendario) -->
-        <div id="modalEditarPedido" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+        <div id="modalEditarPedido" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onclick="if(event.target===this) cerrarModalEditarPedido()">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-bold text-gray-800">Editar Pedido</h3>

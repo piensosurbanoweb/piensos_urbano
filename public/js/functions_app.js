@@ -1758,6 +1758,7 @@ async function mostrarDetallesPedido(id) {
             document.body.appendChild(modal);
         }
         modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.onclick = (e) => { if (e.target === modal) cerrarDetallesPedidoModal(); };
         modal.innerHTML = `
             <div class="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
                 <div class="flex justify-between items-center mb-4">
