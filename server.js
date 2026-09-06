@@ -57,18 +57,26 @@ app.use(helmet({
 // así se configura explícitamente para que, si algún día el frontend se
 // sirve desde otro dominio (o alguien intenta llamar a la API desde una
 // web distinta), solo se acepten peticiones cuyo origen sea el de la propia
-// app (ALLOWED_ORIGIN en .env / Vercel). Sin ALLOWED_ORIGIN definida, no se
-// permite ningún origen cross-site (las peticiones same-origin del propio
-// navegador siguen funcionando igual, porque el navegador no manda
-// cabecera Origin distinta ni aplica CORS a peticiones same-origin).
+// app (ALLOWED_ORIGIN en .env / Vercel) o el propio host de la petición.
+//
+// OJO: los navegadores modernos SÍ mandan cabecera Origin en peticiones
+// fetch/XHR same-origin (sobre todo en POST/PATCH/DELETE, como el login).
+// La versión anterior rechazaba cualquier petición con Origin salvo que
+// coincidiera exactamente con ALLOWED_ORIGIN, y como esa variable nunca se
+// llegó a configurar en Vercel, TODAS esas peticiones (login incluido) se
+// bloqueaban con "Origen no permitido por CORS" -> de ahí el "fallo de
+// conexión" al iniciar sesión y que ningún botón pareciera hacer nada.
+// Ahora se compara también contra el host real de la petición para que el
+// propio origen de la app siempre funcione, esté o no definida esa variable.
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || null;
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin) return callback(null, true); // same-origin / curl / apps móviles
-    if (ALLOWED_ORIGIN && origin === ALLOWED_ORIGIN) return callback(null, true);
-    return callback(new Error('Origen no permitido por CORS'));
-  },
-  credentials: true,
+app.use(cors((req, callback) => {
+  const origin = req.header('Origin');
+  const origenPropio = `${req.protocol}://${req.get('host')}`;
+  const origenValido = !origin || origin === origenPropio || (ALLOWED_ORIGIN && origin === ALLOWED_ORIGIN);
+  if (!origenValido) {
+    console.warn('CORS: origen rechazado ->', origin);
+  }
+  callback(null, { origin: origenValido, credentials: true });
 }));
 
 // --- RATE LIMITING ---
