@@ -23,31 +23,20 @@ const app = express();
 // en vez de la IP del proxy para todas las peticiones.
 app.set('trust proxy', 1);
 
-// --- CABECERAS DE SEGURIDAD (Helmet) + CONTENT SECURITY POLICY ---
-// La CSP solo permite cargar scripts/estilos/fuentes desde este mismo
-// servidor y de los CDNs que la app realmente usa (Tailwind Play CDN,
-// cdnjs para Font Awesome/jsPDF/SheetJS). 'unsafe-inline' en script/style
-// sigue haciendo falta porque las páginas usan atributos onclick="..." y
-// bloques <script> embebidos; quitarlo requeriría reescribir el frontend
-// para no usar manejadores de eventos inline (mejora futura, no bloqueante
-// para esta ronda).
+// --- CABECERAS DE SEGURIDAD (Helmet) ---
+// Se activan las cabeceras de seguridad "normales" de Helmet (X-Content-Type-
+// Options, X-Frame-Options, etc.), que no afectan al funcionamiento de la
+// web. La Content-Security-Policy se desactiva por completo: esta app usa
+// atributos onclick="..." en todas las páginas (navegación por pestañas,
+// botones de acción, etc.) y varios CDNs (Tailwind Play CDN, cdnjs, Google
+// Fonts vía Tailwind). Configurar una CSP que cubra todo eso sin bloquear
+// nada es delicado y, si se deja mal ajustada, deja la web completamente
+// inutilizable (botones que no responden, estilos/fuentes que no cargan),
+// que es justo lo que pasó la primera vez que se activó. Si en el futuro se
+// quiere una CSP, habría que reescribir el frontend para no depender de
+// onclick inline y probarla a fondo antes de subirla a producción.
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.tailwindcss.com', 'https://cdnjs.cloudflare.com'],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'],
-      fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'data:'],
-      imgSrc: ["'self'", 'data:'],
-      connectSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      baseUri: ["'self'"],
-      frameAncestors: ["'self'"],
-    },
-  },
-  // La API se sirve desde el propio dominio; crossOriginEmbedderPolicy por
-  // defecto puede romper la carga de scripts de CDN sin CORS, así que se
-  // desactiva (no hace falta para esta app).
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
 }));
 
