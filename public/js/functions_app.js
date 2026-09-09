@@ -430,7 +430,7 @@ function inicializarLocalidadAutocomplete() {
                 nombres.forEach(nombre => {
                     const li = document.createElement('li');
                     li.textContent = nombre;
-                    li.classList.add('cursor-pointer', 'px-4', 'py-2', 'hover:bg-gray-200');
+                    li.classList.add('cursor-pointer', 'px-4', 'py-2', 'hover:bg-gray-200', 'uppercase');
                     li.addEventListener('click', () => {
                         input.value = nombre;
                         lista.classList.add('hidden');
@@ -732,7 +732,7 @@ function renderizarPaginaClientes() {
             <td class="px-4 py-2 border align-middle">${escapeHTML(cliente.apodo)}</td>
             <td class="px-4 py-2 border align-middle">${escapeHTML(cliente.nombre_completo)}</td>
             <td class="px-4 py-2 border align-middle">${escapeHTML(cliente.telefono)}</td>
-            <td class="px-4 py-2 border align-middle">${escapeHTML(cliente.localidad)}</td>
+            <td class="px-4 py-2 border align-middle uppercase">${escapeHTML(cliente.localidad)}</td>
             <td class="px-4 py-2 border align-middle">${escapeHTML(cliente.zona_reparto)}</td>
             <td class="px-4 py-2 border align-middle">${escapeHTML(cliente.observaciones)}</td>
             <td class="px-4 py-2 border align-middle">
@@ -2687,7 +2687,7 @@ function renderizarHojaReparto() {
             <td class="border px-2 py-2 align-middle conductor-cell">
                 ${construirSelectHoja(camionesHoja, p.camion, `onchange="actualizarCampoHoja(${p.id}, 'camion', this.value || null)"`)}
             </td>
-            <td class="border px-2 py-2 align-middle">${escapeHTML(p.localidad)}</td>
+            <td class="border px-2 py-2 align-middle uppercase">${escapeHTML(p.localidad)}</td>
             <td class="border px-2 py-2 text-center align-middle no-print">
                 <div class="flex items-center justify-center gap-3">
                     <button onclick="eliminarPedidoHoja(${p.id})" class="text-gray-500 hover:text-red-600" title="Volver a Calendario (quita de esta hoja, sigue programado)"><i class="fas fa-calendar-days"></i></button>
