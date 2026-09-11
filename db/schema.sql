@@ -212,3 +212,16 @@ ALTER TABLE historial_cambios ENABLE ROW LEVEL SECURITY;
 -- ALTER TABLE zonas DISABLE ROW LEVEL SECURITY;
 -- ALTER TABLE historial_accesos DISABLE ROW LEVEL SECURITY;
 -- ALTER TABLE historial_cambios DISABLE ROW LEVEL SECURITY;
+
+-- =====================================================================
+-- RONDA 11 (rendimiento): índices en claves foráneas que el Performance
+-- Advisor de Supabase marcaba como "sin índice" (7 sugerencias, no eran
+-- errores ni problema de seguridad). Solo crea índices — no cambia datos
+-- ni comportamiento de la app, seguro de ejecutar en cualquier momento.
+CREATE INDEX IF NOT EXISTS idx_historial_accesos_usuario ON historial_accesos(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_historial_cambios_usuario ON historial_cambios(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_cliente ON pedidos(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_calendario_cliente ON pedidos_calendario(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_calendario_historial ON pedidos_calendario(historial_id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_hoja_reparto_cliente ON pedidos_hoja_reparto(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_pedidos_pendientes_cliente ON pedidos_pendientes(cliente_id);
