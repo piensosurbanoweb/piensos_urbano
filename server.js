@@ -216,6 +216,31 @@ async function asegurarTablasHistorial() {
 }
 asegurarTablasHistorial();
 
+// Limpieza automática del historial: evita que historial_accesos e
+// historial_cambios crezcan sin límite en Supabase (cada login y cada
+// crear/editar/eliminar añade una fila y nunca se borra nada). Se ejecuta
+// dentro del cron de backup que ya existe (día 1 y 16 de cada mes, ver
+// vercel.json /backup-cron) para no tener que dar de alta un segundo cron
+// en Vercel. Umbral configurable con la variable de entorno
+// HISTORIAL_RETENCION_DIAS (por defecto 180 días si no se define).
+async function limpiarHistorialAntiguo() {
+  const dias = Number(process.env.HISTORIAL_RETENCION_DIAS) || 180;
+  try {
+    const accesos = await pool.query(
+      `DELETE FROM historial_accesos WHERE fecha < now() - ($1 || ' days')::interval`,
+      [dias]
+    );
+    const cambios = await pool.query(
+      `DELETE FROM historial_cambios WHERE fecha < now() - ($1 || ' days')::interval`,
+      [dias]
+    );
+    return { ok: true, dias, borrados: { accesos: accesos.rowCount, cambios: cambios.rowCount } };
+  } catch (err) {
+    console.error('Error limpiando historial antiguo:', err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
 // Registra un inicio de sesión correcto (para el historial de accesos).
 async function registrarAcceso(usuario, req) {
   try {
@@ -512,10 +537,16 @@ app.get('/backup-cron', async (req, res) => {
     if (!secreto || req.headers.authorization !== `Bearer ${secreto}`) {
       return res.status(401).json({ error: 'No autorizado.' });
     }
+    // La limpieza va antes y nunca lanza (ver limpiarHistorialAntiguo): así,
+    // si el envío del backup por email falla, el historial se limpia igual.
+    const limpieza = await limpiarHistorialAntiguo();
+    if (limpieza.ok) {
+      console.log(`Historial limpiado: ${limpieza.borrados.accesos} acceso(s) y ${limpieza.borrados.cambios} cambio(s) eliminados (más de ${limpieza.dias} días).`);
+    }
     const resultado = await generarYEnviarBackup();
-    if (!resultado.ok) return res.status(500).json({ error: resultado.error });
+    if (!resultado.ok) return res.status(500).json({ error: resultado.error, limpieza });
     if (resultado.avisos) console.warn('Copia de seguridad (cron) con avisos:', resultado.avisos.join(' | '));
-    res.json({ ok: true, avisos: resultado.avisos });
+    res.json({ ok: true, avisos: resultado.avisos, limpieza });
   } catch (err) {
     console.error('Error generando la copia de seguridad programada:', err.message);
     res.status(500).json({ error: 'Error interno del servidor.' });
