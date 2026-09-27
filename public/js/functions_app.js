@@ -594,6 +594,32 @@ async function cargarHistorialCambios(pagina) {
     }
 }
 
+async function borrarHistorialAccesos() {
+    if (!(await confirmarAccion('¿Vaciar todo el historial de accesos? Se borrarán todos los registros de inicio de sesión y no se puede deshacer.', 'Vaciar historial'))) return;
+    try {
+        const res = await fetch('/historial/accesos', { method: 'DELETE' });
+        if (!res.ok) throw new Error((await res.json())?.error || 'Error al borrar el historial de accesos');
+        await cargarHistorialAccesos(1);
+        await mostrarAviso('Historial de accesos vaciado.', 'exito');
+    } catch (err) {
+        await mostrarAviso('No se pudo vaciar el historial de accesos: ' + err.message, 'error');
+    }
+}
+
+async function borrarHistorialCambios() {
+    if (!(await confirmarAccion('¿Vaciar todo el historial de cambios? Se borrarán todos los registros de creaciones, ediciones y eliminaciones, y no se puede deshacer.', 'Vaciar historial'))) return;
+    try {
+        const res = await fetch('/historial/cambios', { method: 'DELETE' });
+        if (!res.ok) throw new Error((await res.json())?.error || 'Error al borrar el historial de cambios');
+        // Se vuelve a cargar en vez de vaciar la tabla a mano porque el propio
+        // borrado deja una fila nueva en el historial (quién y cuándo lo vació).
+        await cargarHistorialCambios(1);
+        await mostrarAviso('Historial de cambios vaciado.', 'exito');
+    } catch (err) {
+        await mostrarAviso('No se pudo vaciar el historial de cambios: ' + err.message, 'error');
+    }
+}
+
 async function inicializarHojaReparto() {
     const fechaEl = document.getElementById('fechaImpresionHoja');
     if (fechaEl) fechaEl.textContent = `Impreso el ${new Date().toLocaleDateString('es-ES')}`;

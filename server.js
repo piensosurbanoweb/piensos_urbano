@@ -2082,6 +2082,32 @@ app.get('/historial/cambios', requireDesarrollador, async (req, res) => {
   }
 });
 
+// Borrado manual del historial (además de la limpieza automática por
+// antigüedad de /backup-cron). Solo "desarrollador", con confirmación en el
+// frontend: son registros de auditoría, así que se borran solo a propósito.
+app.delete('/historial/accesos', requireDesarrollador, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query('DELETE FROM historial_accesos');
+    res.json({ success: true, borrados: rowCount });
+  } catch (err) {
+    console.error('Error al borrar el historial de accesos:', err.message);
+    res.status(500).json({ error: 'Error al borrar el historial de accesos.' });
+  }
+});
+
+app.delete('/historial/cambios', requireDesarrollador, async (req, res) => {
+  try {
+    const { rowCount } = await pool.query('DELETE FROM historial_cambios');
+    // Se registra en el propio historial de cambios (quedará como única fila
+    // tras el borrado): así se sabe quién vació el historial y cuándo.
+    await registrarCambio(req.usuario, 'eliminar', 'historial_cambios', null, `Historial de cambios vaciado a mano (${rowCount} registro(s) eliminados).`);
+    res.json({ success: true, borrados: rowCount });
+  } catch (err) {
+    console.error('Error al borrar el historial de cambios:', err.message);
+    res.status(500).json({ error: 'Error al borrar el historial de cambios.' });
+  }
+});
+
 // Rutas "limpias": las páginas se pueden pedir sin el .html y la app
 // principal se sirve tanto en "/" como en "/inicio", para que la barra de
 // direcciones no muestre nunca "index.html", "login.html", etc.
